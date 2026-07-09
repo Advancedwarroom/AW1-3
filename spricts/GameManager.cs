@@ -51,11 +51,13 @@ public partial class GameManager : Node
     public Godot.Collections.Array<Infantry> apcUnits = new();
     public Godot.Collections.Array<Infantry> reconUnits = new();
     public Godot.Collections.Array<Infantry> flyBombUnits = new();
+    public Godot.Collections.Array<Infantry> flareUnits = new();
+    public Godot.Collections.Array<Infantry> bikeUnits = new();
 
     // 回合管理
     public int turns = 1;
     public int turnPhase = 1;
-    public const int totalPhases = 2;
+    public const int totalPhases = 3;
 
     // 当前选中的单位
     public Infantry selectedInfantry = null;
@@ -75,6 +77,11 @@ public partial class GameManager : Node
     private CameraTouchController cameraController;
 
     public Dictionary<Infantry, UnitCategory> unitCategories = new();
+    public enum StatsMode { Units, Facilities, Funds }
+    public StatsMode statsMode = StatsMode.Units;
+    private Button unitStatsBtn;
+    private Button facilityStatsBtn;
+    private Button fundsStatsBtn;
 
     public override void _Ready()
     {   
@@ -93,6 +100,9 @@ public partial class GameManager : Node
 
         UpdateTurnLabel();
         UpdateUnitLists();  // ✅ 初始化单位统计
+        
+        // ✅ 创建统计切换按钮
+        CreateStatsToggleButtons();
         SetProcessInput(true);
             if (restartButton != null)
     {
@@ -120,6 +130,17 @@ public partial class GameManager : Node
     if (fogOfWarManager != null && fogOfWarManager.isFogOfWarEnabled)
     {
         CallDeferred(nameof(DeferredFogRefresh));
+    }
+    
+    // ✅ 确保 AI_Manager 存在
+    var aiManager = GetTree().GetFirstNodeInGroup("ai_manager") as AI_Manager;
+    if (aiManager == null)
+    {
+        aiManager = new AI_Manager();
+        aiManager.Name = "AI_Manager";
+        aiManager.gameManager = this;
+        AddChild(aiManager);
+        GD.Print("[GameManager] 动态创建 AI_Manager");
     }
     
     gameEnded = false;
@@ -425,6 +446,16 @@ private void AutoCategorizeUnit(Infantry unit)
             flyBombUnits.Add(unit);
             GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 FlyBomb");
             break;
+        case Flare _:
+            category = UnitCategory.Vehicle;
+            flareUnits.Add(unit);
+            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Flare");
+            break;
+        case Bike _:
+            category = UnitCategory.Infantry;
+            bikeUnits.Add(unit);
+            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Bike");
+            break;
         case Artillery _:
             category = UnitCategory.Artillery;
             artilleryUnits.Add(unit);
@@ -458,112 +489,400 @@ private void AutoCategorizeUnit(Infantry unit)
 }
 
 
+
+    // ✅ 创建统计面板切换按钮
+    private void CreateStatsToggleButtons()
+    {
+        if (UnitLists == null) return;
+        
+        var canvasLayer = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("CanvasLayer");
+        if (canvasLayer == null) return;
+        
+        // 使用 TopRight 锚点，与 UnitListsToggleBtn 放在同一行
+        // UnitListsToggleBtn 在 TopRight, OffsetLeft=-120, OffsetRight=-60
+        // 我们在它左边放两个按钮
+        
+        // 单位按钮
+        // 单位按钮
+        unitStatsBtn = new Button();
+        unitStatsBtn.Name = "UnitStatsBtn";
+        unitStatsBtn.Text = "📊 单位";
+        unitStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        unitStatsBtn.OffsetLeft = -360;
+        unitStatsBtn.OffsetTop = 0;
+        unitStatsBtn.OffsetRight = -280;
+        unitStatsBtn.OffsetBottom = 32;
+        unitStatsBtn.AddThemeFontSizeOverride("font_size", 14);
+        unitStatsBtn.AddThemeColorOverride("font_color", Colors.White);
+        var uStyle = new StyleBoxFlat();
+        uStyle.BgColor = new Color(0.3f, 0.5f, 0.7f, 0.9f);
+        uStyle.SetCornerRadiusAll(8);
+        unitStatsBtn.AddThemeStyleboxOverride("normal", uStyle);
+        var uStyleHover = new StyleBoxFlat();
+        uStyleHover.BgColor = new Color(0.4f, 0.6f, 0.8f, 0.95f);
+        uStyleHover.SetCornerRadiusAll(8);
+        unitStatsBtn.AddThemeStyleboxOverride("hover", uStyleHover);
+        unitStatsBtn.ZIndex = 200;
+        unitStatsBtn.Pressed += () => { statsMode = StatsMode.Units; UpdateUnitLists(); };
+        canvasLayer.AddChild(unitStatsBtn);
+        
+        // 设施按钮
+        facilityStatsBtn = new Button();
+        facilityStatsBtn.Name = "FacilityStatsBtn";
+        facilityStatsBtn.Text = "🏙️ 设施";
+        facilityStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        facilityStatsBtn.OffsetLeft = -280;
+        facilityStatsBtn.OffsetTop = 0;
+        facilityStatsBtn.OffsetRight = -200;
+        facilityStatsBtn.OffsetBottom = 32;
+        facilityStatsBtn.AddThemeFontSizeOverride("font_size", 14);
+        facilityStatsBtn.AddThemeColorOverride("font_color", Colors.White);
+        var fStyle = new StyleBoxFlat();
+        fStyle.BgColor = new Color(0.6f, 0.5f, 0.3f, 0.9f);
+        fStyle.SetCornerRadiusAll(8);
+        facilityStatsBtn.AddThemeStyleboxOverride("normal", fStyle);
+        var fStyleHover = new StyleBoxFlat();
+        fStyleHover.BgColor = new Color(0.7f, 0.6f, 0.4f, 0.95f);
+        fStyleHover.SetCornerRadiusAll(8);
+        facilityStatsBtn.AddThemeStyleboxOverride("hover", fStyleHover);
+        facilityStatsBtn.ZIndex = 200;
+        facilityStatsBtn.Pressed += () => { statsMode = StatsMode.Facilities; UpdateUnitLists(); };
+        canvasLayer.AddChild(facilityStatsBtn);
+        
+        // 资金按钮
+        fundsStatsBtn = new Button();
+        fundsStatsBtn.Name = "FundsStatsBtn";
+        fundsStatsBtn.Text = "💰 资金";
+        fundsStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        fundsStatsBtn.OffsetLeft = -200;
+        fundsStatsBtn.OffsetTop = 0;
+        fundsStatsBtn.OffsetRight = -120;
+        fundsStatsBtn.OffsetBottom = 32;
+        fundsStatsBtn.AddThemeFontSizeOverride("font_size", 14);
+        fundsStatsBtn.AddThemeColorOverride("font_color", Colors.White);
+        var mStyle = new StyleBoxFlat();
+        mStyle.BgColor = new Color(0.3f, 0.6f, 0.4f, 0.9f);
+        mStyle.SetCornerRadiusAll(8);
+        fundsStatsBtn.AddThemeStyleboxOverride("normal", mStyle);
+        var mStyleHover = new StyleBoxFlat();
+        mStyleHover.BgColor = new Color(0.4f, 0.7f, 0.5f, 0.95f);
+        mStyleHover.SetCornerRadiusAll(8);
+        fundsStatsBtn.AddThemeStyleboxOverride("hover", mStyleHover);
+        fundsStatsBtn.ZIndex = 200;
+        fundsStatsBtn.Pressed += () => { statsMode = StatsMode.Funds; UpdateUnitLists(); };
+        canvasLayer.AddChild(fundsStatsBtn);
+    }
     public void UpdateUnitLists()
     {
         if (UnitLists == null) return;
+        switch (statsMode)
+        {
+            case StatsMode.Facilities:
+                UpdateFacilityLists();
+                return;
+            case StatsMode.Funds:
+                UpdateFundsLists();
+                return;
+        }
 
         // ✅ 直接从源头实时计算，不依赖维护的列表
         var all = unitManager?.AllUnits ?? new List<Infantry>();
-        int p1Infantry = 0, p2Infantry = 0;
-        int p1Mech = 0, p2Mech = 0;
-        int p1Oozium = 0, p2Oozium = 0;
-        int p1Tank = 0, p2Tank = 0;
-        int p1MdTank = 0, p2MdTank = 0;
-        int p1Artillery = 0, p2Artillery = 0;
-        int p1Rocket = 0, p2Rocket = 0;
-        int p1APC = 0, p2APC = 0;
-        int p1Recon = 0, p2Recon = 0;
-        int p1AntiAir = 0, p2AntiAir = 0;
-        int p1AntiTank = 0, p2AntiTank = 0;
-        int p1FlyBomb = 0, p2FlyBomb = 0;
+        
+        // 四队伍计数器: P-1(Player), P0(Player0), P1(Player1), P2(Player2)
+        int pn1Infantry = 0, p0Infantry = 0, p1Infantry = 0, p2Infantry = 0;
+        int pn1Mech = 0, p0Mech = 0, p1Mech = 0, p2Mech = 0;
+        int pn1Oozium = 0, p0Oozium = 0, p1Oozium = 0, p2Oozium = 0;
+        int pn1Tank = 0, p0Tank = 0, p1Tank = 0, p2Tank = 0;
+        int pn1MdTank = 0, p0MdTank = 0, p1MdTank = 0, p2MdTank = 0;
+        int pn1Artillery = 0, p0Artillery = 0, p1Artillery = 0, p2Artillery = 0;
+        int pn1Rocket = 0, p0Rocket = 0, p1Rocket = 0, p2Rocket = 0;
+        int pn1APC = 0, p0APC = 0, p1APC = 0, p2APC = 0;
+        int pn1Recon = 0, p0Recon = 0, p1Recon = 0, p2Recon = 0;
+        int pn1AntiAir = 0, p0AntiAir = 0, p1AntiAir = 0, p2AntiAir = 0;
+        int pn1AntiTank = 0, p0AntiTank = 0, p1AntiTank = 0, p2AntiTank = 0;
+        int pn1FlyBomb = 0, p0FlyBomb = 0, p1FlyBomb = 0, p2FlyBomb = 0;
+        int pn1Flare = 0, p0Flare = 0, p1Flare = 0, p2Flare = 0;
+        int pn1Bike = 0, p0Bike = 0, p1Bike = 0, p2Bike = 0;
 
         foreach (var u in all)
         {
             if (u == null || !IsInstanceValid(u)) continue;
             string team = u.team;
 
-            if (u is Mech) { if (team == "Player1") p1Mech++; else p2Mech++; }
-            else if (u is Oozium) { if (team == "Player1") p1Oozium++; else p2Oozium++; }
-            else if (u is FlyBomb) { if (team == "Player1") p1FlyBomb++; else p2FlyBomb++; }
-            else if (u is LightTank) { if (team == "Player1") p1Tank++; else p2Tank++; }
-            else if (u is MdTank) { if (team == "Player1") p1MdTank++; else p2MdTank++; }
-            else if (u is APC) { if (team == "Player1") p1APC++; else p2APC++; }
-            else if (u is Recon) { if (team == "Player1") p1Recon++; else p2Recon++; }
-            else if (u is Artillery) { if (team == "Player1") p1Artillery++; else p2Artillery++; }
-            else if (u is Rocket) { if (team == "Player1") p1Rocket++; else p2Rocket++; }
-            else if (u is AntiAir) { if (team == "Player1") p1AntiAir++; else p2AntiAir++; }
-            else if (u is AntiTank) { if (team == "Player1") p1AntiTank++; else p2AntiTank++; }
-            else if (u is Infantry) { if (team == "Player1") p1Infantry++; else p2Infantry++; }
+            if (u is Mech) 
+            { 
+                if (team == "Player") pn1Mech++; else if (team == "Player0") p0Mech++;
+                else if (team == "Player1") p1Mech++; else if (team == "Player2") p2Mech++;
+            }
+            else if (u is Oozium) 
+            { 
+                if (team == "Player") pn1Oozium++; else if (team == "Player0") p0Oozium++;
+                else if (team == "Player1") p1Oozium++; else if (team == "Player2") p2Oozium++;
+            }
+            else if (u is FlyBomb) 
+            { 
+                if (team == "Player") pn1FlyBomb++; else if (team == "Player0") p0FlyBomb++;
+                else if (team == "Player1") p1FlyBomb++; else if (team == "Player2") p2FlyBomb++;
+            }
+            else if (u is Flare) 
+            { 
+                if (team == "Player") pn1Flare++; else if (team == "Player0") p0Flare++;
+                else if (team == "Player1") p1Flare++; else if (team == "Player2") p2Flare++;
+            }
+            else if (u is Bike) 
+            { 
+                if (team == "Player") pn1Bike++; else if (team == "Player0") p0Bike++;
+                else if (team == "Player1") p1Bike++; else if (team == "Player2") p2Bike++;
+            }
+            else if (u is LightTank) 
+            { 
+                if (team == "Player") pn1Tank++; else if (team == "Player0") p0Tank++;
+                else if (team == "Player1") p1Tank++; else if (team == "Player2") p2Tank++;
+            }
+            else if (u is MdTank) 
+            { 
+                if (team == "Player") pn1MdTank++; else if (team == "Player0") p0MdTank++;
+                else if (team == "Player1") p1MdTank++; else if (team == "Player2") p2MdTank++;
+            }
+            else if (u is APC) 
+            { 
+                if (team == "Player") pn1APC++; else if (team == "Player0") p0APC++;
+                else if (team == "Player1") p1APC++; else if (team == "Player2") p2APC++;
+            }
+            else if (u is Recon) 
+            { 
+                if (team == "Player") pn1Recon++; else if (team == "Player0") p0Recon++;
+                else if (team == "Player1") p1Recon++; else if (team == "Player2") p2Recon++;
+            }
+            else if (u is Artillery) 
+            { 
+                if (team == "Player") pn1Artillery++; else if (team == "Player0") p0Artillery++;
+                else if (team == "Player1") p1Artillery++; else if (team == "Player2") p2Artillery++;
+            }
+            else if (u is Rocket) 
+            { 
+                if (team == "Player") pn1Rocket++; else if (team == "Player0") p0Rocket++;
+                else if (team == "Player1") p1Rocket++; else if (team == "Player2") p2Rocket++;
+            }
+            else if (u is AntiAir) 
+            { 
+                if (team == "Player") pn1AntiAir++; else if (team == "Player0") p0AntiAir++;
+                else if (team == "Player1") p1AntiAir++; else if (team == "Player2") p2AntiAir++;
+            }
+            else if (u is AntiTank) 
+            { 
+                if (team == "Player") pn1AntiTank++; else if (team == "Player0") p0AntiTank++;
+                else if (team == "Player1") p1AntiTank++; else if (team == "Player2") p2AntiTank++;
+            }
+            else if (u is Infantry) 
+            { 
+                if (team == "Player") pn1Infantry++; else if (team == "Player0") p0Infantry++;
+                else if (team == "Player1") p1Infantry++; else if (team == "Player2") p2Infantry++;
+            }
         }
 
-        // 兵器统计
-        int p1Weapons = 0, p2Weapons = 0;
-        int p1Cannons = 0, p2Cannons = 0;
-        int p1Lasers = 0, p2Lasers = 0;
+        // 兵器统计 - 四队伍
+        int pn1Weapons = 0, p0Weapons = 0, p1Weapons = 0, p2Weapons = 0;
+        int pn1Cannons = 0, p0Cannons = 0, p1Cannons = 0, p2Cannons = 0;
+        int pn1Lasers = 0, p0Lasers = 0, p1Lasers = 0, p2Lasers = 0;
         if (weaponManager != null)
         {
             foreach (var w in weaponManager.AllWeapons.ToList())
             {
                 if (w == null || !IsInstanceValid(w)) continue;
                 string team = w.team;
-                if (w is BlackCannon) { if (team == "Player1") p1Cannons++; else p2Cannons++; p1Weapons++; }
-                else if (w is Laser) { if (team == "Player1") p1Lasers++; else p2Lasers++; p1Weapons++; }
-                else { if (team == "Player1") p1Weapons++; else p2Weapons++; }
+                if (w is BlackCannon) 
+                { 
+                    if (team == "Player") pn1Cannons++; else if (team == "Player0") p0Cannons++;
+                    else if (team == "Player1") p1Cannons++; else if (team == "Player2") p2Cannons++;
+                }
+                else if (w is Laser) 
+                { 
+                    if (team == "Player") pn1Lasers++; else if (team == "Player0") p0Lasers++;
+                    else if (team == "Player1") p1Lasers++; else if (team == "Player2") p2Lasers++;
+                }
+                else 
+                { 
+                    if (team == "Player") pn1Weapons++; else if (team == "Player0") p0Weapons++;
+                    else if (team == "Player1") p1Weapons++; else if (team == "Player2") p2Weapons++;
+                }
             }
         }
 
         int totalUnits = all.Count(u => u != null && IsInstanceValid(u));
         int totalWeapons = weaponManager?.AllWeapons.Count(w => w != null && IsInstanceValid(w)) ?? 0;
 
-        // 构建文本
-        string text = " [color=red]单位[/color][color=blue]统计[/color] \n";
-        text += $"[color=red]🔴P1[/color]\t\t\t\t|[color=blue]🔵P2[/color]\n";
-        text += $"[color=red]步兵:\t\t{p1Infantry}\t\t[/color]|\t\t[color=blue]{p2Infantry}[/color]\n";
-        text += $"[color=red]机甲:\t\t{p1Mech}\t\t[/color]|\t   [color=blue] {p2Mech}[/color]\n";
-        text += $"[color=red]Oozium:\t{p1Oozium}[/color]\t\t|\t\t[color=blue]{p2Oozium}[/color]\n";
+        // 颜色定义
+        string cP1 = "#ff4d4d";   // 红
+        string cP2 = "#4d80ff";   // 蓝
+        string cP0 = "#b3b3b3";   // 灰
+        string cPN1 = "#b366ff";  // 紫
+        string cTitle = "#ffaa33"; // 橙黄
 
-        if (p1Tank > 0 || p2Tank > 0)
-            text += $"[color=red]轻坦: \t\t{p1Tank}\t\t[/color]|[color=blue]\t\t{p2Tank}\n[/color]";
+        string text = $" [color={cTitle}]⚔ 单位统计[/color] \n";
+        text += $"  [color={cPN1}]🟣P-1[/color]  [color={cP0}]⚪P0[/color]  [color={cP1}]🔴P1[/color]  [color={cP2}]🔵P2[/color]\n";
+        text += $"步 [color={cPN1}]{pn1Infantry,2}|[color={cP0}]{p0Infantry,2}|[color={cP1}]{p1Infantry,2}|[color={cP2}]{p2Infantry,2}[/color]\n";
+        text += $"机 [color={cPN1}]{pn1Mech,2}|[color={cP0}]{p0Mech,2}|[color={cP1}]{p1Mech,2}|[color={cP2}]{p2Mech,2}[/color]\n";
+        text += $"O [color={cPN1}]{pn1Oozium,2}|[color={cP0}]{p0Oozium,2}[color={cP1}]|{p1Oozium,2}|[color={cP2}]{p2Oozium,2}[/color]\n";
 
-        if (p1MdTank > 0 || p2MdTank > 0)
-            text += $"[color=red]重坦: \t\t{p1MdTank}\t\t[/color]|[color=blue]\t\t{p2MdTank}\n[/color]";
+        if (pn1Tank > 0 || p0Tank > 0 || p1Tank > 0 || p2Tank > 0)
+            text += $"轻 [color={cPN1}]{pn1Tank,2}|[color={cP0}]{p0Tank,2}|[color={cP1}]{p1Tank,2}|[color={cP2}]{p2Tank,2}[/color]\n";
 
-        if (p1APC > 0 || p2APC > 0)
-            text += $"[color=red]运输车:\t{p1APC}\t\t[/color]|\t\t[color=blue]{p2APC}[/color]\n";
+        if (pn1MdTank > 0 || p0MdTank > 0 || p1MdTank > 0 || p2MdTank > 0)
+            text += $"重 [color={cPN1}]{pn1MdTank,2}|[color={cP0}]{p0MdTank,2}|[color={cP1}]{p1MdTank,2}|[color={cP2}]{p2MdTank,2}[/color]\n";
 
-        if (p1Recon > 0 || p2Recon > 0)
-            text += $"[color=red]侦察车:\t{p1Recon}\t\t[/color]|\t\t[color=blue]{p2Recon}[/color]\n";
+        if (pn1APC > 0 || p0APC > 0 || p1APC > 0 || p2APC > 0)
+            text += $"运 [color={cPN1}]{pn1APC,2}|[color={cP0}]{p0APC,2}|[color={cP1}]{p1APC,2}|[color={cP2}]{p2APC,2}[/color]\n";
 
-        if (p1Artillery > 0 || p2Artillery > 0)
-            text += $"[color=red]火炮:\t\t{p1Artillery}\t\t[/color]|\t\t[color=blue]{p2Artillery}[/color]\n";
+        if (pn1Recon > 0 || p0Recon > 0 || p1Recon > 0 || p2Recon > 0)
+            text += $"侦 [color={cPN1}]{pn1Recon,2}|[color={cP0}]{p0Recon,2}|[color={cP1}]{p1Recon,2}|[color={cP2}]{p2Recon,2}[/color]\n";
 
-        if (p1Rocket > 0 || p2Rocket > 0)
-            text += $"[color=red]火箭炮:\t{p1Rocket}\t\t[/color]|\t\t[color=blue]{p2Rocket}[/color]\n";
+        if (pn1Artillery > 0 || p0Artillery > 0 || p1Artillery > 0 || p2Artillery > 0)
+            text += $"炮[color={cPN1}] {pn1Artillery,2}|[color={cP0}]{p0Artillery,2}|[color={cP1}]{p1Artillery,2}|[color={cP2}]{p2Artillery,2}[/color]\n";
 
-        if (p1AntiAir > 0 || p2AntiAir > 0)
-            text += $"[color=red]防空高炮:\t{p1AntiAir}\t\t[/color]|\t\t[color=blue]{p2AntiAir}[/color]\n";
+        if (pn1Rocket > 0 || p0Rocket > 0 || p1Rocket > 0 || p2Rocket > 0)
+            text += $"箭[color={cPN1}] {pn1Rocket,2}|[color={cP0}]{p0Rocket,2}|[color={cP1}]{p1Rocket,2}|[color={cP2}]{p2Rocket,2}[/color]\n";
 
-        if (p1AntiTank > 0 || p2AntiTank > 0)
-            text += $"[color=red]反坦克炮:\t{p1AntiTank}\t\t[/color]|\t\t[color=blue]{p2AntiTank}[/color]\n";
+        if (pn1AntiAir > 0 || p0AntiAir > 0 || p1AntiAir > 0 || p2AntiAir > 0)
+            text += $"防[color={cPN1}] {pn1AntiAir,2}|[color={cP0}]{p0AntiAir,2}|[color={cP1}]{p1AntiAir,2}|[color={cP2}]{p2AntiAir,2}[/color]\n";
 
-        if (p1FlyBomb > 0 || p2FlyBomb > 0)
-            text += $"[color=red]飞弹:\t{p1FlyBomb}\t\t[/color]|\t\t[color=blue]{p2FlyBomb}[/color]\n";
+        if (pn1AntiTank > 0 || p0AntiTank > 0 || p1AntiTank > 0 || p2AntiTank > 0)
+            text += $"反[color={cPN1}] {pn1AntiTank,2}|[color={cP0}]{p0AntiTank,2}|[color={cP1}]{p1AntiTank,2}|[color={cP2}]{p2AntiTank,2}[/color]\n";
 
-        if (p1Weapons > 0 || p2Weapons > 0 || p1Cannons > 0 || p2Cannons > 0 || p1Lasers > 0 || p2Lasers > 0)
+        if (pn1FlyBomb > 0 || p0FlyBomb > 0 || p1FlyBomb > 0 || p2FlyBomb > 0)
+            text += $"弹 [color={cPN1}]{pn1FlyBomb,2}|[color={cP0}]{p0FlyBomb,2}|[color={cP1}]{p1FlyBomb,2}|[color={cP2}]{p2FlyBomb,2}[/color]\n";
+
+        if (pn1Flare > 0 || p0Flare > 0 || p1Flare > 0 || p2Flare > 0)
+            text += $"照 [color={cPN1}]{pn1Flare,2}|[color={cP0}]{p0Flare,2}|[color={cP1}]{p1Flare,2}|[color={cP2}]{p2Flare,2}[/color]\n";
+
+        if (pn1Bike > 0 || p0Bike > 0 || p1Bike > 0 || p2Bike > 0)
+            text += $"摩[color={cPN1}] {pn1Bike,2}|[color={cP0}]{p0Bike,2}|[color={cP1}]{p1Bike,2}|[color={cP2}]{p2Bike,2}[/color]\n";
+
+        // 兵器统计
+        bool hasAnyWeapon = pn1Cannons > 0 || p0Cannons > 0 || p1Cannons > 0 || p2Cannons > 0
+                         || pn1Lasers > 0 || p0Lasers > 0 || p1Lasers > 0 || p2Lasers > 0
+                         || pn1Weapons > 0 || p0Weapons > 0 || p1Weapons > 0 || p2Weapons > 0;
+        
+        if (hasAnyWeapon)
         {
-            text += $"\n[color=yellow]===兵器统计===[/color]\n";
-            if (p1Cannons > 0 || p2Cannons > 0)
-                text += $"[color=red]迷你加农炮:\t{p1Cannons}[/color]\t\t|\t\t[color=blue]{p2Cannons}[/color]\n";
-            if (p1Lasers > 0 || p2Lasers > 0)
-                text += $"[color=red]激光炮:\t{p1Lasers}[/color]\t\t|\t\t[color=blue]{p2Lasers}[/color]\n";
+            text += $"\n[color={cTitle}]===兵器===[/color]\n";
+            if (pn1Cannons > 0 || p0Cannons > 0 || p1Cannons > 0 || p2Cannons > 0)
+                text += $"炮 [color={cPN1}]{pn1Cannons,2}|[color={cP0}]{p0Cannons,2}|[color={cP1}]{p1Cannons,2}|[color={cP2}]{p2Cannons,2}[/color]\n";
+            if (pn1Lasers > 0 || p0Lasers > 0 || p1Lasers > 0 || p2Lasers > 0)
+                text += $"激[color={cPN1}] {pn1Lasers,2}|[color={cP0}]{p0Lasers,2}|[color={cP1}]{p1Lasers,2}|[color={cP2}]{p2Lasers,2}[/color]\n";
+            if (pn1Weapons > 0 || p0Weapons > 0 || p1Weapons > 0 || p2Weapons > 0)
+                text += $"其[color={cPN1}] {pn1Weapons,2}|[color={cP0}]{p0Weapons,2}|[color={cP1}]{p1Weapons,2}|[color={cP2}]{p2Weapons,2}[/color]\n";
         }
 
-        text += $"总计: {totalUnits}单位";
+
+        int totalAll = totalUnits + totalWeapons;
+
+        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike;
+        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike;
+        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike;
+        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike;
+
+        int pn1TotalWeapons = pn1Cannons + pn1Lasers + pn1Weapons;
+        int p0TotalWeapons = p0Cannons + p0Lasers + p0Weapons;
+        int p1TotalWeapons = p1Cannons + p1Lasers + p1Weapons;
+        int p2TotalWeapons = p2Cannons + p2Lasers + p2Weapons;
+
+        int pn1TotalAll = pn1TotalUnits + pn1TotalWeapons;
+        int p0TotalAll = p0TotalUnits + p0TotalWeapons;
+        int p1TotalAll = p1TotalUnits + p1TotalWeapons;
+        int p2TotalAll = p2TotalUnits + p2TotalWeapons;
+
+        text += $"\n[color={cTitle}]===总计===[/color]\n";
+        text += $"单 {pn1TotalUnits,2}|{p0TotalUnits,2}|{p1TotalUnits,2}|{p2TotalUnits,2}\n";
         if (totalWeapons > 0)
-            text += $" + {totalWeapons}兵器";
+            text += $"兵 {pn1TotalWeapons,2}|{p0TotalWeapons,2}|{p1TotalWeapons,2}|{p2TotalWeapons,2}\n";
+        text += $"共 {pn1TotalAll,2}|{p0TotalAll,2}|{p1TotalAll,2}|{p2TotalAll,2}\n";
 
         UnitLists.Text = text;
     }
+    public void UpdateFacilityLists()
+    {
+        if (UnitLists == null) return;
+        if (gridManager == null) return;
+        
+        var cities = gridManager.GetAllCities();
+        int p0Cities = 0, p1Cities = 0, p2Cities = 0, pN1Cities = 0;
+        
+        foreach (var city in cities)
+        {
+            if (city == null) continue;
+            switch (city.facilityTeam)
+            {
+                case "Player0": p0Cities++; break;
+                case "Player1": p1Cities++; break;
+                case "Player2": p2Cities++; break;
+                case "Player": pN1Cities++; break;
+            }
+        }
+        
+        string text = " [color=yellow]设施统计[/color] \n";
+        text += $"[color=gray]中立(P0): {p0Cities}[/color]\n";
+        text += $"[color=red]🔴P1: {p1Cities}[/color]\n";
+        text += $"[color=blue]🔵P2: {p2Cities}[/color]\n";
+        if (pN1Cities > 0)
+            text += $"[color=orange]P-1: {pN1Cities}[/color]\n";
+        text += $"总计: {cities.Count} 设施";
+        
+        UnitLists.Text = text;
+    }
+    public void UpdateFundsLists()
+    {
+        if (UnitLists == null) return;
+        
+        long pn1Funds = 0, p0Funds = 0, p1Funds = 0, p2Funds = 0;
+        
+        // 统计单位造价
+        var all = unitManager?.AllUnits ?? new List<Infantry>();
+        foreach (var u in all)
+        {
+            if (u == null || !IsInstanceValid(u)) continue;
+            switch (u.team)
+            {
+                case "Player": pn1Funds += u.cost; break;
+                case "Player0": p0Funds += u.cost; break;
+                case "Player1": p1Funds += u.cost; break;
+                case "Player2": p2Funds += u.cost; break;
+            }
+        }
+        
+        // 统计兵器造价
+        if (weaponManager != null)
+        {
+            foreach (var w in weaponManager.AllWeapons.ToList())
+            {
+                if (w == null || !IsInstanceValid(w)) continue;
+                switch (w.team)
+                {
+                    case "Player": pn1Funds += w.cost; break;
+                    case "Player0": p0Funds += w.cost; break;
+                    case "Player1": p1Funds += w.cost; break;
+                    case "Player2": p2Funds += w.cost; break;
+                }
+            }
+        }
+        
+        long totalFunds = pn1Funds + p0Funds + p1Funds + p2Funds;
+        
+        string cP1 = "#ff4d4d";
+        string cP2 = "#4d80ff";
+        string cP0 = "#b3b3b3";
+        string cPN1 = "#b366ff";
+        string cTitle = "#ffaa33";
+        
+        string text = $" [color={cTitle}]💰 资金统计[/color] \n";
+        text += $"  [color={cPN1}]🟣P-1[/color]  [color={cP0}]⚪P0[/color]  [color={cP1}]🔴P1[/color]  [color={cP2}]🔵P2[/color]\n";
+        text += $"💵 [color={cPN1}]{pn1Funds,7}|[color={cP0}]{p0Funds,7}|[color={cP1}]{p1Funds,7}|[color={cP2}]{p2Funds,7}[/color]\n";
+        text += $"\n[color={cTitle}]===总计===[/color]\n";
+        text += $"💰 {totalFunds} G\n";
+        
+        UnitLists.Text = text;
+    }
+
 
     // ========== ✅ 新增：缩放滑块 ==========
     private void SetupZoomSlider()
@@ -775,6 +1094,8 @@ private void AutoCategorizeUnit(Infantry unit)
             LightTank _ => UnitCategory.Tank,
             Rocket _ => UnitCategory.Rocket,
             FlyBomb _ => UnitCategory.FlyBomb,
+            Flare _ => UnitCategory.Vehicle,
+            Bike _ => UnitCategory.Infantry,
             Artillery _ => UnitCategory.Artillery,
             AntiAir _ => UnitCategory.AntiAir,
             AntiTank _ => UnitCategory.AntiTank,
@@ -792,8 +1113,10 @@ private void AutoCategorizeUnit(Infantry unit)
     var allUnits = unitManager?.AllUnits.Where(u => IsInstanceValid(u) && u.health > 0).ToList();
     if (allUnits == null) return;
 
-    var p1Units = allUnits.Where(u => u.team == "Player1").ToList();
-    var p2Units = allUnits.Where(u => u.team == "Player2").ToList();
+    var p1Units = allUnits.Where(u => u.team == TeamHelper.Player1).ToList();
+    var p2Units = allUnits.Where(u => u.team == TeamHelper.Player2).ToList();
+    var p0Units = allUnits.Where(u => u.team == TeamHelper.Player0).ToList();
+    var pN1Units = allUnits.Where(u => u.team == TeamHelper.Player).ToList();
 
     GD.Print($"[VictoryCheck] P1单位:{p1Units.Count} P2单位:{p2Units.Count}");
 
@@ -1078,10 +1401,25 @@ public void RestartGame()
 
         weaponManager?.OnTurnStartForNewTurn(); // 使用新方法
 
+        // ✅ 照明弹效果大回合过期处理
+        fogOfWarManager?.OnBigTurnEnd();
+
         }
 
-        string currentTeam = turnPhase == 1 ? "Player1" : "Player2";
+        string currentTeam = TeamHelper.GetPhaseTeamName(turnPhase);
         GD.Print($"阶段 {turnPhase}/{totalPhases} - {currentTeam} 的回合");
+
+        // ✅ P0 阶段：P0 和 P-1 兵器自动执行 AI
+        if (turnPhase == 3)
+        {
+            foreach (var wp in weaponManager?.AllWeapons ?? new List<Weapon>())
+            {
+                if (IsInstanceValid(wp) && (TeamHelper.ShouldWeaponUseAI(wp.team) || TeamHelper.ShouldPlayerWeaponUseAI(turnPhase, wp.team)))
+                {
+                    wp.ExecuteAI();
+                }
+            }
+        }
 
         UpdateTurnLabel();
         
@@ -1096,7 +1434,7 @@ public void RestartGame()
         Infantry.UpdateUnitsCannotMove();
         // 重置所有单位状态
         
-                foreach (var wp in weapons)
+                foreach (var wp in weaponManager?.AllWeapons ?? new List<Weapon>())
         {
             if (IsInstanceValid(wp))
             {
@@ -1198,6 +1536,13 @@ public void RestartGame()
         {
             ApplyTerrainDamageToAllUnits();
         }
+
+        // ✅ AI 回合触发
+        var aiManager = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+        if (aiManager != null && aiManager.IsCurrentPhaseAI())
+        {
+            aiManager.OnPhaseStart();
+        }
     }
 
     // ========== ✅ 新增：对所有单位应用地形伤害 ==========
@@ -1266,16 +1611,7 @@ public void RestartGame()
     // 判断当前阶段是否允许该阵营移动
     public bool IsTurnPhaseValid(string team)
     {
-            if (team == "Player0")
-    {
-        return false;
-    }
-        return team switch
-        {
-            "Player1" => turnPhase == 1,
-            "Player2" => turnPhase == 2,
-            _ => false
-        };
+        return TeamHelper.CanOperateTeam(turnPhase, team);
     }
 
     // 选择单位
@@ -1446,16 +1782,16 @@ public void RollbackMove()
     // Mech 和 LightTank 使用 animSprite
     if (unit is Mech mechUnit && mechUnit.animSprite != null)
     {
-        mechUnit.animSprite.Modulate = Colors.White;
+        mechUnit.animSprite.Modulate = mechUnit.normal;
     }
     else if (unit is LightTank tankUnit && tankUnit.animSprite != null)
     {
-        tankUnit.animSprite.Modulate = Colors.White;
+        tankUnit.animSprite.Modulate = tankUnit.normal;
     }
     else if (unit.sprite != null)
     {
         // 普通 Infantry 使用 sprite
-        unit.sprite.Modulate = Colors.White;
+        unit.sprite.Modulate = unit.normal;
     }
 
     // 重新启动呼吸动画

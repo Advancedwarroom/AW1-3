@@ -13,6 +13,7 @@ public partial class Weapon : Node2D
     [Export] public int health = 999;
     [Export] public bool canRotate = true;
     [Export] public int maxAttacksPerTurn = 1;
+    [Export] public int cost = 0;  
 
     // ========== ✅ 新增：通用弹药系统（子类可覆盖）==========
     [ExportGroup("弹药系统")]
@@ -88,6 +89,9 @@ public partial class Weapon : Node2D
         if (enableAutoAI && !hasActed) CallDeferred(nameof(TryExecuteAI));
     }
 
+    // ✅ P0/P-1 兵器 AI 入口
+    public virtual void ExecuteAI() { }
+
     public virtual void OnTurnEnd() { }
     public virtual void ShowAttackRange() { GD.PrintErr($"[Weapon] {Name} 未实现 ShowAttackRange!"); }
     public virtual void PerformAttack(Infantry target) { GD.PrintErr($"[Weapon] {Name} 未实现 PerformAttack!"); }
@@ -136,7 +140,6 @@ public partial class Weapon : Node2D
             {
                 string terrainName = grid.gridType == GridType.PIPESEAM ? "PIPESEAM" : "METEORITE";
                 targetGrid.gridType = GridType.BROKENPIPE;
-                targetGrid.isSupplyPoint = false;
                 var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
                 if (sprite != null) { var tween = CreateTween(); tween.TweenProperty(sprite, "modulate", new Color(0.3f, 0.3f, 0.3f), 0.5f); }
             }
@@ -159,7 +162,8 @@ public partial class Weapon : Node2D
             targetGrid.weapons.Remove(this);
             if (targetGrid.weapon == this) targetGrid.weapon = targetGrid.weapons.Count > 0 ? targetGrid.weapons[0] : null;
             targetGrid.gridType = GridType.BROKENPIPE;
-            targetGrid.isSupplyPoint = false;
+            if (targetGrid.city != null)
+                targetGrid.city.isSupplyPoint = false;
             var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
             if (sprite != null) { var tween = CreateTween(); tween.TweenProperty(sprite, "modulate", new Color(0.4f, 0.7f, 0.3f), 0.5f).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut); }
         }
@@ -208,7 +212,26 @@ public partial class Weapon : Node2D
         }
     }
 
-    public virtual void SetVisualDark() { if (animSprite != null) animSprite.Modulate = new Color(0.5f, 0.5f, 0.5f, 1f); }
-    public virtual void SetVisualNormal() { if (animSprite != null) animSprite.Modulate = Colors.White; }
+    public virtual void SetVisualDark() 
+    { 
+        if (animSprite != null) 
+        {
+            Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
+                ? TeamHelper.GetTeamColor(team) * 0.7f
+                : new Color(0.5f, 0.5f, 0.5f, 1f);
+            tint.A = 1f;
+            animSprite.Modulate = tint;
+        }
+    }
+    public virtual void SetVisualNormal() 
+    { 
+        if (animSprite != null) 
+        {
+            Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
+                ? TeamHelper.GetTeamColor(team)
+                : Colors.White;
+            animSprite.Modulate = tint;
+        }
+    }
     public virtual bool CanAttack() { return !hasActed && remainingAttacks > 0; }
 }

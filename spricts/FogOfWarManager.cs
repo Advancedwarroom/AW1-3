@@ -6,6 +6,23 @@ using System.Linq;
 
 public enum VisionMode { Normal, Independent }
 
+// ========== ✅ 照明弹效果数据结构 ==========
+public class IlluminationEffect
+{
+    public Grids centerGrid;
+    public int minRange;
+    public int maxRange;
+    public int remainingTurns;  // 剩余大回合数
+
+    public IlluminationEffect(Grids center, int minR, int maxR, int duration)
+    {
+        centerGrid = center;
+        minRange = minR;
+        maxRange = maxR;
+        remainingTurns = duration;
+    }
+}
+
 public partial class FogOfWarManager : Node
 {
     [Export] public bool isFogOfWarEnabled = true;
@@ -14,6 +31,7 @@ public partial class FogOfWarManager : Node
 
     private Dictionary<Grids, Sprite2D> fogSprites = new();
     private HashSet<Grids> visibleGridsThisTurn = new();
+    public List<IlluminationEffect> activeIlluminations = new(); // ✅ 活跃照明弹效果
 
     private GameManager gameManager;
     private GridManager gridManager;
@@ -76,8 +94,19 @@ public partial class FogOfWarManager : Node
 
         currentTeam = gameManager?.turnPhase == 1 ? "Player1" : "Player2";
 
+        // ✅ AI 操控时，切换为 P-1 视角（玩家只能看到公开领域）
+        var aiManager = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+        if (aiManager != null && aiManager.IsAITeam(currentTeam))
+        {
+            currentTeam = TeamHelper.Player;
+        }
+
         // ✅ 新：计算全局视野池（单位视野 + 格子视野共享）
         visibleGridsThisTurn = CalculateGlobalVisionPool(currentTeam);
+
+        // ✅ 添加照明弹照亮的格子（所有队伍都可见）
+        var illuminatedGrids = CalculateIlluminatedGrids();
+        visibleGridsThisTurn.UnionWith(illuminatedGrids);
 
         if (visibleGridsThisTurn.Count == 0)
         {
@@ -126,9 +155,9 @@ public partial class FogOfWarManager : Node
         {
             if (grid == null || !IsInstanceValid(grid)) continue;
 
-            // 只有己方占领的建筑/格子才提供视野
-            if (string.IsNullOrEmpty(grid.cityTeam) || grid.cityTeam == "Player0") continue;
-            if (grid.cityTeam != team) continue;
+            // 己方或P-1占领的建筑/格子才提供视野
+            if (grid.city == null || string.IsNullOrEmpty(grid.city.facilityTeam)) continue;
+            if (grid.city.facilityTeam != team && grid.city.facilityTeam != TeamHelper.Player) continue;
 
             // 计算该格子提供的视野
             var gridVision = grid.CalculateGridVision(gameManager);
@@ -192,13 +221,15 @@ public partial class FogOfWarManager : Node
         var providers = new List<IVisionProvider>();
         if (unitManager?.AllUnits != null)
             foreach (var unit in unitManager.AllUnits)
-                if (unit != null && IsInstanceValid(unit) && unit.team == team && unit.health > 0)
-                    providers.Add(new UnitVisionProvider(unit));
+                if (unit != null && IsInstanceValid(unit) && unit.health > 0)
+                    if (unit.team == team || unit.team == TeamHelper.Player)
+                        providers.Add(new UnitVisionProvider(unit));
 
         if (weaponManager?.AllWeapons != null)
             foreach (var weapon in weaponManager.AllWeapons)
-                if (weapon != null && IsInstanceValid(weapon) && weapon.team == team && weapon.health > 0)
-                    providers.Add(new WeaponVisionProvider(weapon));
+                if (weapon != null && IsInstanceValid(weapon) && weapon.health > 0)
+                    if (weapon.team == team || weapon.team == TeamHelper.Player)
+                        providers.Add(new WeaponVisionProvider(weapon));
         return providers;
     }
 
@@ -312,8 +343,8 @@ public partial class FogOfWarManager : Node
         foreach (var grid in gridManager.grids)
         {
             if (grid == null || !IsInstanceValid(grid)) continue;
-            if (grid.gridType == GridType.CITY && grid.cityTeam == team) visible.Add(grid);
-            if (grid.isWatchtower && grid.cityTeam == team)
+            if (grid.city != null && (grid.city.facilityTeam == team || grid.city.facilityTeam == TeamHelper.Player) && TeamHelper.DoesFacilityProvideVision(grid.city.facilityTeam)) visible.Add(grid);
+            if (grid.isWatchtower && grid.city != null && (grid.city.facilityTeam == team || grid.city.facilityTeam == TeamHelper.Player) && TeamHelper.DoesFacilityProvideVision(grid.city.facilityTeam))
             {
                 visible.Add(grid);
                 int towerRange = 1 + grid.visionBonus;
@@ -453,10 +484,81 @@ public partial class FogOfWarManager : Node
         if (!isFogOfWarEnabled) return "无迷雾";
         var vision = CalculateGlobalVisionPool(team);
         if (vision.Contains(grid)) return "视野内";
-        if (grid.gridType == GridType.CITY && grid.cityTeam == team) return "建筑视野";
+        if (grid.city != null && grid.city.facilityTeam == team) return "建筑视野";
         return "战争迷雾";
     }
-}
+
+
+    // ✅ 计算所有照明弹照亮的格子
+    private HashSet<Grids> CalculateIlluminatedGrids()
+    {
+        var visible = new HashSet<Grids>();
+        if (gridManager?.map == null) return visible;
+
+        foreach (var effect in activeIlluminations)
+        {
+            if (effect?.centerGrid == null) continue;
+            
+            // 使用 Manhattan 距离计算照明范围（maxRange 外圈 - minRange 内圈）
+            int maxRange = effect.maxRange;
+            int minRange = effect.minRange;
+            var center = effect.centerGrid.GridIndex;
+            
+            for (int dx = -maxRange; dx <= maxRange; dx++)
+            {
+                for (int dy = -maxRange; dy <= maxRange; dy++)
+                {
+                    int dist = Mathf.Abs(dx) + Mathf.Abs(dy);
+                    if (dist > maxRange) continue;
+                    if (dist < minRange) continue; // 排除内圈（与UI黄色范围一致）
+                    var pos = new Vector2I(center.X + dx, center.Y + dy);
+                    if (pos.X >= 0 && pos.X < gridManager.searchRange.X &&
+                        pos.Y >= 0 && pos.Y < gridManager.searchRange.Y)
+                    {
+                        var g = gridManager.map[pos.X, pos.Y];
+                        if (g != null) visible.Add(g);
+                    }
+                }
+            }
+        }
+        return visible;
+    }
+
+    // ✅ 大回合结束时处理照明弹效果过期
+    public void OnBigTurnEnd()
+    {
+        if (activeIlluminations.Count == 0) return;
+
+        var expired = new List<IlluminationEffect>();
+        foreach (var effect in activeIlluminations)
+        {
+            effect.remainingTurns--;
+            if (effect.remainingTurns <= 0)
+            {
+                expired.Add(effect);
+            }
+        }
+
+        foreach (var e in expired)
+        {
+            activeIlluminations.Remove(e);
+            GD.Print($"[Illumination] 照明效果在 {e.centerGrid.GridIndex} 已过期");
+        }
+
+        if (expired.Count > 0 && isFogOfWarEnabled)
+        {
+            RefreshFog();
+        }
+    }
+
+    // ✅ 添加新的照明弹效果
+    public void AddIllumination(Grids center, int minR, int maxR, int duration)
+    {
+        if (center == null || duration <= 0) return;
+        activeIlluminations.Add(new IlluminationEffect(center, minR, maxR, duration));
+        GD.Print($"[Illumination] 在 {center.GridIndex} 添加照明效果，持续 {duration} 大回合");
+        if (isFogOfWarEnabled) RefreshFog();
+    }
 
 // ========== 视野提供者接口 ==========
 public interface IVisionProvider
@@ -538,4 +640,5 @@ public class WeaponVisionProvider : IVisionProvider
         bonus += weapon.grid.visionBonus;
         return bonus;
     }
+}
 }

@@ -96,6 +96,8 @@ public partial class AntiAir : Infantry
         maxAttackRange = 1;
         canAttackAfterMoving = true;     
 
+        cost = 8000;  // AntiAir造价
+
     }
 
 

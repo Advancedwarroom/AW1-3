@@ -123,6 +123,9 @@ public partial class Laser : Weapon
         base.canRotate = this.canRotate;
         base.CanAttackWeapon = this.canAttackWeapons;
         base.maxAttacksPerTurn = this.attacksPerCooldown;
+        cost = 19000;  // Laser造价
+        base.CanAttackWeapon = this.canAttackWeapons;
+        base.maxAttacksPerTurn = this.attacksPerCooldown;
         UpdateLaserVisual();
 
         if (enableAutoAI && !hasActed && HasAmmoAndCooldown())
@@ -433,6 +436,16 @@ public partial class Laser : Weapon
     private List<Node2D> GetValidTargetsInGrid(Grids g)
     {
         var targets = new List<Node2D>();
+
+        // P0 兵器：无差别攻击，除了自己谁都能打，跳过友军/敌军判定
+        if (team == TeamHelper.Player0)
+        {
+            targets.AddRange(g.infantries.Where(i => IsInstanceValid(i)).Cast<Node2D>());
+            if (canAttackWeapons && g.weapon != null && IsInstanceValid(g.weapon) && g.weapon != this)
+                targets.Add(g.weapon);
+            return targets;
+        }
+
         switch (targetSelectionMode)
         {
             case LaserTargetMode.AllSelect:
@@ -615,7 +628,7 @@ public partial class Laser : Weapon
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
-            target.CallDeferred("queue_free");
+            target.CallDeferred("QueueFree");
         }
     }
 
@@ -662,7 +675,7 @@ public partial class Laser : Weapon
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
-            target.CallDeferred("queue_free");
+            target.CallDeferred("QueueFree");
         }
     }
 
@@ -677,7 +690,7 @@ public partial class Laser : Weapon
             target.health -= damage;
         target.UpdateHpLabel();
         if (target.health <= 0)
-            target.CallDeferred("queue_free");
+            target.CallDeferred("QueueFree");
     }
 
     // ========== 激光特效 ==========
@@ -797,6 +810,17 @@ public partial class Laser : Weapon
         if (gm == null || !gm.IsTurnPhaseValid(team)) return;
         if (!CanAttack()) { MarkAIActed(); return; }
 
+        isAIExecuting = true;
+        aiCurrentRotationAttempts = 0;
+        aiMarkedActed = false;
+        AIAttackSequence();
+    }
+
+    // ✅ P0/P-1 兵器强制 AI：绕过 phase 和 enableAutoAI 检查
+    public override void ExecuteAI()
+    {
+        if (hasActed || isAIExecuting) return;
+        if (!CanAttack()) { MarkAIActed(); return; }
         isAIExecuting = true;
         aiCurrentRotationAttempts = 0;
         aiMarkedActed = false;
@@ -1364,4 +1388,5 @@ public partial class LaserHitEffect : Node2D
         DrawCircle(Vector2.Zero, r, new Color(1, 0.8f, 0.2f, a * 0.8f));
         DrawCircle(Vector2.Zero, r * 0.5f, new Color(1, 1, 0.8f, a));
     }
+
 }

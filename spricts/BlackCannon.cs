@@ -314,6 +314,8 @@ public override void _Ready()
     base._Ready();
     InitializeCooldownState();
     
+    cost = 18000;  // BlackCannon造价
+    
     var love = GetNode<Sprite2D>("LoveIcon");
     if (love != null) love.Show();
     UpdateDirectionVisual();
@@ -599,7 +601,6 @@ public override void TakeDamage(int damage)
 
             // 切换地形
             destroyedGrid.gridType = GridType.BROKENPIPE;
-            destroyedGrid.isSupplyPoint = false;
 
             // 更新格子视觉
             var sprite = destroyedGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
@@ -626,27 +627,35 @@ public override void TakeDamage(int damage)
 
     public bool HasValidTargetInGrid(Grids targetGrid)
     {
+        // P0 兵器：无差别攻击，除了自己谁都能打，跳过友军/敌军判定
+        if (team == TeamHelper.Player0)
+        {
+            if (targetGrid.infantries.Count > 0) return true;
+            if (CanAttackWeapon && targetGrid.weapon != null && targetGrid.weapon != this) return true;
+            return false;
+        }
+
         switch (targetSelectionMode)
         {
             case TargetSelectionMode.AllSelect:
                 // ✅ 检查单位
                 if (targetGrid.infantries.Count > 0) return true;
                 // ✅ 检查兵器（根据CanAttackWeapon设置）
-                if (CanAttackWeapon && targetGrid.weapon != null) return true;
+                if (CanAttackWeapon && targetGrid.weapon != null && targetGrid.weapon != this) return true;
                 return false;
 
             case TargetSelectionMode.OnlyEnemyUnits:
                 // ✅ 检查敌方单位
                 if (targetGrid.HasEnemyInfantry(team)) return true;
                 // ✅ 检查敌方兵器（根据CanAttackWeapon设置）
-                if (CanAttackWeapon && targetGrid.weapon != null && targetGrid.weapon.team != team) return true;
+                if (CanAttackWeapon && targetGrid.weapon != null && targetGrid.weapon.team != team && targetGrid.weapon != this) return true;
                 return false;
 
             case TargetSelectionMode.OnlyUserUnits:
                 // ✅ 检查己方单位
                 if (targetGrid.infantries.Any(i => i.team == team)) return true;
                 // ✅ 检查己方兵器（根据CanAttackWeapon设置）
-                if (CanAttackWeapon && targetGrid.weapon != null && targetGrid.weapon.team == team) return true;
+                if (CanAttackWeapon && targetGrid.weapon != null && targetGrid.weapon.team == team && targetGrid.weapon != this) return true;
                 return false;
 
             default:
@@ -716,13 +725,22 @@ public override void TakeDamage(int damage)
     {
         var targets = new List<Node2D>();
 
+        // P0 兵器：无差别攻击，除了自己谁都能打，跳过友军/敌军判定
+        if (team == TeamHelper.Player0)
+        {
+            targets.AddRange(targetGrid.infantries.Where(i => IsInstanceValid(i)).Cast<Node2D>());
+            if (CanAttackWeapon && targetGrid.weapon != null && IsInstanceValid(targetGrid.weapon) && targetGrid.weapon != this)
+                targets.Add(targetGrid.weapon);
+            return targets;
+        }
+
         switch (targetSelectionMode)
         {
             case TargetSelectionMode.AllSelect:
                 // ✅ 添加所有单位
                 targets.AddRange(targetGrid.infantries.Where(i => IsInstanceValid(i)).Cast<Node2D>());
                 // ✅ 添加兵器（根据CanAttackWeapon设置）
-                if (CanAttackWeapon && targetGrid.weapon != null && IsInstanceValid(targetGrid.weapon))
+                if (CanAttackWeapon && targetGrid.weapon != null && IsInstanceValid(targetGrid.weapon) && targetGrid.weapon != this)
                     targets.Add(targetGrid.weapon);
                 break;
 
@@ -732,7 +750,7 @@ public override void TakeDamage(int damage)
                     .Where(i => IsInstanceValid(i) && i.team != team)
                     .Cast<Node2D>());
                 // ✅ 添加敌方兵器（根据CanAttackWeapon设置）
-                if (CanAttackWeapon && targetGrid.weapon != null && IsInstanceValid(targetGrid.weapon) && targetGrid.weapon.team != team)
+                if (CanAttackWeapon && targetGrid.weapon != null && IsInstanceValid(targetGrid.weapon) && targetGrid.weapon.team != team && targetGrid.weapon != this)
                     targets.Add(targetGrid.weapon);
                 break;
 
@@ -742,7 +760,7 @@ public override void TakeDamage(int damage)
                     .Where(i => IsInstanceValid(i) && i.team == team)
                     .Cast<Node2D>());
                 // ✅ 添加己方兵器（根据CanAttackWeapon设置）
-                if (CanAttackWeapon && targetGrid.weapon != null && IsInstanceValid(targetGrid.weapon) && targetGrid.weapon.team == team)
+                if (CanAttackWeapon && targetGrid.weapon != null && IsInstanceValid(targetGrid.weapon) && targetGrid.weapon.team == team && targetGrid.weapon != this)
                     targets.Add(targetGrid.weapon);
                 break;
         }
@@ -959,7 +977,6 @@ public override void TakeDamage(int damage)
                     if (targetGrid.weapon == weapon)
                         targetGrid.weapon = null;
                     targetGrid.gridType = GridType.BROKENPIPE;
-                    targetGrid.isSupplyPoint = false;
 
                     var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
                     if (sprite != null)
@@ -1214,7 +1231,6 @@ public override void OnTurnStart()
 
             // 切换地形
             targetGrid.gridType = GridType.BROKENPIPE;
-            targetGrid.isSupplyPoint = false;
 
             // 更新视觉
             var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
@@ -1620,6 +1636,86 @@ public override void OnTurnStart()
         }
 
         return info;
+    }
+
+    // ✅ P0/P-1 兵器 AI：自动攻击所有目标（单位优先，兵器次之）
+    public override void ExecuteAI()
+    {
+        if (!TeamHelper.ShouldWeaponUseAI(team) && !TeamHelper.ShouldPlayerWeaponUseAI(3, team))
+            return;
+        if (hasActed) return;
+
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager == null) return;
+
+        // 构建所有候选目标（除了自己）
+        var candidates = new List<Godot.Node2D>();
+
+        // 1. 优先收集所有单位
+        if (gm.unitManager?.AllUnits != null)
+        {
+            foreach (var u in gm.unitManager.AllUnits)
+            {
+                if (u != null && IsInstanceValid(u) && TeamHelper.IsEnemyForAttacker(team, u.team) && u.health > 0)
+                    candidates.Add(u);
+            }
+        }
+
+        // 2. 收集兵器（CanAttackWeapon 时）
+        if (CanAttackWeapon && gm.weaponManager?.AllWeapons != null)
+        {
+            foreach (var w in gm.weaponManager.AllWeapons)
+            {
+                if (w != null && IsInstanceValid(w) && w != this && TeamHelper.IsEnemyForAttacker(team, w.team) && w.health > 0)
+                    candidates.Add(w);
+            }
+        }
+
+        if (candidates.Count == 0) return;
+
+        // 找到射程内最近的目标
+        Godot.Node2D bestTarget = null;
+        float bestDist = float.MaxValue;
+        foreach (var target in candidates)
+        {
+            int dist = GetDistanceToTarget(target);
+            if (dist >= 0 && dist <= maxAttackDepth && dist < bestDist)
+            {
+                bestDist = dist;
+                bestTarget = target;
+            }
+        }
+
+        if (bestTarget != null)
+        {
+            GD.Print($"[BlackCannon AI] {Name} 自动攻击 {bestTarget.Name}");
+            if (bestTarget is Infantry inf)
+                PerformAttack(inf);
+            else if (bestTarget is Weapon wp)
+                AttackWeapon(wp);
+        }
+    }
+
+    private int GetDistanceToTarget(Godot.Node2D target)
+    {
+        if (grid == null || target == null) return -1;
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager == null) return -1;
+
+        var targetPos = target.Position;
+        int tx = (int)((targetPos.X - gm.gridManager.startPos.X) / gm.gridManager.gridSize.X);
+        int ty = (int)((targetPos.Y - gm.gridManager.startPos.Y) / gm.gridManager.gridSize.Y);
+        return Mathf.Abs(grid.GridIndex.X - tx) + Mathf.Abs(grid.GridIndex.Y - ty);
+    }
+
+    private void AttackWeapon(Weapon target)
+    {
+        if (target == null) return;
+        int damage = Mathf.Max(1, Mathf.RoundToInt(target.maxHealth * fixedDamagePercent));
+        target.TakeDamage(damage);
+        hasActed = true;
+        remainingAttacks = 0;
+        GD.Print($"[BlackCannon AI] {Name} 对 {target.Name} 造成 {damage} 伤害");
     }
 }
 

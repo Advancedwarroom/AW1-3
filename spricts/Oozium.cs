@@ -40,6 +40,9 @@ public override void _Ready()
     if (counterMul == 0 || counterMul == 0.5f) counterMul = 0f;
     if (captureAbility == default) captureAbility = CaptureAbility.CannotCapture;
 
+    cost = 20000;  // Oozium造价
+    if (captureAbility == default) captureAbility = CaptureAbility.CannotCapture;
+
     UpdateHpLabel();
     StartBreathAnimation();
 }

@@ -15,6 +15,7 @@ public static class VisionConfig
         ["MdTank"] = 3, ["Artillery"] = 2, ["Rocket"] = 2,
         ["APC"] = 3, ["Oozium"] = 2, ["AntiAir"] = 5,
         ["Recon"] = 5, ["FlyBomb"] = 1, ["AntiTank"] = 2,
+        ["Flare"] = 2, ["Bike"] = 2,
     };
 
     // ========== 单位类型额外视野加成（全局）==========
@@ -47,7 +48,7 @@ public static class VisionConfig
         ["Infantry"] = new()
         {
             [GridType.FOREST] = -1, [GridType.HILL] = 1,
-            [GridType.CITY] = 0, [GridType.GROUND] = 0,
+            [GridType.GROUND] = 0,
             [GridType.SEAFOG] = -3, [GridType.LANDFOG] = -3,
             [GridType.CLIFF] = 1, [GridType.CAVE] = -2,
         },
@@ -55,7 +56,7 @@ public static class VisionConfig
         ["Mech"] = new()
         {
             [GridType.FOREST] = 0, [GridType.HILL] = 2,
-            [GridType.CITY] = 0, [GridType.GROUND] = 0,
+            [GridType.GROUND] = 0,
             [GridType.SEAFOG] = -2, [GridType.LANDFOG] = -2,
         },
         // 轻坦：开阔地好，森林差
@@ -98,7 +99,7 @@ public static class VisionConfig
         {
             [GridType.GROUND] = 0, [GridType.ROAD] = 0,
             [GridType.HILL] = 0, [GridType.FOREST] = 0,
-            [GridType.CITY] = 0, [GridType.SEAFOG] = 0,
+            [GridType.SEAFOG] = 0,
             [GridType.LANDFOG] = 0,
         },
         // 飞弹：高空飞行，不受地形影响
@@ -106,12 +107,22 @@ public static class VisionConfig
         {
             [GridType.GROUND] = 0, [GridType.ROAD] = 0,
             [GridType.HILL] = 0, [GridType.FOREST] = 0,
-            [GridType.CITY] = 0, [GridType.SEA] = 0,
+            [GridType.SEA] = 0,
             [GridType.SEAFOG] = 0, [GridType.LANDFOG] = 0,
             [GridType.LAVA] = 0, [GridType.LAVAFOG] = 0,
         },
         // 反坦克炮：普通地面视野
         ["AntiTank"] = new()
+        {
+
+        },
+        // 照明炮
+        ["Flare"] = new()
+        {
+
+        },
+        // 摩托兵
+        ["Bike"] = new()
         {
 
         },
@@ -123,12 +134,12 @@ public static class VisionConfig
         ["BlackCannon"] = new()
         {
             [GridType.GROUND] = 0, [GridType.HILL] = 1,
-            [GridType.CITY] = 0, [GridType.OVERPASS] = 2,
+            [GridType.OVERPASS] = 2,
         },
         ["Laser"] = new()
         {
             [GridType.GROUND] = 0, [GridType.HILL] = 1,
-            [GridType.CITY] = 0, [GridType.OVERPASS] = 1,
+            [GridType.OVERPASS] = 1,
         },
     };
 
@@ -136,7 +147,7 @@ public static class VisionConfig
     private static Dictionary<GridType, int> defaultTerrainVisionBonus = new()
     {
         [GridType.GROUND] = 0, [GridType.FOREST] = -1,
-        [GridType.CITY] = 1, [GridType.ROAD] = 0,
+        [GridType.ROAD] = 0,
         [GridType.SEA] = 0, [GridType.RIVER] = 0,
         [GridType.HILL] = 2, [GridType.METEORITE] = 0,
         [GridType.PIPE] = 0, [GridType.LAVA] = -1,
@@ -310,6 +321,7 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
             ["MdTank"] = 1, ["Artillery"] = 1, ["Rocket"] = 1,
             ["APC"] = 1, ["Oozium"] = 2, ["AntiAir"] = 2,
             ["Recon"] = 5,
+            ["Flare"] = 2, ["Bike"] = 2,
         };
 
         weaponVisionRange = new()
@@ -324,7 +336,7 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
 
         defaultTerrainVisionBonus = new()
         {
-            [GridType.GROUND] = 0, [GridType.FOREST] = -1, [GridType.CITY] = 1,
+            [GridType.GROUND] = 0, [GridType.FOREST] = -1,
             [GridType.HILL] = 2, [GridType.LAVA] = -1, [GridType.WHIRLPOOL] = -2,
             [GridType.SEAFOG] = -3, [GridType.LANDFOG] = -3, [GridType.CLIFF] = 1,
             [GridType.CAVE] = -2, [GridType.OVERPASS] = 1, [GridType.LAVAFOG] = -4,
@@ -336,38 +348,38 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
             ["Infantry"] = new()
             {
                 [GridType.FOREST] = 0, [GridType.HILL] = 1,
-                [GridType.CITY] = 0, [GridType.GROUND] = 0,
+                [GridType.GROUND] = 0,
                 [GridType.SEAFOG] = 0, [GridType.LANDFOG] = 0,
                 [GridType.CLIFF] = 0, [GridType.CAVE] = 0,
             },
             ["Mech"] = new()
             {
                 [GridType.FOREST] = 0, [GridType.HILL] = 1,
-                [GridType.CITY] = 0, [GridType.GROUND] = 0,
+                [GridType.GROUND] = 0,
                 [GridType.SEAFOG] = 0, [GridType.LANDFOG] = 0,
             },
             ["LightTank"] = new()
             {
                 [GridType.FOREST] = 0, [GridType.HILL] = 0,
-                [GridType.CITY] = 0, [GridType.GROUND] = 0,
+                [GridType.GROUND] = 0,
                 [GridType.ROAD] = 0, [GridType.SEAFOG] = 0,
             },
             ["MdTank"] = new()
             {
                 [GridType.FOREST] = 0, [GridType.HILL] = 0,
-                [GridType.CITY] = 0, [GridType.GROUND] = 0,
+                [GridType.GROUND] = 0,
                 [GridType.ROAD] = 0, [GridType.SEAFOG] = 0,
             },
             ["Artillery"] = new()
             {
                 [GridType.HILL] = 0, [GridType.FOREST] = 0,
-                [GridType.CITY] = 0, [GridType.GROUND] = 0,
+                [GridType.GROUND] = 0,
                 [GridType.CLIFF] = 0, [GridType.OVERPASS] = 0,
             },
             ["Rocket"] = new()
             {
                 [GridType.HILL] = 0, [GridType.FOREST] = 0,
-                [GridType.CITY] = 0, [GridType.GROUND] = 0,
+                [GridType.GROUND] = 0,
                 [GridType.CLIFF] = 0, [GridType.OVERPASS] = 0,
             },
             ["APC"] = new()
@@ -378,22 +390,30 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
             ["Oozium"] = new()
             {
                 [GridType.GROUND] = 0, [GridType.FOREST] = 0,
-                [GridType.HILL] = 0, [GridType.CITY] = 0,
+                [GridType.HILL] = 0,
                 [GridType.SEAFOG] = 0, [GridType.LANDFOG] = 0,
                 [GridType.LAVA] = 0, [GridType.LAVAFOG] = 0,
             },
             ["AntiAir"] = new()
             {
                 [GridType.GROUND] = 0, [GridType.HILL] = 0,
-                [GridType.CITY] = 0, [GridType.FOREST] = 0,
+                [GridType.FOREST] = 0,
                 [GridType.OVERPASS] = 0, [GridType.CLIFF] = 0,
             },
             ["Recon"] = new()
             {
                 [GridType.GROUND] = 0, [GridType.ROAD] = 0,
                 [GridType.HILL] = 0, [GridType.FOREST] = 0,
-                [GridType.CITY] = 0, [GridType.SEAFOG] = 0,
+                [GridType.SEAFOG] = 0,
                 [GridType.LANDFOG] = 0,
+            },
+            ["Flare"] = new()
+            {
+
+            },
+            ["Bike"] = new()
+            {
+
             },
         };
     }

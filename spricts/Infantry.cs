@@ -78,6 +78,8 @@ public partial class Infantry : Node2D
     [Export] public bool canCapture = true;                // 是否能占领城市
     [Export] public UnitCategory unitCategory = UnitCategory.Other;  // 手动指定分类
 
+    [Export] public int cost = 1000;  // 单位造价（可在Inspector中修改，非硬编码）
+
 // ========== 攻防表系统 ==========
 
 // ========== ✅ 战争迷雾视野系统 ==========
@@ -182,6 +184,15 @@ public void InitializeDefaultMatrix()
             ["AntiAir_AntiTank"] = 25,    ["LightTank_AntiTank"] = 30, ["MdTank_AntiTank"] = 35,
             ["Artillery_AntiTank"] = 55,  ["AntiTank_AntiTank"] = 75,  ["Rocket_AntiTank"] = 65,
             ["APC_AntiTank"] = 0,       ["FlyBomb_AntiTank"] = 0,
+            // ✅ Flare / Bike 主武器数据
+            ["Mech_Flare"] = 80,          ["Mech_Bike"] = 55,
+            ["LightTank_Flare"] = 80,     ["LightTank_Bike"] = 70,
+            ["MdTank_Flare"] = 90,        ["MdTank_Bike"] = 80,
+            ["Artillery_Flare"] = 75,     ["Artillery_Bike"] = 85,
+            ["Rocket_Flare"] = 85,        ["Rocket_Bike"] = 90,
+            ["Oozium_Flare"] = 999,       ["Oozium_Bike"] = 999,
+            ["AntiAir_Flare"] = 50,       ["AntiAir_Bike"] = 105,
+            ["AntiTank_Flare"] = 75,      ["AntiTank_Bike"] = 65,
         };
     }
 
@@ -259,6 +270,29 @@ public void InitializeDefaultMatrix()
             ["AntiAir_AntiTank"] = 0,   ["LightTank_AntiTank"] = 1, ["MdTank_AntiTank"] = 1,
             ["Artillery_AntiTank"] = 0, ["AntiTank_AntiTank"] = 0,  ["Rocket_AntiTank"] = 0,
             ["APC_AntiTank"] = 0,      ["FlyBomb_AntiTank"] = 0,
+            // ✅ Flare / Bike 副武器数据
+            // Flare 副武器（机枪）
+            ["Flare_Infantry"] = 80,      ["Flare_Mech"] = 70,          ["Flare_Bike"] = 70,
+            ["Flare_Recon"] = 60,         ["Flare_Flare"] = 50,         ["Flare_AntiAir"] = 45,
+            ["Flare_LightTank"] = 10,     ["Flare_MdTank"] = 5,         ["Flare_Artillery"] = 45,
+            ["Flare_AntiTank"] = 25,      ["Flare_Rocket"] = 55,        ["Flare_APC"] = 45,
+            ["Flare_Oozium"] = 20,        ["Flare_FlyBomb"] = 0,
+            // Bike 副武器（机枪）
+            ["Bike_Infantry"] = 65,       ["Bike_Mech"] = 55,           ["Bike_Bike"] = 55,
+            ["Bike_Recon"] = 35,          ["Bike_Flare"] = 15,          ["Bike_AntiAir"] = 35,
+            ["Bike_LightTank"] = 1,       ["Bike_MdTank"] = 1,          ["Bike_Artillery"] = 15,
+            ["Bike_AntiTank"] = 35,       ["Bike_Rocket"] = 20,         ["Bike_APC"] = 15,
+            ["Bike_Oozium"] = 35,         ["Bike_FlyBomb"] = 0,
+            // 其他单位副武器攻击 Flare
+            ["Infantry_Flare"] = 10,      ["Mech_Flare"] = 15,          ["Recon_Flare"] = 30,
+            ["AntiAir_Flare"] = 0,        ["LightTank_Flare"] = 35,     ["MdTank_Flare"] = 35,
+            ["Artillery_Flare"] = 0,      ["Rocket_Flare"] = 0,         ["APC_Flare"] = 0,
+            ["Oozium_Flare"] = 0,         ["AntiTank_Flare"] = 0,       ["FlyBomb_Flare"] = 0,
+            // 其他单位副武器攻击 Bike
+            ["Infantry_Bike"] = 45,       ["Mech_Bike"] = 55,           ["Recon_Bike"] = 30,
+            ["AntiAir_Bike"] = 55,        ["LightTank_Bike"] = 25,      ["MdTank_Bike"] = 45,
+            ["Artillery_Bike"] = 0,       ["Rocket_Bike"] = 0,          ["APC_Bike"] = 0,
+            ["Oozium_Bike"] = 0,          ["AntiTank_Bike"] = 0,        ["FlyBomb_Bike"] = 0,
         };
     }
 }
@@ -595,6 +629,9 @@ public virtual bool ConsumePrimaryAmmo()
     [Export]
     public int capturePower = 10;  // 占领力，默认10（两回合）
 
+    [Export]
+    public bool allowCaptureAfterMove = true;  // 移动后是否允许占领（AW标准=true）
+
     // ========== ✅ 通用自爆系统（任何单位勾选即可自爆）==========
     [ExportGroup("自爆系统")]
     [Export] public bool canExplode = false;                     // 是否可自爆
@@ -609,6 +646,19 @@ public virtual bool ConsumePrimaryAmmo()
     [Export] public bool explosionCanKill = false;               // 是否能击杀其他单位（否则最低留1HP）
     [Export] public bool explosionAffectsWeapons = false;        // 爆炸是否影响兵器
     [Export] public bool explosionCanExceedMaxHealth = false;    // 回血/加血时能否超过最大HP
+
+    // ========== ✅ 通用照明模块（任何单位勾选即可发射照明弹）==========
+    [ExportGroup("照明模块")]
+    [Export] public bool canIlluminate = false;                     // 是否可以发射照明弹
+    [Export] public int maxFlareAmmo = 0;                            // 最大照明弹数
+    [Export] public int currentFlareAmmo = 0;                        // 当前照明弹数
+    [Export] public int minLaunchRange = 0;                          // 投射最小射程（绿色预览）
+    [Export] public int maxLaunchRange = 5;                          // 投射最大射程（绿色预览）
+    [Export] public int minIlluminationRange = 0;                    // 照明覆盖最小射程（黄色预览）
+    [Export] public int maxIlluminationRange = 2;                    // 照明覆盖最大射程（黄色预览）
+    [Export] public int flareDurationTurns = 1;                      // 照明效果持续大回合数
+    [Export] public bool canIlluminateAfterMove = false;             // 移动后是否可以照明
+
 
     // 当前占领进度（运行时）
     public int currentCaptureProgress = 0;
@@ -839,6 +889,19 @@ public virtual void UpdateTeamVisual()
 {
     UpdateActiveSprite();
     
+    // 设置势力色调（P0灰白、P-1浅紫，P1/P2保持原色）
+    if (team == TeamHelper.Player0 || team == TeamHelper.Player)
+    {
+        normal = TeamHelper.GetTeamColor(team);
+        dim = normal * 0.7f;
+        dim.A = 1.0f;
+    }
+    else
+    {
+        normal = Colors.White;
+        dim = new Color(0.7f, 0.7f, 0.7f, 1.0f);
+    }
+    
     // 确保呼吸动画作用到正确的 sprite
     if (breathTween != null && breathTween.IsValid())
     {
@@ -849,6 +912,7 @@ public virtual void UpdateTeamVisual()
     if (sprite != null && IsInstanceValid(sprite) && !isMoved && state != UnitState.Acted)
     {
         sprite.Scale = Vector2.One;
+        SetWaitVisual(false);
         StartBreath();
     }
 }
@@ -878,7 +942,7 @@ public override void _Process(double delta)
         if (currentCaptureProgress > 0 && capturingGrid != null)
         {
             // 通知格子占领中断
-            capturingGrid.OnCaptureInterrupted(this);
+            capturingGrid.city?.OnCaptureInterrupted(this);
             ShowCaptureInterruptedEffect();
             // 清理自己的占领状态
             currentCaptureProgress = 0;
@@ -920,7 +984,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.RIVER => 2,
             GridType.HILL => 2,
@@ -961,7 +1025,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.RIVER => 1,
             GridType.HILL => 1,
@@ -1002,7 +1066,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.SEA => 1,
             GridType.RIVER => 1,
@@ -1042,7 +1106,7 @@ public virtual int GetMoveCost(GridType gridType)
         MoveType.Treads => gridType switch
         {
             GridType.GROUND => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.FOREST => 2,
             GridType.BEACH => 1,
@@ -1082,7 +1146,7 @@ public virtual int GetMoveCost(GridType gridType)
         // ========== Tire（轮胎）==========
         MoveType.Tire => gridType switch
         {
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.GROUND => 2,
             GridType.FOREST => 3,
@@ -1133,7 +1197,7 @@ public virtual int GetMoveCost(GridType gridType)
             GridType.PIPESEAM => 999, 
             GridType.GROUND => 999,
             GridType.FOREST => 999,
-            GridType.CITY => 999,
+
             GridType.ROAD => 999,
             GridType.RIVER => 999,
             GridType.HILL => 999,
@@ -1166,7 +1230,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.SEA => 1,
             GridType.RIVER => 1,
@@ -1207,7 +1271,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.SEA => 1,
             GridType.RIVER => 1,
@@ -1248,7 +1312,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.RIVER => 1,
             GridType.HILL => 1,
@@ -1289,7 +1353,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.SEA => 1,
             GridType.RIVER => 1,
@@ -1329,7 +1393,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.SEA => 1,
             GridType.RIVER => 1,
@@ -1370,7 +1434,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.SEA => 1,
             GridType.RIVER => 1,
@@ -1426,7 +1490,7 @@ public virtual int GetMoveCost(GridType gridType)
             GridType.PIPESEAM => 999,  // 气垫不能通过管道接缝
             GridType.GROUND => 999,
             GridType.FOREST => 999,
-            GridType.CITY => 999,
+
             GridType.ROAD => 999,
             GridType.HILL => 999,
             GridType.METEORITE => 999,
@@ -1455,7 +1519,7 @@ public virtual int GetMoveCost(GridType gridType)
             GridType.TP => 0,
             GridType.GROUND => 999,
             GridType.FOREST => 999,
-            GridType.CITY => 999,
+
             GridType.ROAD => 999,
             GridType.SEA => 999,
             GridType.RIVER => 999,
@@ -1561,7 +1625,7 @@ public virtual int GetMoveCost(GridType gridType)
         {
             GridType.GROUND => 1,
             GridType.FOREST => 1,
-            GridType.CITY => 1,
+
             GridType.ROAD => 1,
             GridType.SEA => 1,
             GridType.RIVER => 1,
@@ -1678,11 +1742,11 @@ public virtual void SetWaitVisual(bool waiting)
     if (grid == null)
         return false;
     
-    if (grid.gridType != GridType.CITY)
+    if (grid.city == null)
         return false;
     
     // ✅ 关键：如果城市已被己方占领，不能再次占领
-    if (grid.cityTeam == team)
+    if (grid.city.facilityTeam == team)
         return false;
     
     // ✅ 如果正在占领中，但占领的是当前格子，允许继续
@@ -1690,9 +1754,9 @@ public virtual void SetWaitVisual(bool waiting)
         return true;
     
     // ✅ 如果其他己方单位正在占领，检查是否可以协助
-    if (grid.capturingUnits.Count > 0)
+    if (grid.city.capturingUnits.Count > 0)
     {
-        var allyCapturing = grid.capturingUnits
+        var allyCapturing = grid.city.capturingUnits
             .FirstOrDefault(u => u.team == this.team && u != this);
         if (allyCapturing != null)
         {
@@ -1724,12 +1788,12 @@ public virtual void SetWaitVisual(bool waiting)
         {
             if (capturingGrid != null)
             {
-                capturingGrid.OnCaptureInterrupted(this);
+                capturingGrid.city?.OnCaptureInterrupted(this);
             }
             
             currentCaptureProgress = 0;
             capturingGrid = grid;
-            grid.OnCaptureStarted(this);
+            grid.city?.OnCaptureStarted(this);
         }
         
         var contestUnits = grid.infantries
@@ -1743,7 +1807,7 @@ public virtual void SetWaitVisual(bool waiting)
             
         if (contestUnits.Count > 0)
         {
-            grid.ShowCaptureContestVisual();
+            grid.city?.ShowCaptureContestVisual();
             currentCaptureProgress = 0;
             foreach (var enemy in contestUnits)
             {
@@ -1758,7 +1822,7 @@ public virtual void SetWaitVisual(bool waiting)
         
         ShowCaptureEffect();
         
-        if (currentCaptureProgress >= grid.capturePointsRequired)
+        if (currentCaptureProgress >= (grid.city?.capturePointsRequired ?? 20))
         {
             CompleteCapture();
         }
@@ -1778,10 +1842,11 @@ public virtual void SetWaitVisual(bool waiting)
 {
     if (grid == null) return;
     
-    string oldOwner = grid.cityTeam;
+    string oldOwner = grid.city?.facilityTeam ?? "";
     
     // ✅ 关键修复：实际改变城市归属！
-    grid.cityTeam = team;
+    if (grid.city != null)
+        grid.city.facilityTeam = team;
     GD.Print($"[CompleteCapture] {Name} 占领成功！{oldOwner} -> {team}");
     
     // 显示占领完成特效
@@ -1800,10 +1865,10 @@ public virtual void SetWaitVisual(bool waiting)
     // 视觉变暗
     SetWaitVisual(true);
     
-    // 通知GameManager刷新城市视觉
-    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-    gm?.gridManager?.UpdateCityVisual(grid);
+    // 通知刷新城市视觉
+    grid.city?.UpdateCityVisual();
     
+    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     gm?.CheckVictoryCondition();
 }
         protected virtual void ShowCaptureInterruptedEffect()
@@ -1837,7 +1902,7 @@ protected virtual void ShowCaptureEffect()
     }
     
     // ✅ 计算进度百分比（0-100）
-    float progressPercent = Mathf.Min(100f, (currentCaptureProgress / (float)grid.capturePointsRequired) * 100f);
+    float progressPercent = Mathf.Min(100f, (currentCaptureProgress / (float)(grid.city?.capturePointsRequired ?? 20)) * 100f);
     
     currentCaptureEffect = new CaptureEffect
     {
@@ -1875,6 +1940,8 @@ protected virtual void ShowCaptureCompleteEffect()
         {
             "Player1" => new Color(1f, 0.2f, 0.2f),  // 红色
             "Player2" => new Color(0.2f, 0.4f, 1f),  // 蓝色
+            "Player0" => new Color(0.7f, 0.7f, 0.7f),  // P0 灰白色
+            "Player" => new Color(0.7f, 0.4f, 0.9f),   // P-1 浅紫色
             _ => Colors.White
         };
     }
@@ -2238,7 +2305,7 @@ public virtual void Attack(Infantry target)
         && target.attackType != AttackType.NoAttack
         && target.IsTargetInCounterRange(this);
     
-    if (canTargetCounter)
+    if (canTargetCounter && TeamHelper.CanCounterAttack(target.team))
     {
         WeaponType counterWeapon = target.SelectWeaponByMatrix(this);
         counterDamage = target.CalculateFinalDamage(this, counterWeapon, isCounter: true);
@@ -2676,6 +2743,37 @@ public virtual void PerformSupply()
             unit.currentPrimaryAmmo = unit.maxPrimaryAmmo;
             supplied = true;
             supplyText = "Ammo+";
+        }
+
+        // ✅ 补给照明弹（通用：任何开启照明模块的单位）
+        if (unit.canIlluminate && unit.currentFlareAmmo < unit.maxFlareAmmo)
+        {
+            unit.currentFlareAmmo = unit.maxFlareAmmo;
+            if (!supplied)
+            {
+                supplyText = "Flare+";
+                supplyColor = new Color(0.9f, 0.9f, 0.2f);
+            }
+            else
+            {
+                supplyText += " Flare+";
+            }
+            supplied = true;
+        }
+        if (unit is Flare flareUnit && flareUnit.canIlluminate && 
+            flareUnit.currentFlareAmmo < flareUnit.maxFlareAmmo)
+        {
+            flareUnit.currentFlareAmmo = flareUnit.maxFlareAmmo;
+            if (!supplied)
+            {
+                supplyText = "Flare+";
+                supplyColor = new Color(0.9f, 0.9f, 0.2f);
+            }
+            else
+            {
+                supplyText += " Flare+";
+            }
+            supplied = true;
         }
 
         // 补给燃料

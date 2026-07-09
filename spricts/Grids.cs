@@ -6,7 +6,7 @@ using System.Linq;
 
 public enum GridType
 {
-	GROUND, FOREST, CITY, ROAD, SEA, RIVER, HILL, METEORITE, PIPE, LAVA, BEACH, TP,
+	GROUND, FOREST, ROAD, SEA, RIVER, HILL, METEORITE, PIPE, LAVA, BEACH, TP,
 	REEF, WHIRLPOOL, LAVASIDE, SEAFOG, LANDFOG, WATERFALL, CLIFF, SLOPE, CAVE, HOLE,
 	PIPESEAM, TRACK, STATION, BRIDGE, LAVABRIDGE, PASSABLEPIPE, SHIPGATE, OVERPASS,
 	BROKENPIPE, RUINS, BROKENTRACK, LAVAFOG,
@@ -26,11 +26,7 @@ public partial class Grids : Node2D
     public Action<Grids> OnClickGrid;
     public Action OnClickEmpty;
 
-    [Export] public bool isSupplyPoint = false;
-    [Export] public int healAmount = 20;
-    [Export] public string cityTeam = "";
-    [Export] public int capturePointsRequired = 20;
-    private CaptureContestEffect contestEffect;
+    public Facility city;
     public bool IsInAttackRangeMode = false;
     public List<Weapon> weapons = new();
     public Weapon weapon;
@@ -57,6 +53,13 @@ public partial class Grids : Node2D
 
     [ExportGroup("格子视野系统")]
     [Export] public GridVisionMode gridVisionMode = GridVisionMode.None;
+
+    [ExportGroup("地形绑定图标")]
+    [Export] public Godot.Collections.Dictionary<GridType, Texture2D> terrainIconTextures = new();
+    [Export] public int terrainIconZIndex = 1;
+    private Godot.Collections.Dictionary<GridType, Sprite2D> terrainIconSprites = new();
+    private GridType _lastGridType;
+
     [Export] public int gridVisionRange = 1;
     [Export] public TowerDirection towerDirection = TowerDirection.Up;
     [Export] public bool towerCanRotate = false;
@@ -65,7 +68,6 @@ public partial class Grids : Node2D
 
     public Action OnMouseEnteredAttackGrid;
     public Action OnMouseExitedAttackGrid;
-    public List<Infantry> capturingUnits = new();
 
     public bool HasEnemyWeapon(string myTeam)
     {
@@ -78,6 +80,8 @@ public partial class Grids : Node2D
         attackRangeIcon = GetNode<Sprite2D>("AttackRange");
         pathIcon?.Hide();
         attackRangeIcon?.Hide();
+
+        city = GetNodeOrNull<Facility>("City");
 
         var area2D = GetNodeOrNull<Area2D>("Area2D");
         if (area2D != null)
@@ -101,6 +105,11 @@ public partial class Grids : Node2D
                 _ => 0
             };
         }
+
+        // ✅ 初始化地形绑定图标
+        InitializeTerrainIcons();
+        _lastGridType = gridType;
+        UpdateTerrainIcon();
     }
 
     public void OnArea2DMouseEntered() { if (IsInAttackRangeMode) OnMouseEnteredAttackGrid?.Invoke(); }
@@ -111,17 +120,14 @@ public partial class Grids : Node2D
         var visible = new HashSet<Grids>();
         if (gm == null || gm.gridManager?.map == null) return visible;
 
-        if (!string.IsNullOrEmpty(cityTeam) && cityTeam != "Player0")
-            visible.Add(this);
+        if (city != null)
+            visible.UnionWith(city.CalculateFacilityVision(gm));
 
         switch (gridVisionMode)
         {
             case GridVisionMode.TowerCone: visible.UnionWith(CalculateTowerConeVision(gm)); break;
             case GridVisionMode.TowerRay: visible.UnionWith(CalculateTowerRayVision(gm)); break;
         }
-
-        if (visionBonus > 0 && !string.IsNullOrEmpty(cityTeam) && cityTeam != "Player0")
-            visible.UnionWith(CalculateManhattanVision(gm, GridIndex, visionBonus));
 
         return visible;
     }
@@ -411,122 +417,13 @@ public partial class Grids : Node2D
         tween.TweenCallback(Callable.From(() => label.QueueFree()));
     }
 
-    public void ShowCaptureContestVisual()
-    {
-        if (contestEffect != null && IsInstanceValid(contestEffect)) contestEffect.QueueFree();
-        contestEffect = new CaptureContestEffect { Position = new Godot.Vector2(0, -20), ZIndex = 200 };
-        AddChild(contestEffect);
-    }
-
-    public void OnCaptureInterrupted(Infantry unit)
-    {
-        capturingUnits.RemoveAll(u => u == null || !IsInstanceValid(u));
-        capturingUnits.Remove(unit);
-        if (capturingUnits.Count > 0)
-        {
-            if (capturingUnits.Select(u => u.team).Distinct().Count() > 1)
-            {
-                GD.Print($"[Grids] 争夺状态！不同阵营在同时占领 {GridIndex}");
-                foreach (var u in capturingUnits) u.currentCaptureProgress = 0;
-                ShowCaptureContestVisual();
-            }
-        }
-        else ClearCaptureVisual();
-        UpdateCaptureVisual();
-    }
-
-    public void OnCaptureCompleted(Infantry unit)
-    {
-        foreach (var u in capturingUnits.ToList()) { if (u != unit) { u.currentCaptureProgress = 0; u.capturingGrid = null; } }
-        capturingUnits.Clear();
-        cityTeam = unit.team;
-        ClearCaptureVisual();
-        ShowCaptureCompletedVisual(unit.team);
-    }
-
-    private void UpdateCaptureVisual() { }
-    public void ClearContestVisual()
-    {
-        if (contestEffect != null && IsInstanceValid(contestEffect)) { contestEffect.QueueFree(); contestEffect = null; }
-    }
-    private void ClearCaptureVisual()
-    {
-        if (contestEffect != null && IsInstanceValid(contestEffect)) { contestEffect.QueueFree(); contestEffect = null; }
-    }
-    public void OnCaptureStarted(Infantry unit)
-    {
-        capturingUnits.RemoveAll(u => u == null || !IsInstanceValid(u));
-        if (HasContest()) ShowCaptureContestVisual();
-    }
-
-    public bool HasContest()
-    {
-        if (gridType != GridType.CITY) return false;
-        var capturing = infantries.Where(u => u.currentCaptureProgress > 0 && u.capturingGrid == this).ToList();
-        capturing.RemoveAll(u => u == null || !IsInstanceValid(u));
-        if (capturing.Count < 2) return false;
-        return capturing.Select(u => u.team).Distinct().Count() > 1;
-    }
-
-    public void ShowCaptureCompletedVisual(string newTeam)
-    {
-        ClearCaptureVisual();
-        var effect = new CaptureEffect
-        {
-            CaptureProgress = 100f,
-            TeamColor = newTeam == "Player1" ? new Color(1f, 0.2f, 0.2f) : new Color(0.2f, 0.4f, 1f),
-            IsCapturing = false, Position = new Godot.Vector2(0, -10), ZIndex = 200
-        };
-        AddChild(effect);
-    }
-
-    public void PerformSupply()
-    {
-        if (!isSupplyPoint) return;
-        infantries?.RemoveAll(i => !IsInstanceValid(i));
-        bool anySupplied = false;
-        foreach (var unit in infantries)
-        {
-            if (unit == null || !IsInstanceValid(unit)) continue;
-            bool canSupply = false;
-            if (string.IsNullOrEmpty(cityTeam)) continue;
-            else if (cityTeam == "Player0") canSupply = (unit.team == "Player1" || unit.team == "Player2");
-            else canSupply = (unit.team == cityTeam);
-            if (!canSupply) continue;
-
-            bool supplied = false; string supplyText = ""; Color supplyColor = Colors.Green;
-            int oldHealth = unit.health;
-            int healAmt = Mathf.Max(1, Mathf.RoundToInt(unit.maxHealth * 0.2f));
-            unit.health = Mathf.Min(unit.maxHealth, unit.health + healAmt);
-            int actualHeal = unit.health - oldHealth;
-            if (actualHeal > 0) { supplied = true; supplyText = $"+{actualHeal}HP"; supplyColor = new Color(0.2f, 0.9f, 0.3f); }
-
-            if (unit.consumeFuel && unit.fuel < unit.maxFuel)
-            { unit.fuel = unit.maxFuel; if (!supplied) { supplyText = "Fuel+"; supplyColor = new Color(0.9f, 0.7f, 0.2f); } else supplyText += " Fuel+"; supplied = true; }
-            if (unit.hasPrimaryWeapon && !unit.CanUsePrimaryWeapon())
-            { unit.ReloadAmmo(); if (!supplied) { supplyText = "Ammo+"; supplyColor = new Color(0.9f, 0.3f, 0.2f); } else supplyText += " Ammo+"; supplied = true; }
-            if (unit.maxPrimaryAmmo > 0 && unit.currentPrimaryAmmo < unit.maxPrimaryAmmo)
-            { unit.ReloadAmmo(); if (!supplied) { supplyText = "Ammo+"; supplyColor = new Color(0.9f, 0.3f, 0.2f); } else supplyText += " Ammo+"; supplied = true; }
-
-            if (supplied) { anySupplied = true; unit.UpdateHpLabel(); ShowSupplyEffectNew(unit, supplyText, supplyColor); }
-        }
-        if (anySupplied) ShowGridSupplyEffectNew();
-    }
-
-    private void ShowSupplyEffectNew(Infantry unit, string text, Color color)
-    {
-        var effect = new SupplyEffect(); AddChild(effect);
-        effect.Setup(unit.Position - Position, text, color);
-    }
-    private void ShowGridSupplyEffectNew() { var effect = new GridSupplyEffect(); AddChild(effect); }
-
     public float TerrainDefenseBonus
     {
         get
         {
             return gridType switch
             {
-                GridType.GROUND => 0.10f, GridType.FOREST => 0.20f, GridType.CITY => 0.30f,
+                GridType.GROUND => 0.10f, GridType.FOREST => 0.20f,
                 GridType.HILL => 0.40f, GridType.ROAD => 0.0f, GridType.SEA => 0.0f,
                 GridType.RIVER => 0.0f, GridType.BEACH => 0.10f, GridType.TP => 0.0f,
                 GridType.REEF => 0.10f, GridType.WHIRLPOOL => 0.10f, GridType.LAVASIDE => 0.10f,
@@ -543,13 +440,11 @@ public partial class Grids : Node2D
 
     public string GetTerrainDefenseDescription() { float bonus = TerrainDefenseBonus * 100; return bonus > 0 ? $"{bonus:F0}%" : "无"; }
 
-    public bool CanBeCapturedBy(Infantry unit) { if (gridType != GridType.CITY || unit == null || cityTeam == unit.team) return false; return true; }
-
-    public List<Infantry> GetEnemyInfantries(string team) { return infantries.Where(i => i != null && i.team != team).ToList(); }
+    public List<Infantry> GetEnemyInfantries(string team) { return infantries.Where(i => i != null && TeamHelper.IsEnemyForAttacker(team, i.team)).ToList(); }
 
     private double lastClickTime = 0;
     private const double DOUBLE_CLICK_WINDOW = 0.3;
-    public bool HasEnemyInfantry(string team) { return infantries.Any(i => i != null && IsInstanceValid(i) && i.team != team); }
+    public bool HasEnemyInfantry(string team) { return infantries.Any(i => i != null && IsInstanceValid(i) && TeamHelper.IsEnemyForAttacker(team, i.team)); }
     public static bool IsForceActionMode = false;
 
     public void ClickGrid(Node viewport, InputEvent inputs, int shape_index)
@@ -581,8 +476,7 @@ public partial class Grids : Node2D
                 {
                     if (gm != null)
                     {
-                        string currentTeam = gm.turnPhase == 1 ? "Player1" : "Player2";
-                        var selectableUnits = infantries.Where(i => i.team == currentTeam && !i.isMoved).OrderByDescending(i => i.health).ToList();
+                        var selectableUnits = infantries.Where(i => TeamHelper.CanOperateTeam(gm.turnPhase, i.team) && !i.isMoved).OrderByDescending(i => i.health).ToList();
                         if (selectableUnits.Count > 0)
                         {
                             var selectedUnit = selectableUnits[0];
@@ -598,10 +492,10 @@ public partial class Grids : Node2D
                 }
 
                 // ✅ 检查是否为可旋转的己方瞭望塔
-                if (gridVisionMode != GridVisionMode.None && towerCanRotate && !string.IsNullOrEmpty(cityTeam))
+                if (gridVisionMode != GridVisionMode.None && towerCanRotate && city != null && !string.IsNullOrEmpty(city.facilityTeam))
                 {
                     string currentTeam = gm?.turnPhase == 1 ? "Player1" : "Player2";
-                    if (cityTeam == currentTeam && gm?.selectedInfantry == null)
+                    if (city.facilityTeam == currentTeam && gm?.selectedInfantry == null)
                     {
                         var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
                         actionMenu?.ShowGridRotateMenu(this);
@@ -623,7 +517,7 @@ public partial class Grids : Node2D
         var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
         if (actionMenu == null) return;
         string info = $"地形: {gridType}\n防御加成: {GetTerrainDefenseDescription()}\n坐标: ({GridIndex.X}, {GridIndex.Y})\n";
-        if (gridType == GridType.CITY) { info += $"归属: {cityTeam}\n占领所需: {capturePointsRequired}点\n"; }
+        if (city != null) { info += $"归属: {city.facilityTeam}\n占领所需: {city.capturePointsRequired}点\n"; }
         if (gridVisionMode != GridVisionMode.None)
         {
             info += $"\n=== 格子视野 ===\n模式: {gridVisionMode}\n射程: {gridVisionRange}\n";
@@ -645,6 +539,57 @@ public partial class Grids : Node2D
     }
 
     public List<Infantry> GetOtherInfantries(Infantry exclude) { return infantries.Where(i => i != exclude && IsInstanceValid(i)).ToList(); }
-    public List<Infantry> GetEnemyInfantries(Infantry reference) { return infantries.Where(i => i != reference && IsInstanceValid(i) && i.team != reference.team).ToList(); }
-    public bool HasEnemyInfantry(Infantry reference) { return infantries.Any(i => i != reference && IsInstanceValid(i) && i.team != reference.team); }
+    public List<Infantry> GetEnemyInfantries(Infantry reference) { return infantries.Where(i => i != reference && IsInstanceValid(i) && TeamHelper.IsEnemyForAttacker(reference.team, i.team)).ToList(); }
+    public bool HasEnemyInfantry(Infantry reference) { return infantries.Any(i => i != reference && IsInstanceValid(i) && TeamHelper.IsEnemyForAttacker(reference.team, i.team)); }
+
+    // ========== 地形绑定图标系统 ==========
+    private void InitializeTerrainIcons()
+    {
+        if (terrainIconTextures == null || terrainIconTextures.Count == 0) return;
+
+        foreach (var kvp in terrainIconTextures)
+        {
+            if (kvp.Value == null) continue;
+
+            // 若已存在则复用（热重载或重复调用）
+            string spriteName = $"TerrainIcon_{kvp.Key}";
+            var existing = GetNodeOrNull<Sprite2D>(spriteName);
+            if (existing != null)
+            {
+                existing.Texture = kvp.Value;
+                existing.Visible = false;
+                terrainIconSprites[kvp.Key] = existing;
+                continue;
+            }
+
+            var sprite = new Sprite2D
+            {
+                Name = spriteName,
+                Texture = kvp.Value,
+                Visible = false,
+                Centered = false,
+                ZIndex = terrainIconZIndex
+            };
+            AddChild(sprite);
+            terrainIconSprites[kvp.Key] = sprite;
+        }
+    }
+
+    private void UpdateTerrainIcon()
+    {
+        foreach (var kvp in terrainIconSprites)
+        {
+            if (IsInstanceValid(kvp.Value))
+                kvp.Value.Visible = (kvp.Key == gridType);
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        if (gridType != _lastGridType)
+        {
+            _lastGridType = gridType;
+            UpdateTerrainIcon();
+        }
+    }
 }

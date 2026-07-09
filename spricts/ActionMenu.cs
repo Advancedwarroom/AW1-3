@@ -16,6 +16,7 @@ public partial class ActionMenu : Control
     [Export] public Label unitInfoLabel; 
     [Export] public Button rotateButton; 
     [Export] public Button explodeButton; // ✅ 自爆按钮
+    [Export] public Button illuminateButton; // ✅ 照明按钮
 
     // APC专用按钮
     [Export] public Button loadButton;
@@ -29,6 +30,10 @@ public partial class ActionMenu : Control
     private Infantry currentTransport;
     private bool isExplosionPreview = false; // ✅ 爆炸范围预览状态
     private bool isProcessingExplosion = false; // ✅ 防重入：防止OnExplodePressed被连续触发
+    private bool isFlarePreview = false; // ✅ 照明弹射程预览状态
+    private bool isIlluminationPreview = false; // ✅ 照明覆盖范围预览状态
+    private bool isProcessingIllumination = false; // ✅ 防重入
+    private Grids pendingIlluminationTarget = null; // ✅ 待确认的照明目标格子
 
     [Export] public PackedScene unloadUnitButtonPreset;
 public override void _Ready()
@@ -45,6 +50,15 @@ public override void _Ready()
     }
     // ⚠️ 注意：explodeButton 的 Pressed 信号已在编辑器中连接 OnExplodePressed
     // 不要在这里再用代码连接，否则会触发两次！
+    // ✅ 照明按钮信号连接（带安全检查）
+    if (illuminateButton != null)
+    {
+        var illumCallable = new Callable(this, nameof(OnIlluminatePressed));
+        if (!illuminateButton.IsConnected(BaseButton.SignalName.Pressed, illumCallable))
+        {
+            illuminateButton.Connect(BaseButton.SignalName.Pressed, illumCallable);
+        }
+    }
 }
 
 
@@ -665,7 +679,12 @@ private List<Grids> GetAdjacentGrids(Grids center)
 
         // ✅ 切换单位时重置爆炸预览状态，防止状态残留
         if (currentUnit != unit)
+        {
             isExplosionPreview = false;
+            isFlarePreview = false;
+            isIlluminationPreview = false;
+            pendingIlluminationTarget = null;
+        }
 
         currentUnit = unit;
         bool canAttackAfterMove = unit.CanAttackAfterMove();
@@ -746,8 +765,10 @@ private List<Grids> GetAdjacentGrids(Grids center)
         bool canCapture = unit.CanCaptureCurrentGrid();
         bool isCapturing = unit.currentCaptureProgress > 0 && unit.capturingGrid == unit.grid;
 
+        bool allowCaptureAfterMove = unit?.allowCaptureAfterMove ?? true;
+
         moveButton.Visible = !afterMove && !unit.isMoved && unit.CanMove();
-        captureButton.Visible = (canCapture || isCapturing) && !unit.isMoved && !unit.isAttacked;
+        captureButton.Visible = (canCapture || isCapturing) && !unit.isAttacked && (!unit.isMoved || allowCaptureAfterMove);
         rotateButton?.Hide();
 
         waitButton.Visible = true;
@@ -759,6 +780,21 @@ private List<Grids> GetAdjacentGrids(Grids center)
             // ✅ 爆炸按钮：只要单位可自爆且未行动就显示（移动前后均可）
             explodeButton.Visible = unit.canExplode && !unit.hasActed && unit.state != UnitState.Acted;
             explodeButton.Text = isExplosionPreview ? "确认爆炸" : "爆炸";
+        }
+
+        if (illuminateButton != null)
+        {
+            // ✅ 照明按钮：任何开启照明模块的单位，且还有照明弹时显示
+            bool canIlluminateNow = unit.canIlluminate && unit.currentFlareAmmo > 0
+                                && !unit.hasActed && unit.state != UnitState.Acted
+                                && (!unit.isMoved || unit.canIlluminateAfterMove);
+            illuminateButton.Visible = canIlluminateNow;
+            if (isIlluminationPreview)
+                illuminateButton.Text = "确认照明";
+            else if (isFlarePreview)
+                illuminateButton.Text = "取消照明";
+            else
+                illuminateButton.Text = "照明";
         }
 
         if (isCapturing)
@@ -1009,7 +1045,8 @@ private bool HasSupplyableUnits(Infantry transport)
         bool needsAmmo = unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo 
                         && unit.currentPrimaryAmmo < unit.maxPrimaryAmmo;
         bool needsFuel = unit.consumeFuel && unit.fuel < unit.maxFuel;
-        if (needsAmmo || needsFuel) return true;
+        bool needsFlare = unit.canIlluminate && unit.currentFlareAmmo < unit.maxFlareAmmo;
+        if (needsAmmo || needsFuel || needsFlare) return true;
     }
 
     var cannonsNeedingAmmo = transport.GetBlackCannonsNeedingAmmo();
@@ -1356,6 +1393,43 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             infoText += $"回血可超上限: {(currentUnit.explosionCanExceedMaxHealth ? "✓" : "✗")}\n";
         }
 
+        // ✅ 照明模块信息
+        if (currentUnit.canIlluminate)
+        {
+            infoText += $"\n=== 照明模块 ===\n";
+            infoText += $"照明弹: {currentUnit.currentFlareAmmo}/{currentUnit.maxFlareAmmo}\n";
+            infoText += $"投射射程: {currentUnit.minLaunchRange}-{currentUnit.maxLaunchRange}格\n";
+            infoText += $"照明覆盖: {currentUnit.minIlluminationRange}-{currentUnit.maxIlluminationRange}格\n";
+            infoText += $"持续回合: {currentUnit.flareDurationTurns}大回合\n";
+            infoText += $"移动后可照明: {(currentUnit.canIlluminateAfterMove ? "✓" : "✗")}\n";
+        }
+
+        if (currentUnit.grid != null)
+        {
+            infoText += $"\n=== 自爆系统 ===\n";
+            infoText += $"爆炸范围: {currentUnit.explosionMinRange}-{currentUnit.explosionMaxRange}格\n";
+            string damageModeStr = currentUnit.explosionDamageMode switch
+            {
+                0 => $"固定值 {currentUnit.explosionFixedValue}",
+                1 => $"{currentUnit.explosionPercentValue * 100}%最大HP",
+                2 => "攻击公式",
+                _ => "未知"
+            };
+            infoText += $"伤害模式: {damageModeStr}\n";
+            string targetModeStr = currentUnit.explosionTargetMode switch
+            {
+                0 => "所有单位",
+                1 => "仅敌方",
+                2 => "仅友方",
+                _ => "未知"
+            };
+            infoText += $"目标筛选: {targetModeStr}\n";
+            infoText += $"摧毁自身: {(currentUnit.explosionDestroysSelf ? "✓" : "✗")}\n";
+            infoText += $"可击杀: {(currentUnit.explosionCanKill ? "✓" : "✗ (保留1HP)")}\n";
+            infoText += $"影响兵器: {(currentUnit.explosionAffectsWeapons ? "✓" : "✗")}\n";
+            infoText += $"回血可超上限: {(currentUnit.explosionCanExceedMaxHealth ? "✓" : "✗")}\n";
+        }
+
         if (currentUnit.grid != null)
         {
             infoText += $"\n=== 地形信息 ===\n";
@@ -1407,9 +1481,9 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             infoText += $"  可归零: {(currentUnit.grid.fuelCanReachZero ? "✓" : "✗ (强制剩1)")}\n";
         }
 
-        if (currentUnit.grid?.gridType == GridType.CITY)
+        if (currentUnit.grid?.city != null)
         {
-            string ownerText = currentUnit.grid.cityTeam switch
+            string ownerText = currentUnit.grid.city.facilityTeam switch
             {
                 "Player0" => "中立（双方共用）",
                 "Player1" => "🔴 Player1 占领",
@@ -1421,13 +1495,13 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
 
         string captureAbility = currentUnit.captureAbility == CaptureAbility.CanCapture ? "可以占领" : "不能占领";
         infoText += $"占领能力: {captureAbility}\n";
-        if (currentUnit.captureAbility == CaptureAbility.CanCapture)
+        if (currentUnit.captureAbility == CaptureAbility.CanCapture && currentUnit.grid?.city != null)
         {
             infoText += $"占领力: {currentUnit.GetCapturePower()}\n";
-            infoText += $"占领消耗: {currentUnit.grid?.capturePointsRequired ?? 20}\n";
+            infoText += $"占领消耗: {currentUnit.grid.city?.capturePointsRequired ?? 20}\n";
             if (currentUnit.currentCaptureProgress > 0)
             {
-                infoText += $"当前占领进度: {currentUnit.currentCaptureProgress}/{currentUnit.grid?.capturePointsRequired ?? 20}\n";
+                infoText += $"当前占领进度: {currentUnit.currentCaptureProgress}/{currentUnit.grid.city?.capturePointsRequired ?? 20}\n";
                 if (currentUnit.capturingGrid != null)
                 {
                     infoText += $"占领目标: ({currentUnit.capturingGrid.GridIndex.X},{currentUnit.capturingGrid.GridIndex.Y})\n";
@@ -1837,10 +1911,153 @@ else if (weapon is Laser laser)
         }
     }
 
-    // ✅ 重写 Hide 确保隐藏时取消爆炸预览
+    // ========== ✅ 照明按钮处理 ==========
+    private void OnIlluminatePressed()
+    {
+        if (isProcessingIllumination) return;
+        if (currentUnit == null || !currentUnit.canIlluminate) return;
+
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm == null) return;
+
+        if (!isFlarePreview && !isIlluminationPreview)
+        {
+            // 第一阶段：显示照明弹投射射程范围（绿色）
+            isFlarePreview = true;
+            pendingIlluminationTarget = null;
+            gm.gridManager?.ShowFlareRange(currentUnit, currentUnit.minLaunchRange, currentUnit.maxLaunchRange);
+
+            // 设置射程内格子的点击回调
+            foreach (var grid in gm.gridManager.flareRange)
+            {
+                grid.OnClickGrid = to => OnFlareTargetSelected(to);
+            }
+            // 射程外点击取消
+            foreach (var grid in gm.gridManager.grids)
+            {
+                if (!gm.gridManager.flareRange.Contains(grid))
+                {
+                    grid.OnClickEmpty = () => CancelIlluminationPreview();
+                    grid.OnClickGrid = to => CancelIlluminationPreview();
+                }
+            }
+
+            // 隐藏其他按钮，只保留照明和待机
+            moveButton.Visible = false;
+            attackButton.Visible = false;
+            captureButton.Visible = false;
+            infoButton.Visible = false;
+            if (loadButton != null) loadButton.Visible = false;
+            if (unloadContainer != null) unloadContainer.Visible = false;
+            if (supplyButton != null) supplyButton.Visible = false;
+            if (explodeButton != null) explodeButton.Visible = false;
+            illuminateButton.Text = "取消照明";
+            waitButton.Visible = true;
+        }
+        else if (isFlarePreview)
+        {
+            // 在第一阶段点击"取消照明"
+            CancelIlluminationPreview();
+        }
+        else if (isIlluminationPreview)
+        {
+            // 第二阶段：执行照明
+            isProcessingIllumination = true;
+            ExecuteIllumination(currentUnit);
+            isProcessingIllumination = false;
+        }
+    }
+
+    private void OnFlareTargetSelected(Grids target)
+    {
+        if (target == null || currentUnit == null || !currentUnit.canIlluminate) return;
+
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm == null) return;
+
+        // 从第一阶段进入第二阶段
+        isFlarePreview = false;
+        isIlluminationPreview = true;
+        pendingIlluminationTarget = target;
+
+        // 隐藏绿色射程，显示黄色照明覆盖范围
+        gm.gridManager?.HideFlareRange();
+        gm.gridManager?.ShowIlluminationRange(target, currentUnit.minIlluminationRange, currentUnit.maxIlluminationRange);
+
+        // 清除之前的回调
+        foreach (var grid in gm.gridManager.grids)
+        {
+            grid.OnClickGrid = null;
+            grid.OnClickEmpty = null;
+        }
+
+        // 更新按钮
+        if (illuminateButton != null)
+            illuminateButton.Text = "确认照明";
+        waitButton.Visible = true;
+    }
+
+    private void ExecuteIllumination(Infantry unit)
+    {
+        if (pendingIlluminationTarget == null || unit == null) return;
+
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm == null) return;
+
+        // 消耗照明弹
+        unit.currentFlareAmmo--;
+        GD.Print($"[Illumination] {unit.Name} 在 {pendingIlluminationTarget.GridIndex} 发射照明弹，剩余 {unit.currentFlareAmmo}/{unit.maxFlareAmmo}");
+
+        // 添加照明效果
+        gm.fogOfWarManager?.AddIllumination(
+            pendingIlluminationTarget,
+            unit.minIlluminationRange,
+            unit.maxIlluminationRange,
+            unit.flareDurationTurns
+        );
+
+        // 清理状态
+        isIlluminationPreview = false;
+        pendingIlluminationTarget = null;
+        gm.gridManager?.HideIlluminationRange();
+
+        // 标记单位已行动
+        unit.isMoved = true;
+        unit.isAttacked = true;
+        unit.state = UnitState.Acted;
+        unit.originalGrid = null;
+        unit.SetWaitVisual(true);
+
+        gm.ClearSelectedInfantry();
+        Hide();
+    }
+
+    public void CancelIlluminationPreview()
+    {
+        if (isProcessingIllumination) return;
+        if (isFlarePreview || isIlluminationPreview)
+        {
+            isFlarePreview = false;
+            isIlluminationPreview = false;
+            pendingIlluminationTarget = null;
+
+            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            gm?.gridManager?.HideFlareRange();
+            gm?.gridManager?.HideIlluminationRange();
+
+            // 恢复按钮状态
+            if (currentUnit != null)
+            {
+                ShowMenu(currentUnit, currentUnit.isMoved);
+            }
+        }
+    }
+
+    // ✅ 重写 Hide 确保隐藏时取消爆炸预览和照明预览
     public new void Hide()
     {
         CancelExplosionPreview();
+        CancelIlluminationPreview();
         base.Hide();
     }
 }

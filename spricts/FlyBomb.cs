@@ -108,6 +108,8 @@ public partial class FlyBomb : Infantry
         explosionMaxRange = 3;
         explosionDamageMode = 1;
         explosionSelfDamageEnabled = false;
+
+        cost = 25000;  // FlyBomb造价
     }
 
     public override void _Process(double delta)
@@ -130,7 +132,7 @@ public partial class FlyBomb : Infantry
     {
         if (animSprite == null) return;
         animSprite.Show();
-        animSprite.Modulate = Colors.White;
+        animSprite.Modulate = normal;
         string actualAnim = animName;
         if (!animSprite.SpriteFrames.HasAnimation(actualAnim))
             actualAnim = GetIdleAnimName();

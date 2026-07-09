@@ -109,6 +109,8 @@ public partial class AntiTank : Infantry
         baseAttack = 550;  // 对兵器（Black Cannon / Laser）的基础伤害
 
         captureAbility = CaptureAbility.CannotCapture;
+
+        cost = 11000;  // AntiTank造价
     }
 
     public override void _Process(double delta)
@@ -138,7 +140,7 @@ public partial class AntiTank : Infantry
         if (animSprite == null) return;
         if (idleSprite != null) idleSprite.Hide();
         animSprite.Show();
-        animSprite.Modulate = Colors.White;
+        animSprite.Modulate = normal;
         string actualAnim = animName;
         if (!animSprite.SpriteFrames.HasAnimation(actualAnim))
             actualAnim = GetIdleAnimName();

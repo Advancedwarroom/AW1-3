@@ -160,6 +160,7 @@ public partial class GridManager : Node
     public void Init()
     {
         map = new Grids[searchRange.X, searchRange.Y];
+        grids.Clear(); // ✅ 防止重复填充导致统计翻倍
         for (int i = 0; i < GridsNode.GetChildCount(); i++)
         {
             Grids grid = GridsNode.GetChild<Grids>(i);
@@ -179,25 +180,22 @@ public partial class GridManager : Node
                         break;
                     case GridType.HILL:
                         break;
-                    case GridType.CITY:
-                        grid.isSupplyPoint = true;
-                        grid.healAmount = 20;
-
-                        if (string.IsNullOrEmpty(grid.cityTeam))
-                        {
-                            int middleStart = searchRange.X / 3;
-                            int middleEnd = searchRange.X * 2 / 3;
-
-                            if (x >= middleStart && x < middleEnd)
-                                grid.cityTeam = "Player0";
-                            else if (x < middleStart)
-                                grid.cityTeam = "Player1";
-                            else
-                                grid.cityTeam = "Player2";
-                        }
-                        break;
                     default:
                         break;
+                }
+
+                // ✅ 初始化城市默认势力
+                if (grid.city != null && string.IsNullOrEmpty(grid.city.facilityTeam))
+                {
+                    int middleStart = searchRange.X / 3;
+                    int middleEnd = searchRange.X * 2 / 3;
+
+                    if (x >= middleStart && x < middleEnd)
+                        grid.city.facilityTeam = "Player0";
+                    else if (x < middleStart)
+                        grid.city.facilityTeam = "Player1";
+                    else
+                        grid.city.facilityTeam = "Player2";
                 }
             }
             else
@@ -358,6 +356,8 @@ public partial class GridManager : Node
         
         attackRange.Clear();
         explosionRange.Clear(); // ✅ 清除爆炸范围缓存
+        flareRange.Clear(); // ✅ 清除照明弹射程范围
+        illuminationRange.Clear(); // ✅ 清除照明覆盖范围
         
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         if (gm != null) 
@@ -1047,28 +1047,6 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
     }
 
-    public void UpdateCityVisual(Grids cityGrid)
-    {
-        if (cityGrid == null || cityGrid.gridType != GridType.CITY)
-            return;
-        
-        var sprite = cityGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
-        if (sprite == null) return;
-        
-        Color teamColor = cityGrid.cityTeam switch
-        {
-            "Player1" => new Color(1f, 0.3f, 0.3f),
-            "Player2" => new Color(0.3f, 0.5f, 1f),
-            "Player0" => new Color(0.8f, 0.8f, 0.8f),
-            _ => Colors.White
-        };
-        
-        var tween = CreateTween();
-        tween.TweenProperty(sprite, "modulate", teamColor, 0.5f);
-        
-        GD.Print($"[UpdateCityVisual] 城市 {cityGrid.GridIndex} 变为 {cityGrid.cityTeam} 颜色");
-    }
-
     private int GetActualMoveCost(Infantry infantry, GridType gridType)
     {
         int cost = infantry.GetMoveCost(gridType);
@@ -1182,30 +1160,32 @@ public void CloseRange()
         }
     }
 
-    public List<Grids> GetAllCityGrids()
+    public List<Facility> GetAllCities()
     {
-        var cityGrids = new List<Grids>();
+        var cities = new List<Facility>();
         foreach (var grid in grids)
         {
-            if (grid != null && grid.gridType == GridType.CITY)
+            if (grid != null && grid.city != null)
             {
-                grid.isSupplyPoint = true;
-                cityGrids.Add(grid);
+                grid.city.isSupplyPoint = true;
+                cities.Add(grid.city);
             }
         }
-        return cityGrids;
+        return cities;
     }
 
     public void PerformTurnSupply()
     {
-        var cityGrids = GetAllCityGrids();
-        foreach (var city in cityGrids)
+        var cities = GetAllCities();
+        foreach (var city in cities)
             city.PerformSupply();
     }
 
     public List<Grids> attackRange = new List<Grids>();
     public bool IsShowingAttackRange => attackRange.Count > 0;
     public List<Grids> explosionRange = new List<Grids>(); // ✅ 爆炸范围
+    public List<Grids> flareRange = new List<Grids>(); // ✅ 照明弹射程范围（绿色）
+    public List<Grids> illuminationRange = new List<Grids>(); // ✅ 照明覆盖范围（黄色）
     
     // ========== ✅ 爆炸范围显示 ==========
     public void ShowExplosionRange(Infantry unit, int minR, int maxR)
@@ -1239,6 +1219,74 @@ public void CloseRange()
             }
         }
         explosionRange.Clear();
+    }
+
+    // ========== ✅ 照明弹射程范围显示（绿色）==========
+    public void ShowFlareRange(Infantry unit, int minR, int maxR)
+    {
+        HideFlareRange();
+        if (unit?.grid == null) return;
+
+        var allRangeGrids = FindRange(unit.grid, maxR, false);
+        List<Grids> innerGrids = minR > 0 ? FindRange(unit.grid, minR - 1, false) : new List<Grids>();
+
+        foreach (var grid in allRangeGrids)
+        {
+            if (innerGrids.Contains(grid)) continue;
+            flareRange.Add(grid);
+            if (grid.attackRangeIcon != null)
+            {
+                grid.attackRangeIcon.Modulate = new Color(0f, 1f, 0f, 0.7f); // 绿色
+                grid.attackRangeIcon.Show();
+            }
+        }
+    }
+
+    public void HideFlareRange()
+    {
+        foreach (var grid in flareRange)
+        {
+            if (grid?.attackRangeIcon != null)
+            {
+                grid.attackRangeIcon.Modulate = Colors.White;
+                grid.attackRangeIcon.Hide();
+            }
+        }
+        flareRange.Clear();
+    }
+
+    // ========== ✅ 照明覆盖范围显示（黄色，以目标为中心）==========
+    public void ShowIlluminationRange(Grids center, int minR, int maxR)
+    {
+        HideIlluminationRange();
+        if (center == null) return;
+
+        var allRangeGrids = FindRange(center, maxR, false);
+        List<Grids> innerGrids = minR > 0 ? FindRange(center, minR - 1, false) : new List<Grids>();
+
+        foreach (var grid in allRangeGrids)
+        {
+            if (innerGrids.Contains(grid)) continue;
+            illuminationRange.Add(grid);
+            if (grid.attackRangeIcon != null)
+            {
+                grid.attackRangeIcon.Modulate = new Color(1f, 1f, 0f, 0.7f); // 黄色
+                grid.attackRangeIcon.Show();
+            }
+        }
+    }
+
+    public void HideIlluminationRange()
+    {
+        foreach (var grid in illuminationRange)
+        {
+            if (grid?.attackRangeIcon != null)
+            {
+                grid.attackRangeIcon.Modulate = Colors.White;
+                grid.attackRangeIcon.Hide();
+            }
+        }
+        illuminationRange.Clear();
     }
     
     public void ShowMinMaxAttackRange(Infantry unit)

@@ -112,6 +112,9 @@ public partial class Mech : Infantry
 
         captureAbility = CaptureAbility.CanCapture;
         capturePower = 10;
+
+        cost = 3000;  // Mech造价
+        capturePower = 10;
     }
 
     public override void _Process(double delta)
@@ -147,7 +150,7 @@ public partial class Mech : Infantry
         if (animSprite == null) return;
         if (idleSprite != null) idleSprite.Hide();
         animSprite.Show();
-        animSprite.Modulate = Colors.White;
+        animSprite.Modulate = normal;
         string actualAnim = animName;
         if (!animSprite.SpriteFrames.HasAnimation(actualAnim))
             actualAnim = GetIdleAnimName();

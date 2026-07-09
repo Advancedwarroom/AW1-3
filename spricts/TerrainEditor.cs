@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Linq;
+using System.IO;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -14,7 +15,7 @@ public class UnitTemplate
     public string Description;
 }
 
-public enum SpawnMode { None, Unit, Weapon }
+public enum SpawnMode { None, Unit, Weapon, Facility }
 
 public partial class TerrainEditor : Control
 {
@@ -137,6 +138,13 @@ private readonly List<UnitTemplate> unitTemplates = new()
 },
 
 
+    new UnitTemplate { DisplayName = "🔦 照明车", ScenePath = "res://Prefabs/Flare.tscn", 
+        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.6f, 0.55f, 0.3f), 
+        Description = "可发射照明弹驱散战争迷雾，移动力5，履带移动，仅副武器" },
+    new UnitTemplate { DisplayName = "🏍️ 摩托兵", ScenePath = "res://Prefabs/Bike.tscn", 
+        Category = "步兵", Team = "Player1", DisplayColor = new Color(0.5f, 0.5f, 0.35f), 
+        Description = "快速步兵单位，可占领城市，移动力5，轮胎移动" },
+
     // 特殊单位
     new UnitTemplate { DisplayName = "🦠 史莱姆", ScenePath = "res://Prefabs/oozium.tscn", 
         Category = "特殊", Team = "Player1", DisplayColor = new Color(0.4f, 0.3f, 0.6f), 
@@ -156,12 +164,20 @@ private readonly List<UnitTemplate> weaponTemplates = new()
         Description = "直线激光兵器，穿透攻击，可配置角度/射程/冷却" },
 };
 
+private readonly List<UnitTemplate> facilityTemplates = new()
+{
+    new UnitTemplate { DisplayName = "🏙️ City", ScenePath = "res://Prefabs/City.tscn", 
+        Category = "设施", Team = "Player0", DisplayColor = new Color(0.8f, 0.6f, 0.2f), 
+        Description = "城市设施，可占领并提供补给" },
+};
+
 // UI 引用
 private Panel spawnMenuPanel;
 private VBoxContainer spawnButtonContainer;
 private Label spawnTitleLabel;
 private Button spawnModeUnitBtn;
 private Button spawnModeWeaponBtn;
+private Button spawnModeFacilityBtn;
 private Button destroyModeBtn;
 private Label spawnHintLabel;
 private HBoxContainer spawnModeSelector;
@@ -230,7 +246,7 @@ private void CreateSpawnMenu()
 {
     spawnMenuPanel = new Panel();
     spawnMenuPanel.Name = "SpawnMenuPanel";
-    spawnMenuPanel.CustomMinimumSize = new Vector2(320, 600);
+    spawnMenuPanel.CustomMinimumSize = new Vector2(400, 600);
     spawnMenuPanel.SetAnchorsPreset(LayoutPreset.Center);
     spawnMenuPanel.Visible = false;
     spawnMenuPanel.ZIndex = 1200;
@@ -244,7 +260,7 @@ private void CreateSpawnMenu()
 
     // 标题
     spawnTitleLabel = new Label();
-    spawnTitleLabel.Text = "🎮 单位/兵器生成器";
+    spawnTitleLabel.Text = "🎮 单位/兵器/设施生成器";
     spawnTitleLabel.HorizontalAlignment = HorizontalAlignment.Center;
     spawnTitleLabel.AddThemeFontSizeOverride("font_size", 20);
     spawnTitleLabel.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
@@ -257,7 +273,7 @@ private void CreateSpawnMenu()
     // 模式选择器
     spawnModeSelector = new HBoxContainer();
     spawnModeSelector.Position = new Vector2(15, 50);
-    spawnModeSelector.Size = new Vector2(290, 40);
+    spawnModeSelector.Size = new Vector2(370, 40);
     spawnModeSelector.AddThemeConstantOverride("separation", 8);
 
     spawnModeUnitBtn = new Button();
@@ -273,6 +289,13 @@ private void CreateSpawnMenu()
     spawnModeWeaponBtn.AddThemeFontSizeOverride("font_size", 12);
     spawnModeWeaponBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Weapon);
     spawnModeSelector.AddChild(spawnModeWeaponBtn);
+
+    spawnModeFacilityBtn = new Button();
+    spawnModeFacilityBtn.Text = "🏙️ 生成设施";
+    spawnModeFacilityBtn.CustomMinimumSize = new Vector2(90, 36);
+    spawnModeFacilityBtn.AddThemeFontSizeOverride("font_size", 12);
+    spawnModeFacilityBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Facility);
+    spawnModeSelector.AddChild(spawnModeFacilityBtn);
 
     destroyModeBtn = new Button();
     destroyModeBtn.Text = "💀 销毁模式";
@@ -290,36 +313,37 @@ private void CreateSpawnMenu()
     spawnHintLabel.AddThemeFontSizeOverride("font_size", 12);
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
     spawnHintLabel.Position = new Vector2(10, 95);
-    spawnHintLabel.Size = new Vector2(300, 25);
+    spawnHintLabel.Size = new Vector2(380, 25);
     spawnMenuPanel.AddChild(spawnHintLabel);
 
     // 滚动容器
     var scroll = new ScrollContainer();
     scroll.Position = new Vector2(15, 125);
-    scroll.Size = new Vector2(290, 460);
+    scroll.Size = new Vector2(370, 460);
     scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
 
     spawnButtonContainer = new VBoxContainer();
     spawnButtonContainer.AddThemeConstantOverride("separation", 6);
-    spawnButtonContainer.Size = new Vector2(290, 0);
+    spawnButtonContainer.Size = new Vector2(370, 0);
 
     scroll.AddChild(spawnButtonContainer);
     spawnMenuPanel.AddChild(scroll);
 
     var dragHandle = new Panel();
     dragHandle.Name = "DragHandle";
-    dragHandle.CustomMinimumSize = new Vector2(320, 35);
+    dragHandle.CustomMinimumSize = new Vector2(400, 35);
     dragHandle.Position = new Vector2(0, 0);
     dragHandle.MouseFilter = MouseFilterEnum.Pass;
     spawnMenuPanel.AddChild(dragHandle);
 
     spawnTitleLabel.Position = new Vector2(0, 12 + 35);
+    spawnTitleLabel.Size = new Vector2(400, 35);
 
     var closeBtn = new Button();
     closeBtn.Name = "CloseButton";
     closeBtn.Text = "✕";
     closeBtn.CustomMinimumSize = new Vector2(32, 32);
-    closeBtn.Position = new Vector2(280, 10);
+    closeBtn.Position = new Vector2(360, 10);
     closeBtn.ZIndex = 10;
     closeBtn.MouseFilter = MouseFilterEnum.Stop;
     closeBtn.Pressed += CloseSpawnMenu;
@@ -364,6 +388,8 @@ private string GetFriendlyTypeName(Infantry unit)
         Rocket => "火箭",
         AntiAir => "防空高炮",
         APC => "运输",
+        Flare => "照明车",
+        Bike => "摩托兵",
         Oozium => "史莱姆",
         Infantry => "步兵",
         _ => unit.GetType().Name
@@ -395,12 +421,15 @@ private void UpdateModeButtonStyles()
 {
     ResetButtonStyle(spawnModeUnitBtn);
     ResetButtonStyle(spawnModeWeaponBtn);
+    ResetButtonStyle(spawnModeFacilityBtn);
     ResetButtonStyle(destroyModeBtn);
 
     if (currentSpawnMode == SpawnMode.Unit)
         HighlightButton(spawnModeUnitBtn, new Color(0.3f, 0.6f, 0.3f));
     else if (currentSpawnMode == SpawnMode.Weapon)
         HighlightButton(spawnModeWeaponBtn, new Color(0.3f, 0.4f, 0.6f));
+    else if (currentSpawnMode == SpawnMode.Facility)
+        HighlightButton(spawnModeFacilityBtn, new Color(0.8f, 0.6f, 0.2f));
     else if (isDestroyMode)
         HighlightButton(destroyModeBtn, new Color(0.6f, 0.2f, 0.2f));
 }
@@ -431,7 +460,14 @@ private void RefreshSpawnButtons()
 
     if (currentSpawnMode == SpawnMode.None) return;
 
-    var templates = currentSpawnMode == SpawnMode.Unit ? unitTemplates : weaponTemplates;
+    List<UnitTemplate> templates;
+    if (currentSpawnMode == SpawnMode.Unit)
+        templates = unitTemplates;
+    else if (currentSpawnMode == SpawnMode.Weapon)
+        templates = weaponTemplates;
+    else
+        templates = facilityTemplates;
+
     var grouped = templates.GroupBy(t => t.Category).OrderBy(g => g.Key);
 
     foreach (var group in grouped)
@@ -450,9 +486,13 @@ private void RefreshSpawnButtons()
         }
     }
 
-    spawnHintLabel.Text = currentSpawnMode == SpawnMode.Unit 
-        ? "🚶 选择单位模板，然后点击地图格子生成" 
-        : "⚔️ 选择兵器模板，然后点击地图格子生成";
+    spawnHintLabel.Text = currentSpawnMode switch
+    {
+        SpawnMode.Unit => "🚶 选择单位模板，然后点击地图格子生成",
+        SpawnMode.Weapon => "⚔️ 选择兵器模板，然后点击地图格子生成",
+        SpawnMode.Facility => "🏙️ 选择设施模板，然后点击地图格子生成",
+        _ => "选择模式开始..."
+    };
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.9f, 0.6f));
 }
 
@@ -510,6 +550,26 @@ private Button CreateTemplateButton(UnitTemplate template)
     };
     teamHBox.AddChild(p2Btn);
 
+    var p0Btn = new Button();
+    p0Btn.Text = "P0";
+    p0Btn.CustomMinimumSize = new Vector2(30, 24);
+    p0Btn.AddThemeFontSizeOverride("font_size", 10);
+    p0Btn.Pressed += () => {
+        template.Team = "Player0";
+        UpdateTemplateTeamIndicator(btn, "Player0");
+    };
+    teamHBox.AddChild(p0Btn);
+
+    var pN1Btn = new Button();
+    pN1Btn.Text = "P-1";
+    pN1Btn.CustomMinimumSize = new Vector2(30, 24);
+    pN1Btn.AddThemeFontSizeOverride("font_size", 10);
+    pN1Btn.Pressed += () => {
+        template.Team = "Player";
+        UpdateTemplateTeamIndicator(btn, "Player");
+    };
+    teamHBox.AddChild(pN1Btn);
+
     btn.AddChild(teamHBox);
 
     btn.Pressed += () => {
@@ -541,9 +601,20 @@ private void UpdateTemplateTeamIndicator(Button btn, string team)
         teamLabel.AddThemeFontSizeOverride("font_size", 10);
         btn.AddChild(teamLabel);
     }
-    teamLabel.Text = team == "Player1" ? "🔴P1" : "🔵P2";
-    teamLabel.AddThemeColorOverride("font_color", 
-        team == "Player1" ? new Color(1, 0.3f, 0.3f) : new Color(0.3f, 0.5f, 1f));
+    teamLabel.Text = team switch {
+        "Player1" => "🔴P1",
+        "Player2" => "🔵P2",
+        "Player0" => "⚪P0",
+        "Player" => "🟣P-1",
+        _ => team
+    };
+    teamLabel.AddThemeColorOverride("font_color", team switch {
+        "Player1" => new Color(1, 0.3f, 0.3f),
+        "Player2" => new Color(0.3f, 0.5f, 1f),
+        "Player0" => new Color(0.7f, 0.7f, 0.7f),
+        "Player" => new Color(0.7f, 0.4f, 0.9f),
+        _ => Colors.White
+    });
 }
 
 private void ResetTemplateButtonStyle(Button btn)
@@ -726,6 +797,11 @@ private void DestroyTargetAtGrid(Grids grid)
             allTargets.Add(weapon);
     }
 
+    if (grid.city != null && IsInstanceValid(grid.city))
+    {
+        allTargets.Add(grid.city);
+    }
+
     if (allTargets.Count == 0)
     {
         spawnHintLabel.Text = "⚠️ 该格子没有可销毁的目标";
@@ -758,6 +834,17 @@ private void ExecuteDestroy(object target)
             gameManager.RemoveWeapon(weapon);
             spawnHintLabel.Text = $"💀 已销毁兵器: {name}";
         }
+        else if (target is Facility facility)
+        {
+            string name = facility.Name;
+            if (facility.ParentGrid != null)
+            {
+                facility.ParentGrid.city = null;
+            }
+            facility.QueueFree();
+            spawnHintLabel.Text = $"💀 已销毁设施: {name}";
+            gameManager.UpdateUnitLists();
+        }
 
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(1f, 0.4f, 0.4f));
         gameManager.UpdateUnitLists();
@@ -784,7 +871,7 @@ private void ShowDestroySelectionMenu(Grids grid, List<object> targets)
 
         if (target is Infantry unit)
         {
-            string teamEmoji = unit.team == "Player1" ? "🔴" : "🔵";
+            string teamEmoji = unit.team switch { "Player1" => "🔴", "Player2" => "🔵", "Player0" => "⚪", "Player" => "🟣", _ => "⚪" };
             displayName = $"{teamEmoji} [单位:{unit.GetType().Name}] {unit.Name} HP:{Mathf.CeilToInt(unit.health/10f)}";
             color = new Color(0.8f, 0.3f, 0.3f);
             onClick = () => {
@@ -794,11 +881,21 @@ private void ShowDestroySelectionMenu(Grids grid, List<object> targets)
         }
         else if (target is Weapon weapon)
         {
-            string teamEmoji = weapon.team == "Player1" ? "🔴" : "🔵";
+            string teamEmoji = weapon.team switch { "Player1" => "🔴", "Player2" => "🔵", "Player0" => "⚪", "Player" => "🟣", _ => "⚪" };
             displayName = $"{teamEmoji} [兵器:{weapon.GetType().Name}] {weapon.Name} HP:{Mathf.CeilToInt(weapon.health/10f)}";
             color = new Color(0.6f, 0.2f, 0.2f);
             onClick = () => {
                 ExecuteDestroy(weapon);
+                CloseSelectionMenu();
+            };
+        }
+        else if (target is Facility facility)
+        {
+            string teamEmoji = facility.facilityTeam switch { "Player1" => "🔴", "Player2" => "🔵", "Player0" => "⚪", "Player" => "🟣", _ => "⚪" };
+            displayName = $"{teamEmoji} [设施:{facility.GetType().Name}] {facility.Name} (Team:{facility.facilityTeam})";
+            color = new Color(0.8f, 0.5f, 0.2f);
+            onClick = () => {
+                ExecuteDestroy(facility);
                 CloseSelectionMenu();
             };
         }
@@ -828,6 +925,8 @@ private UnitCategory GetUnitCategory(Infantry unit)
         LightTank _ => UnitCategory.Tank,
         Recon _ => UnitCategory.Recon,
         APC _ => UnitCategory.APC,
+        Flare _ => UnitCategory.Vehicle,
+        Bike _ => UnitCategory.Infantry,
         Artillery _ => UnitCategory.Artillery,
         Rocket _ => UnitCategory.Rocket,
         FlyBomb _ => UnitCategory.FlyBomb,
@@ -875,6 +974,8 @@ public void OnGridClickedForEdit(Grids grid)
             SpawnUnitAtGrid(grid, selectedTemplatePath, unitTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
         else if (currentSpawnMode == SpawnMode.Weapon)
             SpawnWeaponAtGrid(grid, selectedTemplatePath, weaponTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
+        else if (currentSpawnMode == SpawnMode.Facility)
+            SpawnFacilityAtGrid(grid, selectedTemplatePath, facilityTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
         return;
     }
 
@@ -895,7 +996,7 @@ public void OnGridClickedForEdit(Grids grid)
 
     foreach (var unit in units)
     {
-        string teamEmoji = unit.team == "Player1" ? "🔴" : unit.team == "Player2" ? "🔵" : "⚪";
+        string teamEmoji = unit.team switch { "Player1" => "🔴", "Player2" => "🔵", "Player0" => "⚪", "Player" => "🟣", _ => "⚪" };
         string hpText = unit.maxHealth <= 999 ? $"HP:{Mathf.CeilToInt(unit.health / 10f)}" : $"HP:{unit.health}";
         allTargets.Add(new EditTarget
         {
@@ -912,7 +1013,7 @@ public void OnGridClickedForEdit(Grids grid)
 
     foreach (var weapon in weapons)
     {
-        string teamEmoji = weapon.team == "Player1" ? "🔴" : weapon.team == "Player2" ? "🔵" : "⚪";
+        string teamEmoji = weapon.team switch { "Player1" => "🔴", "Player2" => "🔵", "Player0" => "⚪", "Player" => "🟣", _ => "⚪" };
         string hpText = weapon.maxHealth <= 999 ? $"HP:{Mathf.CeilToInt(weapon.health / 10f)}" : $"HP:{weapon.health}";
         allTargets.Add(new EditTarget
         {
@@ -1833,7 +1934,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         foreach (var unit in units)
         {
             string typeName = unit.GetType().Name;
-            string teamColor = unit.team == "Player1" ? "🔴" : unit.team == "Player2" ? "🔵" : "⚪";
+            string teamColor = unit.team switch { "Player1" => "🔴", "Player2" => "🔵", "Player0" => "⚪", "Player" => "🟣", _ => "⚪" };
             string hpText = $"HP:{Mathf.CeilToInt(unit.health / 10f)}";
 
             var btn = CreateSelectionButton(
@@ -1848,7 +1949,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         foreach (var weapon in weapons)
         {
             string typeName = weapon.GetType().Name;
-            string teamColor = weapon.team == "Player1" ? "🔴" : weapon.team == "Player2" ? "🔵" : "⚪";
+            string teamColor = weapon.team switch { "Player1" => "🔴", "Player2" => "🔵", "Player0" => "⚪", "Player" => "🟣", _ => "⚪" };
             string hpText = $"HP:{Mathf.CeilToInt(weapon.health / 10f)}";
 
             var btn = CreateSelectionButton(
@@ -1866,6 +1967,15 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
             () => OpenTerrainMenu(grid)
         );
         selectionButtonContainer.AddChild(gridBtn);
+        optionCount++;
+
+        // ✅ 设施更改按钮
+        var facilityBtn = CreateSelectionButton(
+            "🏙️ 设施更改",
+            new Color(0.8f, 0.6f, 0.2f),
+            () => OpenFacilityMenu(grid)
+        );
+        selectionButtonContainer.AddChild(facilityBtn);
         optionCount++;
 
         GD.Print($"[TerrainEditor] 显示选择菜单，共 {optionCount} 个选项");
@@ -2049,21 +2159,30 @@ private void BuildGridPropertyEditor(Grids grid)
 
     CreateMemberControl(grid, "gridType", typeof(GridType), 
         () => grid.gridType, (v) => { grid.gridType = (GridType)v; });
-    CreateMemberControl(grid, "cityTeam", typeof(string),
-        () => grid.cityTeam, (v) => { grid.cityTeam = (string)v; });
-    CreateMemberControl(grid, "isSupplyPoint", typeof(bool),
-        () => grid.isSupplyPoint, (v) => { grid.isSupplyPoint = (bool)v; });
-    CreateMemberControl(grid, "healAmount", typeof(int),
-        () => grid.healAmount, (v) => { grid.healAmount = (int)v; });
-    CreateMemberControl(grid, "capturePointsRequired", typeof(int),
-        () => grid.capturePointsRequired, (v) => { grid.capturePointsRequired = (int)v; });
 
-    // ✅ 新增：占领进度（只读显示）
-    var captureLabel = new Label();
-    captureLabel.Text = $"当前占领中单位数: {grid.capturingUnits.Count}";
-    captureLabel.AddThemeFontSizeOverride("font_size", 12);
-    captureLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
-    propertyContainer.AddChild(captureLabel);
+    if (grid.city != null)
+    {
+        var cityLabel = new Label();
+        cityLabel.Text = "=== City 属性 ===";
+        cityLabel.AddThemeColorOverride("font_color", Colors.Yellow);
+        propertyContainer.AddChild(cityLabel);
+
+        CreateMemberControl(grid.city, "facilityTeam", typeof(string),
+            () => grid.city.facilityTeam, (v) => { grid.city.facilityTeam = (string)v; });
+        CreateMemberControl(grid.city, "isSupplyPoint", typeof(bool),
+            () => grid.city.isSupplyPoint, (v) => { grid.city.isSupplyPoint = (bool)v; });
+        CreateMemberControl(grid.city, "healAmount", typeof(int),
+            () => grid.city.healAmount, (v) => { grid.city.healAmount = (int)v; });
+        CreateMemberControl(grid.city, "capturePointsRequired", typeof(int),
+            () => grid.city.capturePointsRequired, (v) => { grid.city.capturePointsRequired = (int)v; });
+
+        // ✅ 占领进度（只读显示）
+        var captureLabel = new Label();
+        captureLabel.Text = $"当前占领中单位数: {grid.city.capturingUnits.Count}";
+        captureLabel.AddThemeFontSizeOverride("font_size", 12);
+        captureLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
+        propertyContainer.AddChild(captureLabel);
+    }
 
     // ✅ 格子视野系统
     var visionLabel = new Label();
@@ -2294,10 +2413,6 @@ private void OnPropertyChanged(object target, string propertyName)
                 terrainTitleLabel.Text = $"选择地形类型 (当前: {GetTerrainDisplayName(grid.gridType)})";
             }
         }
-        else if (propertyName == "cityTeam")
-        {
-            gameManager?.gridManager?.UpdateCityVisual(grid);
-        }
         else if (propertyName.Contains("Vision") || propertyName == "requiresAdjacentVision" || propertyName == "isWatchtower")
         {
 
@@ -2338,7 +2453,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (mech.animSprite.SpriteFrames.HasAnimation(animName))
                 {
                     mech.animSprite.Play(animName);
-                    mech.animSprite.Modulate = Colors.White;
+                    mech.animSprite.Modulate = mech.normal;
                 }
             }
             else if (infantry is LightTank tank && tank.animSprite != null)
@@ -2347,7 +2462,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (tank.animSprite.SpriteFrames.HasAnimation(animName))
                 {
                     tank.ShowAnimState(animName);
-                    tank.animSprite.Modulate = Colors.White;
+                    tank.animSprite.Modulate = tank.normal;
                 }
             }
             else if (infantry is Artillery artillery && artillery.animSprite != null)
@@ -2356,7 +2471,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (artillery.animSprite.SpriteFrames.HasAnimation(animName))
                 {
                     artillery.ShowAnimState(animName);
-                    artillery.animSprite.Modulate = Colors.White;
+                    artillery.animSprite.Modulate = artillery.normal;
                 }
             }
             else if (infantry is APC apc && apc.animSprite != null)
@@ -2365,7 +2480,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (apc.animSprite.SpriteFrames.HasAnimation(animName))
                 {
                     apc.ShowAnimState(animName);
-                    apc.animSprite.Modulate = Colors.White;
+                    apc.animSprite.Modulate = apc.normal;
                 }
             }
             else if (infantry is Oozium oozium && oozium.animSprite != null)
@@ -2374,7 +2489,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (oozium.animSprite.SpriteFrames.HasAnimation(animName))
                 {
                     oozium.animSprite.Play(animName);
-                    oozium.animSprite.Modulate = Colors.White;
+                    oozium.animSprite.Modulate = oozium.normal;
                 }
             }
             else if (infantry is MdTank mdTank && mdTank.MdSprite != null)
@@ -2383,7 +2498,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (mdTank.MdSprite.SpriteFrames.HasAnimation(animName))
                 {
                     mdTank.MdSprite.Play(animName);
-                    mdTank.MdSprite.Modulate = Colors.White;
+                    mdTank.MdSprite.Modulate = mdTank.normal;
                 }
             }
             else
@@ -2413,7 +2528,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (weapon.animSprite.SpriteFrames.HasAnimation(animName))
                 {
                     weapon.animSprite.Play(animName);
-                    weapon.animSprite.Modulate = Colors.White;
+                    weapon.animSprite.Modulate = TeamHelper.GetTeamColor(weapon.team);
                 }
             }
             else
@@ -2421,7 +2536,7 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (weapon.animSprite.SpriteFrames.HasAnimation(teamPrefix))
                 {
                     weapon.animSprite.Play(teamPrefix);
-                    weapon.animSprite.Modulate = Colors.White;
+                    weapon.animSprite.Modulate = TeamHelper.GetTeamColor(weapon.team);
                 }
             }
 
@@ -2440,7 +2555,7 @@ private void OnSaveProperties()
     if (currentEditingTarget is Infantry unit)
     {
         unit.UpdateHpLabel();
-        if (unit.sprite != null) unit.sprite.Modulate = Colors.White;
+        if (unit.sprite != null) unit.sprite.Modulate = unit.normal;
 
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.UpdateUnitLists();
@@ -2524,6 +2639,141 @@ private void OpenTerrainMenu(Grids grid)
     BuildPropertyEditor(grid);  
     propertyEditorPanel.Visible = true;
 }
+
+// ✅ 设施更改菜单：生成/摧毁/编辑设施
+private void OpenFacilityMenu(Grids grid)
+{
+    CloseSelectionMenu();
+    selectedGrid = grid;
+    currentEditingTarget = grid.city;
+    
+    propertyEditorTitle.Text = $"设施更改 - 格子 {grid.GridIndex}";
+    
+    // 清空属性容器
+    foreach (var child in propertyContainer.GetChildren())
+        child.QueueFree();
+    
+    if (grid.city == null)
+    {
+        // 没有设施：显示生成按钮
+        var noFacilityLabel = new Label();
+        noFacilityLabel.Text = "当前格子没有设施";
+        noFacilityLabel.AddThemeFontSizeOverride("font_size", 14);
+        noFacilityLabel.AddThemeColorOverride("font_color", Colors.Gray);
+        propertyContainer.AddChild(noFacilityLabel);
+        
+        var spawnBtn = new Button();
+        spawnBtn.Text = "🏙️ 生成 City 设施";
+        spawnBtn.CustomMinimumSize = new Vector2(200, 40);
+        spawnBtn.Pressed += () => SpawnFacilityAtGrid(grid);
+        propertyContainer.AddChild(spawnBtn);
+    }
+    else
+    {
+        // 有设施：显示编辑 + 摧毁按钮
+        var facilityLabel = new Label();
+        facilityLabel.Text = $"当前设施: {grid.city.GetType().Name}";
+        facilityLabel.AddThemeFontSizeOverride("font_size", 14);
+        facilityLabel.AddThemeColorOverride("font_color", Colors.Yellow);
+        propertyContainer.AddChild(facilityLabel);
+        
+        // 编辑设施属性
+        BuildPropertyEditor(grid.city);
+        
+        // 摧毁按钮
+        var destroyBtn = new Button();
+        destroyBtn.Text = "💥 摧毁设施";
+        destroyBtn.CustomMinimumSize = new Vector2(200, 40);
+        destroyBtn.AddThemeColorOverride("font_color", Colors.Red);
+        destroyBtn.Pressed += () => DestroyFacilityAtGrid(grid);
+        propertyContainer.AddChild(destroyBtn);
+    }
+    
+    propertyEditorPanel.Visible = true;
+}
+
+// ✅ 在格子生成 City 设施（OpenFacilityMenu 用，默认 Player0）
+private void SpawnFacilityAtGrid(Grids grid)
+{
+    SpawnFacilityAtGrid(grid, "res://Prefabs/City.tscn", "Player0");
+    OpenFacilityMenu(grid);
+}
+
+// ✅ 在格子生成设施（spawnMenu 用，支持模板参数）
+private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
+{
+    if (grid.city != null)
+    {
+        spawnHintLabel.Text = "❌ 该格子已有设施";
+        spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+        return;
+    }
+    
+    if (string.IsNullOrEmpty(scenePath))
+    {
+        spawnHintLabel.Text = "❌ 场景路径为空";
+        spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+        return;
+    }
+    
+    var scene = GD.Load<PackedScene>(scenePath);
+    if (scene == null)
+    {
+        GD.PushError($"[TerrainEditor] 无法加载场景: {scenePath}");
+        spawnHintLabel.Text = $"❌ 无法加载场景: {scenePath}";
+        spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+        return;
+    }
+    
+    var facility = scene.Instantiate<Facility>();
+    if (facility == null)
+    {
+        spawnHintLabel.Text = "❌ 设施实例化失败";
+        spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+        return;
+    }
+    
+    facility.Name = "Facility";
+    grid.AddChild(facility);
+    grid.city = facility;
+    
+    // 设置势力
+    facility.facilityTeam = team;
+    facility.isSupplyPoint = true;
+    facility.healAmount = 20;
+    facility.capturePointsRequired = 20;
+    
+    if (facility is City city)
+    {
+        city.UpdateCityVisual();
+    }
+    else
+    {
+        facility.UpdateCityVisual();
+    }
+    
+    GD.Print($"[TerrainEditor] 在 {grid.GridIndex} 生成 {facility.GetType().Name} 设施，势力={team}");
+    
+    spawnHintLabel.Text = $"✅ 生成设施: {facility.GetType().Name} ({team})";
+    spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+    
+    gameManager?.UpdateUnitLists();
+}
+
+// ✅ 摧毁格子上的设施
+private void DestroyFacilityAtGrid(Grids grid)
+{
+    if (grid.city == null) return;
+    
+    grid.city.QueueFree();
+    grid.city = null;
+    
+    GD.Print($"[TerrainEditor] 在 {grid.GridIndex} 摧毁设施");
+    
+    // 刷新菜单
+    OpenFacilityMenu(grid);
+}
+
 // 替换原有的 CloseTerrainMenu
 private void CloseTerrainMenu()
 {
@@ -2719,7 +2969,6 @@ private void CloseTerrainMenu()
         {
             GridType.GROUND => "🟫 平原",
             GridType.FOREST => "🌲 森林",
-            GridType.CITY => "🏙️ 城市",
             GridType.ROAD => "🛣️ 公路",
             GridType.SEA => "🌊 海洋",
             GridType.RIVER => "🏞️ 河流",
@@ -2759,7 +3008,7 @@ private void CloseTerrainMenu()
     {
         float bonus = type switch
         {
-            GridType.GROUND => 0.10f, GridType.FOREST => 0.20f, GridType.CITY => 0.30f,
+            GridType.GROUND => 0.10f, GridType.FOREST => 0.20f,
             GridType.HILL => 0.40f, GridType.ROAD => 0.0f, GridType.SEA => 0.0f,
             GridType.RIVER => 0.0f, GridType.BEACH => 0.10f, GridType.TP => 0.0f,
             GridType.REEF => 0.10f, GridType.WHIRLPOOL => 0.10f, GridType.LAVASIDE => 0.10f,
@@ -2894,18 +3143,6 @@ private void OnTerrainSelected(GridType newTerrain)
     GridType oldTerrain = selectedGrid.gridType;
     selectedGrid.gridType = newTerrain;
 
-    if (newTerrain == GridType.CITY)
-    {
-        selectedGrid.isSupplyPoint = true;
-        selectedGrid.healAmount = 20;
-        if (string.IsNullOrEmpty(selectedGrid.cityTeam))
-            selectedGrid.cityTeam = "Player0";
-    }
-    else if (oldTerrain == GridType.CITY && newTerrain != GridType.CITY)
-    {
-        selectedGrid.isSupplyPoint = false;
-    }
-
     UpdateGridVisual(selectedGrid);
     
     // ✅ 新增：刷新属性编辑器标题
@@ -2926,9 +3163,6 @@ private void OnTerrainSelected(GridType newTerrain)
         tween.TweenProperty(sprite, "modulate", terrainColor, 0.3f)
              .SetTrans(Tween.TransitionType.Sine)
              .SetEase(Tween.EaseType.InOut);
-
-        if (grid.gridType == GridType.CITY)
-            gameManager?.gridManager?.UpdateCityVisual(grid);
     }
 
     private void LoadCustomDamageValues(Grids grid)
@@ -3368,6 +3602,70 @@ private void RefreshAllUnitVision()
         weaponMatrixBtn.Pressed += OpenWeaponTerrainMatrixEditor;
         globalConfigContainer.AddChild(weaponMatrixBtn);
 
+        // ✅ AI 与地图导出配置
+        var aiSection = CreateConfigSectionTitle("🤖 AI 控制与地图导出");
+        globalConfigContainer.AddChild(aiSection);
+
+        var aiMgr = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+
+        var p1AiHBox = new HBoxContainer();
+        p1AiHBox.AddThemeConstantOverride("separation", 10);
+        var p1AiLabel = new Label();
+        p1AiLabel.Text = "P1 AI 操控:";
+        p1AiLabel.CustomMinimumSize = new Vector2(120, 28);
+        p1AiLabel.AddThemeFontSizeOverride("font_size", 13);
+        p1AiHBox.AddChild(p1AiLabel);
+        var p1AiCheck = new CheckBox();
+        p1AiCheck.ButtonPressed = aiMgr?.p1AIEnabled ?? false;
+        p1AiCheck.CustomMinimumSize = new Vector2(28, 28);
+        p1AiCheck.Toggled += (pressed) => {
+            if (aiMgr != null) aiMgr.p1AIEnabled = pressed;
+            GD.Print($"[全局配置] P1 AI = {pressed}");
+        };
+        p1AiHBox.AddChild(p1AiCheck);
+        globalConfigContainer.AddChild(p1AiHBox);
+
+        var p2AiHBox = new HBoxContainer();
+        p2AiHBox.AddThemeConstantOverride("separation", 10);
+        var p2AiLabel = new Label();
+        p2AiLabel.Text = "P2 AI 操控:";
+        p2AiLabel.CustomMinimumSize = new Vector2(120, 28);
+        p2AiLabel.AddThemeFontSizeOverride("font_size", 13);
+        p2AiHBox.AddChild(p2AiLabel);
+        var p2AiCheck = new CheckBox();
+        p2AiCheck.ButtonPressed = aiMgr?.p2AIEnabled ?? false;
+        p2AiCheck.CustomMinimumSize = new Vector2(28, 28);
+        p2AiCheck.Toggled += (pressed) => {
+            if (aiMgr != null) aiMgr.p2AIEnabled = pressed;
+            GD.Print($"[全局配置] P2 AI = {pressed}");
+        };
+        p2AiHBox.AddChild(p2AiCheck);
+        globalConfigContainer.AddChild(p2AiHBox);
+
+        var autoEndHBox = new HBoxContainer();
+        autoEndHBox.AddThemeConstantOverride("separation", 10);
+        var autoEndLabel = new Label();
+        autoEndLabel.Text = "自动切换回合:";
+        autoEndLabel.CustomMinimumSize = new Vector2(120, 28);
+        autoEndLabel.AddThemeFontSizeOverride("font_size", 13);
+        autoEndHBox.AddChild(autoEndLabel);
+        var autoEndCheck = new CheckBox();
+        autoEndCheck.ButtonPressed = aiMgr?.autoEndTurn ?? false;
+        autoEndCheck.CustomMinimumSize = new Vector2(28, 28);
+        autoEndCheck.Toggled += (pressed) => {
+            if (aiMgr != null) aiMgr.autoEndTurn = pressed;
+            GD.Print($"[全局配置] 自动切换回合 = {pressed}");
+        };
+        autoEndHBox.AddChild(autoEndCheck);
+        globalConfigContainer.AddChild(autoEndHBox);
+
+        var exportMapBtn = new Button();
+        exportMapBtn.Text = "📤 导出地图配置为 txt";
+        exportMapBtn.CustomMinimumSize = new Vector2(300, 40);
+        exportMapBtn.AddThemeFontSizeOverride("font_size", 13);
+        exportMapBtn.Pressed += ExportMapToTxt;
+        globalConfigContainer.AddChild(exportMapBtn);
+
         var btnSeparator = new HSeparator();
         btnSeparator.CustomMinimumSize = new Vector2(0, 10);
         globalConfigContainer.AddChild(btnSeparator);
@@ -3681,7 +3979,7 @@ private void OpenWeaponTerrainMatrixEditor()
     // 所有可用地形类型
     private readonly GridType[] availableTerrainTypes = new GridType[]
     {
-        GridType.GROUND, GridType.FOREST, GridType.CITY, GridType.ROAD,
+        GridType.GROUND, GridType.FOREST, GridType.ROAD,
         GridType.SEA, GridType.RIVER, GridType.HILL, GridType.METEORITE,
         GridType.PIPE, GridType.LAVA, GridType.BEACH, GridType.TP,
         GridType.REEF, GridType.WHIRLPOOL, GridType.LAVASIDE,
@@ -3697,7 +3995,6 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         { GridType.GROUND, new Color(0.4f, 0.7f, 0.3f) },
         { GridType.FOREST, new Color(0.1f, 0.5f, 0.1f) },
-        { GridType.CITY, new Color(0.7f, 0.7f, 0.7f) },
         { GridType.ROAD, new Color(0.6f, 0.6f, 0.5f) },
         { GridType.SEA, new Color(0.2f, 0.4f, 0.8f) },
         { GridType.RIVER, new Color(0.3f, 0.6f, 0.9f) },
@@ -3730,4 +4027,210 @@ private void OpenWeaponTerrainMatrixEditor()
         { GridType.BROKENTRACK, new Color(0.3f, 0.3f, 0.25f) },
         { GridType.LAVAFOG, new Color(0.7f, 0.2f, 0.1f) }
     };
+
+    // ✅ 导出地图配置为 txt
+    private void ExportMapToTxt()
+    {
+        if (gridManager?.map == null)
+        {
+            GD.PrintErr("[ExportMap] GridManager 未初始化");
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("=== AW-1-3 Map Export ===");
+        sb.AppendLine($"Width: {gridManager.searchRange.X}");
+        sb.AppendLine($"Height: {gridManager.searchRange.Y}");
+        sb.AppendLine($"ExportTime: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine();
+
+        // 1. 地形矩阵
+        sb.AppendLine("=== Terrain Matrix [x,y]=Type ===");
+        for (int y = 0; y < gridManager.searchRange.Y; y++)
+        {
+            for (int x = 0; x < gridManager.searchRange.X; x++)
+            {
+                var grid = gridManager.map[x, y];
+                if (grid != null)
+                    sb.Append($"[{x},{y}]={grid.gridType}  ");
+            }
+            sb.AppendLine();
+        }
+        sb.AppendLine();
+
+        // 2. 单位
+        sb.AppendLine("=== Units [x,y] Type Team HP ===");
+        if (gameManager?.unitManager?.AllUnits != null)
+        {
+            foreach (var unit in gameManager.unitManager.AllUnits)
+            {
+                if (unit != null && IsInstanceValid(unit) && unit.grid != null)
+                {
+                    int hx = unit.grid.GridIndex.X;
+                    int hy = unit.grid.GridIndex.Y;
+                    string typeName = unit.GetType().Name;
+                    int hp = Mathf.CeilToInt(unit.health / 10f);
+                    sb.AppendLine($"[{hx},{hy}] {typeName} {unit.team} HP{hp}");
+                }
+            }
+        }
+        sb.AppendLine();
+
+        // 3. 兵器
+        sb.AppendLine("=== Weapons [x,y] Type Team HP ===");
+        if (gameManager?.weaponManager?.AllWeapons != null)
+        {
+            foreach (var weapon in gameManager.weaponManager.AllWeapons)
+            {
+                if (weapon != null && IsInstanceValid(weapon) && weapon.grid != null)
+                {
+                    int hx = weapon.grid.GridIndex.X;
+                    int hy = weapon.grid.GridIndex.Y;
+                    string typeName = weapon.GetType().Name;
+                    int hp = Mathf.CeilToInt(weapon.health / 10f);
+                    sb.AppendLine($"[{hx},{hy}] {typeName} {weapon.team} HP{hp}");
+                }
+            }
+        }
+        sb.AppendLine();
+
+        // 4. 设施
+        sb.AppendLine("=== Facilities [x,y] Type Team ===");
+        if (gridManager?.grids != null)
+        {
+            foreach (var grid in gridManager.grids)
+            {
+                if (grid?.city != null && IsInstanceValid(grid.city))
+                {
+                    int hx = grid.GridIndex.X;
+                    int hy = grid.GridIndex.Y;
+                    string typeName = grid.city.GetType().Name;
+                    string team = grid.city.facilityTeam ?? "None";
+                    sb.AppendLine($"[{hx},{hy}] {typeName} {team}");
+                }
+            }
+        }
+        sb.AppendLine();
+
+        // 5. 资金统计
+        sb.AppendLine("=== Funds Statistics ===");
+        long pn1Funds = 0, p0Funds = 0, p1Funds = 0, p2Funds = 0;
+        if (gameManager?.unitManager?.AllUnits != null)
+        {
+            foreach (var unit in gameManager.unitManager.AllUnits)
+            {
+                if (unit != null && IsInstanceValid(unit))
+                {
+                    switch (unit.team)
+                    {
+                        case "Player": pn1Funds += unit.cost; break;
+                        case "Player0": p0Funds += unit.cost; break;
+                        case "Player1": p1Funds += unit.cost; break;
+                        case "Player2": p2Funds += unit.cost; break;
+                    }
+                }
+            }
+        }
+        if (gameManager?.weaponManager?.AllWeapons != null)
+        {
+            foreach (var weapon in gameManager.weaponManager.AllWeapons)
+            {
+                if (weapon != null && IsInstanceValid(weapon))
+                {
+                    switch (weapon.team)
+                    {
+                        case "Player": pn1Funds += weapon.cost; break;
+                        case "Player0": p0Funds += weapon.cost; break;
+                        case "Player1": p1Funds += weapon.cost; break;
+                        case "Player2": p2Funds += weapon.cost; break;
+                    }
+                }
+            }
+        }
+        long totalFunds = pn1Funds + p0Funds + p1Funds + p2Funds;
+        sb.AppendLine($"P-1 (Player):  {pn1Funds} G");
+        sb.AppendLine($"P0  (Neutral): {p0Funds} G");
+        sb.AppendLine($"P1  (Red):     {p1Funds} G");
+        sb.AppendLine($"P2  (Blue):    {p2Funds} G");
+        sb.AppendLine($"Total:         {totalFunds} G");
+        sb.AppendLine();
+        sb.AppendLine("=== End of Export ===");
+
+        string content = sb.ToString();
+        string fileName = $"AW13_MapExport_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+        string savedPath = "";
+        bool savedToDownloads = false;
+
+        // 尝试保存到下载目录
+        try
+        {
+            string downloadDir = OS.GetSystemDir(OS.SystemDir.Downloads);
+            if (!string.IsNullOrEmpty(downloadDir) && Directory.Exists(downloadDir))
+            {
+                string downloadPath = Path.Combine(downloadDir, fileName);
+                File.WriteAllText(downloadPath, content);
+                savedPath = downloadPath;
+                savedToDownloads = true;
+                GD.Print($"[ExportMap] 已保存到下载目录: {downloadPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            GD.Print($"[ExportMap] 下载目录保存失败: {ex.Message}，将回退到用户目录");
+        }
+
+        // 回退到 user:// 目录
+        if (!savedToDownloads)
+        {
+            try
+            {
+                string userDir = OS.GetUserDataDir();
+                string userPath = Path.Combine(userDir, fileName);
+                File.WriteAllText(userPath, content);
+                savedPath = userPath;
+                GD.Print($"[ExportMap] 已保存到用户目录: {userPath}");
+            }
+            catch (Exception ex)
+            {
+                GD.PrintErr($"[ExportMap] 用户目录保存也失败: {ex.Message}");
+            }
+        }
+
+        // 复制到剪贴板作为备选
+        try
+        {
+            DisplayServer.ClipboardSet(content);
+            GD.Print("[ExportMap] 内容已复制到剪贴板");
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[ExportMap] 剪贴板复制失败: {ex.Message}");
+        }
+
+        // 显示提示
+        string hintText;
+        if (savedToDownloads)
+            hintText = $"✅ 已导出到下载目录:\n{savedPath}\n📋 内容已复制到剪贴板";
+        else if (!string.IsNullOrEmpty(savedPath))
+            hintText = $"⚠️ 已保存到应用目录:\n{savedPath}\n📋 内容已复制到剪贴板\n(手机可在剪贴板粘贴分享)";
+        else
+            hintText = "❌ 文件保存失败\n📋 但内容已复制到剪贴板\n请手动粘贴保存";
+
+        var hintLabel = new Label();
+        hintLabel.Text = hintText;
+        hintLabel.AddThemeFontSizeOverride("font_size", 13);
+        hintLabel.AddThemeColorOverride("font_color", savedToDownloads ? new Color(0.3f, 1f, 0.3f) : new Color(1f, 0.8f, 0.2f));
+        hintLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        hintLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        hintLabel.Position = new Vector2(0, globalConfigPanel.Size.Y - 80);
+        hintLabel.Size = new Vector2(globalConfigPanel.Size.X, 70);
+        globalConfigPanel.AddChild(hintLabel);
+
+        var timer = new Timer();
+        timer.WaitTime = 3.0f;
+        timer.OneShot = true;
+        timer.Timeout += () => { hintLabel.QueueFree(); timer.QueueFree(); };
+        globalConfigPanel.AddChild(timer);
+        timer.Start();
+    }
 }

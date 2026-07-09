@@ -160,7 +160,6 @@ public void RemoveWeapon(Weapon weapon)
             targetGrid.weapon = null;
 
         targetGrid.gridType = GridType.BROKENPIPE;
-        targetGrid.isSupplyPoint = false;
 
         var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
         if (sprite != null)

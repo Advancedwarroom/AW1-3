@@ -111,6 +111,8 @@ public partial class LightTank : Infantry
             canTransportUnitTypes = new Godot.Collections.Array<string> { "Infantry", "Mech" };
 
         captureAbility = CaptureAbility.CannotCapture;
+
+        cost = 7000;  // LightTank造价
     }
 
     public override void _Process(double delta)
@@ -146,7 +148,7 @@ public partial class LightTank : Infantry
         if (animSprite == null) return;
         if (idleSprite != null) idleSprite.Hide();
         animSprite.Show();
-        animSprite.Modulate = Colors.White;
+        animSprite.Modulate = normal;
         string actualAnim = animName;
         if (!animSprite.SpriteFrames.HasAnimation(actualAnim))
             actualAnim = GetIdleAnimName();

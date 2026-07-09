@@ -154,5 +154,7 @@ public partial class Recon : Infantry
         maxAttackRange = 1;
         canAttackAfterMoving = true;
         captureAbility = CaptureAbility.CannotCapture;
+
+        cost = 4000;  // Recon造价
     }
 }

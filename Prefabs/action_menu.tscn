@@ -18,7 +18,7 @@ border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.85490197, 0.8117647, 0.47058824, 0.7019608)
 
-[node name="ActionMenu" type="Control" unique_id=1260179397 node_paths=PackedStringArray("moveButton", "attackButton", "waitButton", "infoButton", "captureButton", "loadButton", "unloadContainer", "supplyButton", "explodeButton")]
+[node name="ActionMenu" type="Control" unique_id=1260179397 node_paths=PackedStringArray("moveButton", "attackButton", "waitButton", "infoButton", "captureButton", "loadButton", "unloadContainer", "supplyButton", "explodeButton", "illuminateButton")]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
@@ -35,6 +35,7 @@ unloadContainer = NodePath("unloadContainer")
 supplyButton = NodePath("ButtonContainer/supplyButton")
 unloadUnitButtonPreset = ExtResource("8_xkp38")
 explodeButton = NodePath("ButtonContainer/ExplodeButton")
+illuminateButton = NodePath("ButtonContainer/IlluminateButton")
 
 [node name="Panel" type="Panel" parent="." unique_id=804605196]
 layout_mode = 1
@@ -77,6 +78,11 @@ layout_mode = 2
 size_flags_vertical = 3
 text = "爆炸"
 
+[node name="IlluminateButton" type="Button" parent="ButtonContainer" unique_id=240141520]
+layout_mode = 2
+size_flags_vertical = 3
+text = "照明"
+
 [node name="WaitButton" type="Button" parent="ButtonContainer" unique_id=157768671]
 layout_mode = 2
 size_flags_vertical = 3
@@ -114,6 +120,7 @@ layout_mode = 2
 [connection signal="pressed" from="ButtonContainer/MoveButton" to="." method="OnMovePressed"]
 [connection signal="pressed" from="ButtonContainer/AttackButton" to="." method="OnAttackPressed"]
 [connection signal="pressed" from="ButtonContainer/ExplodeButton" to="." method="OnExplodePressed"]
+[connection signal="pressed" from="ButtonContainer/IlluminateButton" to="." method="OnIlluminatePressed"]
 [connection signal="pressed" from="ButtonContainer/WaitButton" to="." method="OnWaitPressed"]
 [connection signal="pressed" from="ButtonContainer/InfoButton" to="." method="OnInfoPressed"]
 [connection signal="pressed" from="ButtonContainer/CaptureButton" to="." method="OnCapturePressed"]

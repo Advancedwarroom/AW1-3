@@ -103,6 +103,8 @@ public partial class Artillery : Infantry
         canCounterWhenDefending = false;  // 被攻击时不能反击（间接单位）
 
         captureAbility = CaptureAbility.CannotCapture;
+
+        cost = 6000;  // Artillery造价
     }
 
     public override void _Process(double delta)
@@ -132,7 +134,7 @@ public partial class Artillery : Infantry
         if (animSprite == null) return;
         if (idleSprite != null) idleSprite.Hide();
         animSprite.Show();
-        animSprite.Modulate = Colors.White;
+        animSprite.Modulate = normal;
         string actualAnim = animName;
         if (!animSprite.SpriteFrames.HasAnimation(actualAnim))
             actualAnim = GetIdleAnimName();

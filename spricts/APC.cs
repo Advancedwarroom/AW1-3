@@ -74,6 +74,9 @@ public partial class APC : Infantry
 
         minSupplyRange = 1;
         maxSupplyRange = 1;
+
+        cost = 5000;  // APC造价
+        maxSupplyRange = 1;
     }
 
     protected override string GetIdleAnimName() => team == "Player2" ? "apc2" : "apc1";
@@ -185,7 +188,7 @@ public partial class APC : Infantry
         }
         else
         {
-            if (animSprite != null) { animSprite.Modulate = Colors.White; animSprite.Play(GetIdleAnimName()); }
+            if (animSprite != null) { animSprite.Modulate = normal; animSprite.Play(GetIdleAnimName()); }
             StartBreath();
         }
         if (hpLabel != null) hpLabel.Modulate = Colors.White;
@@ -196,7 +199,7 @@ public partial class APC : Infantry
         if (animSprite == null) return;
         if (idleSprite != null) idleSprite.Hide();
         animSprite.Show();
-        animSprite.Modulate = Colors.White;
+        animSprite.Modulate = normal;
         string actualAnim = animName;
         if (!animSprite.SpriteFrames.HasAnimation(actualAnim))
             actualAnim = GetIdleAnimName();

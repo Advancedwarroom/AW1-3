@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://dbdvtegdaq8pg" path="res://asscets/Weapons/love.png" id="3_dhde5"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_6t4s0"]
-size = Vector2(34, 34)
+size = Vector2(33, 33)
 
 [node name="Laser" type="Node2D" unique_id=507068074]
 z_index = 10
@@ -47,7 +47,7 @@ frame_progress = 0.20988366
 [node name="Area2D" type="Area2D" parent="." unique_id=1657214266]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=2119178706]
-position = Vector2(16, 16)
+position = Vector2(16.5, 16.5)
 shape = SubResource("RectangleShape2D_6t4s0")
 
 [node name="HpLabel" type="Label" parent="." unique_id=1472872463]

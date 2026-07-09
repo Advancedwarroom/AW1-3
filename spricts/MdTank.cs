@@ -53,6 +53,10 @@ public partial class MdTank : Infantry
         canTransportUnits = false;
         maxTransportCapacity = 0;
 
+        cost = 16000;  // MdTank造价
+        canTransportUnits = false;
+        maxTransportCapacity = 0;
+
     }
 
     // === 动画名映射 ===
