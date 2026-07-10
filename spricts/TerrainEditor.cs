@@ -174,6 +174,9 @@ private readonly List<UnitTemplate> weaponTemplates = new()
     new UnitTemplate { DisplayName = "🔴 激光炮", ScenePath = "res://Prefabs/Laser.tscn", 
         Category = "兵器", Team = "Player1", DisplayColor = new Color(0.9f, 0.2f, 0.2f), 
         Description = "直线激光兵器，穿透攻击，可配置角度/射程/冷却" },
+    new UnitTemplate { DisplayName = "💎 黑水晶", ScenePath = "res://Prefabs/crystal.tscn", 
+        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.6f, 0.2f, 0.9f), 
+        Description = "环形范围治疗+补给兵器，还原原版AW黑水晶机制" },
 };
 
 private readonly List<UnitTemplate> facilityTemplates = new()
@@ -436,6 +439,7 @@ private string GetFriendlyWeaponName(Weapon weapon)
     {
         BlackCannon => "黑炮",
         Laser => "激光炮",
+        Crystal => "黑水晶",
         _ => weapon.GetType().Name
     };
 }
@@ -5346,7 +5350,7 @@ private void OpenWeaponTerrainMatrixEditor()
     };
     private readonly Dictionary<string, string> compactWeaponAbbr = new()
     {
-        { "BlackCannon", "BCn" }, { "Laser", "Lsr" }
+        { "BlackCannon", "BCn" }, { "Laser", "Lsr" }, { "Crystal", "Cry" }
     };
     private readonly Dictionary<string, string> compactFacilityAbbr = new()
     {
@@ -6870,6 +6874,7 @@ private void OpenWeaponTerrainMatrixEditor()
         {
             0 => "black_cannon",
             1 => "Laser",
+            2 => "Crystal",
             _ => null
         };
 
