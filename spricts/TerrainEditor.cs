@@ -6872,9 +6872,10 @@ private void OpenWeaponTerrainMatrixEditor()
 
         string typeName = x switch
         {
-            0 => "black_cannon",
-            1 => "Laser",
-            2 => "Crystal",
+            3 => "Crystal",        // AWME Black Crystal (x=3, y=1) + Obelisk variants
+            4 => "black_cannon",  // AWME Black Cannon (x=4, any y=South/North)
+            5 => "Laser",         // AWME Death Ray (x=5, y=1)
+            6 => "Crystal",       // AWME Black Obelisk (x=6, y=1)
             _ => null
         };
 
