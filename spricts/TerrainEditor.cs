@@ -3929,6 +3929,13 @@ private void RefreshAllUnitVision()
         awbwImportBtn.Pressed += OpenAWBWImportDialog;
         globalConfigContainer.AddChild(awbwImportBtn);
 
+        var awmeImportBtn = new Button();
+        awmeImportBtn.Text = "🗺️ 导入 AW 地图 (.aws/.aw2/.awm/.awd)";
+        awmeImportBtn.CustomMinimumSize = new Vector2(300, 40);
+        awmeImportBtn.AddThemeFontSizeOverride("font_size", 13);
+        awmeImportBtn.Pressed += OpenAWMEImportDialog;
+        globalConfigContainer.AddChild(awmeImportBtn);
+
         var btnSeparator = new HSeparator();
         btnSeparator.CustomMinimumSize = new Vector2(0, 10);
         globalConfigContainer.AddChild(btnSeparator);
@@ -6252,5 +6259,502 @@ private void OpenWeaponTerrainMatrixEditor()
             style.SetCornerRadiusAll(8);
             batchTerrainBtn.AddThemeStyleboxOverride("normal", style);
         }
+    }
+
+    // ========== ✅ AWS Map Editor 多格式导入 (.aws/.aw2/.awm/.awd) ==========
+    private void OpenAWMEImportDialog()
+    {
+        var dialog = new Panel();
+        dialog.Name = "AWMEImportDialog";
+        dialog.CustomMinimumSize = new Vector2(420, 280);
+        dialog.SetAnchorsPreset(LayoutPreset.Center);
+        dialog.ZIndex = 1400;
+
+        var bg = new StyleBoxFlat();
+        bg.BgColor = new Color(0.08f, 0.12f, 0.18f, 0.97f);
+        bg.SetCornerRadiusAll(16);
+        bg.SetBorderWidthAll(3);
+        bg.BorderColor = new Color(0.6f, 0.9f, 0.4f);
+        dialog.AddThemeStyleboxOverride("panel", bg);
+
+        var vbox = new VBoxContainer();
+        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.AddThemeConstantOverride("margin_left", 20);
+        vbox.AddThemeConstantOverride("margin_right", 20);
+        vbox.AddThemeConstantOverride("margin_top", 16);
+        vbox.AddThemeConstantOverride("margin_bottom", 16);
+        vbox.AddThemeConstantOverride("separation", 12);
+
+        var title = new Label();
+        title.Text = "🗺️ 导入 AW 地图";
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 20);
+        title.AddThemeColorOverride("font_color", new Color(0.5f, 0.95f, 0.4f));
+        vbox.AddChild(title);
+
+        var fileBtn = new Button();
+        fileBtn.Text = "📁 选择 AW 地图文件";
+        fileBtn.CustomMinimumSize = new Vector2(360, 45);
+        fileBtn.AddThemeFontSizeOverride("font_size", 14);
+        fileBtn.Pressed += () => {
+            dialog.QueueFree();
+            var fd = new FileDialog();
+            fd.FileMode = FileDialog.FileModeEnum.OpenFile;
+            fd.Access = FileDialog.AccessEnum.Filesystem;
+            fd.Filters = new string[] { "*.aws ; AW Advance Wars", "*.aw2 ; AW2 Black Hole Rising", "*.awm ; AWM Advance Wars Map", "*.awd ; AWDS Dual Strike" };
+            fd.Title = "选择 AW 地图文件";
+            fd.Size = new Vector2I(800, 600);
+            fd.FileSelected += (path) => {
+                try {
+                    byte[] fileData = File.ReadAllBytes(path);
+                    ParseAWMEMap(fileData);
+                }
+                catch (Exception ex) { ShowImportHint($"❌ 读取失败: {ex.Message}"); }
+                fd.QueueFree();
+            };
+            fd.Canceled += () => fd.QueueFree();
+            AddChild(fd);
+            fd.PopupCentered();
+        };
+        vbox.AddChild(fileBtn);
+
+        var hint = new Label();
+        hint.Text = "支持 .aws / .aw2 / .awm / .awd 格式\n未知地形将保留为 GROUND\n不支持的单位/设施/兵器将自动跳过";
+        hint.AddThemeFontSizeOverride("font_size", 11);
+        hint.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 0.3f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        vbox.AddChild(hint);
+
+        var closeBtn = new Button();
+        closeBtn.Text = "❌ 关闭";
+        closeBtn.CustomMinimumSize = new Vector2(360, 40);
+        closeBtn.AddThemeFontSizeOverride("font_size", 13);
+        closeBtn.Pressed += () => dialog.QueueFree();
+        vbox.AddChild(closeBtn);
+
+        dialog.AddChild(vbox);
+        AddChild(dialog);
+    }
+
+    private void ParseAWMEMap(byte[] fileData)
+    {
+        try
+        {
+            if (fileData == null || fileData.Length < 10)
+            {
+                ShowImportHint("❌ 文件过短，无法解析");
+                return;
+            }
+
+            if (gameManager != null) gameManager.blockVictoryCheck = true;
+            ClearAllMapEntities();
+
+            string header = System.Text.Encoding.ASCII.GetString(fileData, 0, 9);
+            int offset = 10;
+            int width = 0, height = 0;
+
+            if (header == "AWSMap001")
+            {
+                if (fileData.Length < 13) { ShowImportHint("❌ AWS 文件过短"); return; }
+                height = fileData[10];
+                width = fileData[11];
+                offset = 13;
+            }
+            else if (header == "AW2Map001" || header == "AWMap 001")
+            {
+                width = 30;
+                height = 20;
+                offset = 10;
+            }
+            else if (header == "AWDMap001")
+            {
+                if (fileData.Length < 11) { ShowImportHint("❌ AWD 文件过短"); return; }
+                width = 30;
+                height = 20;
+                offset = 11;
+            }
+            else
+            {
+                ShowImportHint("❌ 不支持的文件格式");
+                return;
+            }
+
+            int gridCount = width * height;
+            int terrainDataSize = gridCount * 2;
+            int unitDataSize = gridCount * 2;
+
+            if (fileData.Length < offset + terrainDataSize + unitDataSize)
+            {
+                ShowImportHint("❌ 文件数据不完整");
+                return;
+            }
+
+            int importedTiles = 0;
+            int skippedTiles = 0;
+            int facilityCount = 0;
+            int unitCount = 0;
+            int weaponCount = 0;
+            var unknownTerrainIds = new HashSet<int>();
+            var unknownFacilityIds = new HashSet<int>();
+            var unknownUnitIds = new HashSet<int>();
+            var unknownWeaponIds = new HashSet<int>();
+
+            // 读取地形数据（同时包含地形和建筑/设施）
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int idx = offset + (y * width + x) * 2;
+                    ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
+
+                    if (x >= gridManager.map.GetLength(0) || y >= gridManager.map.GetLength(1))
+                        continue;
+
+                    var grid = gridManager.map[x, y];
+                    if (grid == null) continue;
+
+                    if (rawVal < 300)
+                    {
+                        var terrain = GetAWMETerrainMapping((int)rawVal);
+                        if (terrain == GridType.GROUND && rawVal != 0 && rawVal != 167)
+                        {
+                            unknownTerrainIds.Add((int)rawVal);
+                            skippedTiles++;
+                        }
+                        else
+                        {
+                            importedTiles++;
+                        }
+                        grid.gridType = terrain;
+                    }
+                    else if (rawVal >= 300 && rawVal <= 499)
+                    {
+                        var (facType, facTeam) = GetAWMEFacilityMapping((int)rawVal);
+                        if (!string.IsNullOrEmpty(facType))
+                        {
+                            string scenePath = GetScenePathForFacilityType(facType);
+                            if (!string.IsNullOrEmpty(scenePath))
+                            {
+                                SpawnFacilityAtGrid(grid, scenePath, facTeam ?? "Player0");
+                                facilityCount++;
+                            }
+                            else
+                            {
+                                unknownFacilityIds.Add((int)rawVal);
+                            }
+                        }
+                        else
+                        {
+                            unknownFacilityIds.Add((int)rawVal);
+                            skippedTiles++;
+                        }
+                        grid.gridType = GridType.GROUND;
+                    }
+                    else if (rawVal >= 500 && rawVal <= 899)
+                    {
+                        var (unitType, unitTeam) = GetAWMEUnitMapping((int)rawVal);
+                        if (!string.IsNullOrEmpty(unitType))
+                        {
+                            string scenePath = GetScenePathForUnitType(unitType);
+                            if (!string.IsNullOrEmpty(scenePath))
+                            {
+                                SpawnUnitAtGrid(grid, scenePath, unitTeam ?? "Player1");
+                                unitCount++;
+                            }
+                            else
+                            {
+                                unknownUnitIds.Add((int)rawVal);
+                            }
+                        }
+                        else
+                        {
+                            unknownUnitIds.Add((int)rawVal);
+                        }
+                        grid.gridType = GridType.GROUND;
+                    }
+                    else if (rawVal >= 900 && rawVal <= 1299)
+                    {
+                        var (wepType, wepTeam) = GetAWMEWeaponMapping((int)rawVal);
+                        if (!string.IsNullOrEmpty(wepType))
+                        {
+                            string scenePath = GetScenePathForWeaponType(wepType);
+                            if (!string.IsNullOrEmpty(scenePath))
+                            {
+                                SpawnWeaponAtGrid(grid, scenePath, wepTeam ?? "Player0");
+                                weaponCount++;
+                            }
+                            else
+                            {
+                                unknownWeaponIds.Add((int)rawVal);
+                            }
+                        }
+                        else
+                        {
+                            unknownWeaponIds.Add((int)rawVal);
+                        }
+                        grid.gridType = GridType.GROUND;
+                    }
+                    else
+                    {
+                        grid.gridType = GridType.GROUND;
+                        unknownTerrainIds.Add((int)rawVal);
+                        skippedTiles++;
+                    }
+                }
+            }
+
+            // 读取单位数据（0xFFFF = 空）
+            int unitOffset = offset + terrainDataSize;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int idx = unitOffset + (y * width + x) * 2;
+                    ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
+
+                    if (rawVal == 0xFFFF) continue;
+
+                    if (x >= gridManager.map.GetLength(0) || y >= gridManager.map.GetLength(1))
+                        continue;
+
+                    var grid = gridManager.map[x, y];
+                    if (grid == null) continue;
+
+                    if (rawVal >= 500 && rawVal <= 899)
+                    {
+                        var (unitType, unitTeam) = GetAWMEUnitMapping((int)rawVal);
+                        if (!string.IsNullOrEmpty(unitType))
+                        {
+                            string scenePath = GetScenePathForUnitType(unitType);
+                            if (!string.IsNullOrEmpty(scenePath))
+                            {
+                                SpawnUnitAtGrid(grid, scenePath, unitTeam ?? "Player1");
+                                unitCount++;
+                            }
+                            else
+                            {
+                                unknownUnitIds.Add((int)rawVal);
+                            }
+                        }
+                        else
+                        {
+                            unknownUnitIds.Add((int)rawVal);
+                        }
+                    }
+                    else if (rawVal >= 900 && rawVal <= 1299)
+                    {
+                        var (wepType, wepTeam) = GetAWMEWeaponMapping((int)rawVal);
+                        if (!string.IsNullOrEmpty(wepType))
+                        {
+                            string scenePath = GetScenePathForWeaponType(wepType);
+                            if (!string.IsNullOrEmpty(scenePath))
+                            {
+                                SpawnWeaponAtGrid(grid, scenePath, wepTeam ?? "Player0");
+                                weaponCount++;
+                            }
+                            else
+                            {
+                                unknownWeaponIds.Add((int)rawVal);
+                            }
+                        }
+                        else
+                        {
+                            unknownWeaponIds.Add((int)rawVal);
+                        }
+                    }
+                    else if (rawVal >= 300 && rawVal <= 499)
+                    {
+                        var (facType, facTeam) = GetAWMEFacilityMapping((int)rawVal);
+                        if (!string.IsNullOrEmpty(facType))
+                        {
+                            string scenePath = GetScenePathForFacilityType(facType);
+                            if (!string.IsNullOrEmpty(scenePath))
+                            {
+                                SpawnFacilityAtGrid(grid, scenePath, facTeam ?? "Player0");
+                                facilityCount++;
+                            }
+                            else
+                            {
+                                unknownFacilityIds.Add((int)rawVal);
+                            }
+                        }
+                        else
+                        {
+                            unknownFacilityIds.Add((int)rawVal);
+                        }
+                    }
+                    else
+                    {
+                        unknownUnitIds.Add((int)rawVal);
+                    }
+                }
+            }
+
+            foreach (var grid in gridManager.grids)
+            {
+                if (grid != null && IsInstanceValid(grid))
+                {
+                    UpdateGridVisual(grid);
+                }
+            }
+
+            gameManager?.UpdateUnitLists();
+            gameManager?.RefreshSpecializedUnitLists();
+            gameManager?.fogOfWarManager?.RefreshFog();
+            gameManager?.ResetGameState();
+
+            string summary = $"✅ AW 地图导入成功！\n尺寸: {width}×{height} | 导入: {importedTiles} 格";
+            if (facilityCount > 0) summary += $" | 设施: {facilityCount} 个";
+            if (unitCount > 0) summary += $" | 单位: {unitCount} 个";
+            if (weaponCount > 0) summary += $" | 兵器: {weaponCount} 个";
+            if (skippedTiles > 0) summary += $" | 跳过: {skippedTiles} 格";
+
+            string unknownInfo = "";
+            if (unknownTerrainIds.Count > 0)
+                unknownInfo += $"\n未知地形: {string.Join(", ", unknownTerrainIds.OrderBy(i => i).Take(20))}";
+            if (unknownFacilityIds.Count > 0)
+                unknownInfo += $"\n未知设施: {string.Join(", ", unknownFacilityIds.OrderBy(i => i).Take(20))}";
+            if (unknownUnitIds.Count > 0)
+                unknownInfo += $"\n未知单位: {string.Join(", ", unknownUnitIds.OrderBy(i => i).Take(20))}";
+            if (unknownWeaponIds.Count > 0)
+                unknownInfo += $"\n未知兵器: {string.Join(", ", unknownWeaponIds.OrderBy(i => i).Take(20))}";
+
+            ShowImportHint(summary + unknownInfo);
+            GD.Print($"[AWMEImport] 完成: {width}x{height}, 地形 {importedTiles}, 设施 {facilityCount}, 单位 {unitCount}, 兵器 {weaponCount}, 跳过 {skippedTiles}");
+        }
+        catch (Exception ex)
+        {
+            if (gameManager != null) gameManager.blockVictoryCheck = false;
+            GD.PrintErr($"[AWMEImport] 导入失败: {ex.Message}\n{ex.StackTrace}");
+            ShowImportHint($"❌ AW 地图导入失败:\n{ex.Message}");
+        }
+        finally
+        {
+            if (gameManager != null) gameManager.blockVictoryCheck = false;
+        }
+    }
+
+    private GridType GetAWMETerrainMapping(int value)
+    {
+        if (value < 0 || value > 299) return GridType.GROUND;
+
+        switch (value)
+        {
+            case 0: return GridType.GROUND;
+            case 1: return GridType.ROAD;
+            case 2: return GridType.BRIDGE;
+            case 3: case 4: case 5: case 6: case 7: case 8: case 9: case 10: case 11: case 12: case 13: case 14:
+                return GridType.RIVER;
+            case 15: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 24: case 25: case 26: case 27:
+                return GridType.ROAD;
+            case 16: return GridType.PIPE;
+            case 28: return GridType.SEA;
+            case 29: case 31: case 32: case 39:
+                return GridType.BEACH;
+            case 30: return GridType.REEF;
+            case 33: return GridType.REEF;
+            case 60: return GridType.SEA;
+            case 90: return GridType.FOREST;
+            case 150: return GridType.HILL;
+            case 167: return GridType.GROUND;
+            case 226: return GridType.PIPESEAM;
+            default:
+                int x = value % 30;
+                int y = value / 30;
+                if (y == 0 && x == 16) return GridType.PIPE;
+                if (y == 7 && x == 16) return GridType.PIPESEAM;
+                return GridType.GROUND;
+        }
+    }
+
+    private (string typeName, string team) GetAWMEFacilityMapping(int value)
+    {
+        if (value < 300 || value > 499) return (null, null);
+
+        int baseVal = value - 300;
+        int x = baseVal % 10;
+        int y = baseVal / 10;
+
+        string team = y == 0 ? "Player1" : (y == 1 ? "Player2" : "Player0");
+
+        string typeName = x switch
+        {
+            0 => "HQ",
+            1 => "City",
+            2 => "Base",
+            3 => "AirPort",
+            4 => "Port",
+            5 => "Tower",
+            6 => "Lab",
+            _ => null
+        };
+
+        if (string.IsNullOrEmpty(typeName)) return (null, null);
+
+        if (typeName == "HQ" || typeName == "Port" || typeName == "Tower" || typeName == "Lab")
+            return (null, null);
+
+        return (typeName, team);
+    }
+
+    private (string typeName, string team) GetAWMEUnitMapping(int value)
+    {
+        if (value < 500 || value > 899) return (null, null);
+
+        int baseVal = value - 500;
+        int x = baseVal % 20;
+        int y = baseVal / 20;
+
+        string team = (y / 2) switch
+        {
+            0 => "Player1",
+            1 => "Player2",
+            _ => "Player0"
+        };
+
+        string typeName = x switch
+        {
+            0 => "infantry",
+            20 => "mech",
+            1 => "Md_Tank",
+            21 => "light_tank",
+            2 => "Recon",
+            22 => "apc",
+            3 => "Artillery",
+            23 => "Rocket",
+            4 => "AntiAir",
+            24 => "Anti_Tank",
+            12 => "oozium",
+            32 => "FlyBomb",
+            _ => null
+        };
+
+        return (typeName, team);
+    }
+
+    private (string typeName, string team) GetAWMEWeaponMapping(int value)
+    {
+        if (value < 900 || value > 1299) return (null, null);
+
+        int baseVal = value - 900;
+        int x = baseVal % 20;
+        int y = baseVal / 20;
+
+        string team = (y / 2) switch
+        {
+            0 => "Player1",
+            1 => "Player2",
+            _ => "Player0"
+        };
+
+        string typeName = x switch
+        {
+            0 => "black_cannon",
+            1 => "Laser",
+            _ => null
+        };
+
+        return (typeName, team);
     }
 }
