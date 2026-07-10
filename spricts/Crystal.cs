@@ -68,6 +68,11 @@ public partial class Crystal : Weapon
     public override void _Ready()
     {
         base._Ready();
+        // Crystal 需要弹药系统（补给消耗自身弹药）
+        useAmmoSystem = true;
+        maxAmmo = 5;     // 默认 5 发弹药，每目标消耗 1 发
+        currentAmmo = 5;
+
         // 按队伍绑定正确贴图动画
         UpdateCrystalVisual();
         // 初始化默认准许类型（所有类型）
@@ -87,6 +92,9 @@ public partial class Crystal : Weapon
                 "Artillery", "APC", "AntiAir", "Recon", "AntiTank", "Flare", "FlyBomb"
             };
         }
+        // 默认补给数值（正加负减零不变，这里默认补 1 发弹药 / 5 燃料）
+        if (crystalSupplyPrimaryAmmo == 0) crystalSupplyPrimaryAmmo = 1;
+        if (crystalSupplyFuel == 0) crystalSupplyFuel = 5;
         // 脉冲动画
         pulseTimer = new Timer { WaitTime = 1.5f, OneShot = false };
         pulseTimer.Timeout += OnPulseTimer;
@@ -159,6 +167,10 @@ public partial class Crystal : Weapon
 
     private void OnRangeGridClicked(Grids targetGrid, GameManager gm)
     {
+        // 防重复触发：已行动则忽略，同时手动清除回调
+        if (hasActed || remainingAttacks <= 0) return;
+        targetGrid.OnClickGrid = null;
+        
         // 点击环形范围内任意格子 -> 执行治疗+补给，然后直接标记已行动
         PerformCrystalEffect(gm);
         hasActed = true;
