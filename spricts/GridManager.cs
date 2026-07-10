@@ -128,6 +128,8 @@ public partial class GridManager : Node
 
     public List<Grids> BuildPath(Grids from, Grids to)
     {
+        if (from == null || to == null) return new List<Grids>();
+
         var queue = new Queue<Grids>();
         var parent = new Dictionary<Grids, Grids>();
         queue.Enqueue(from);

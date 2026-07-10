@@ -1833,7 +1833,12 @@ public void RollbackMove()
     var fromGrid = unit.grid;
     var toGrid = unit.originalGrid;
 
-
+    if (fromGrid == null || toGrid == null)
+    {
+        GD.Print("[RollbackMove] 无法回退：单位未绑定到有效格子");
+        selectedInfantry = null;
+        return;
+    }
 
     int moveCost = 0;
     if (unit is Oozium)

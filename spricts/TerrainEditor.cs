@@ -4876,6 +4876,13 @@ private void OpenWeaponTerrainMatrixEditor()
             }
         }
 
+        // ✅ 重置 GameManager 的选中状态，防止引用已删除的单位
+        if (gameManager != null)
+        {
+            gameManager.selectedInfantry = null;
+            gameManager.selectedWeapon = null;
+        }
+
         GD.Print("[Import] 已清空所有单位、兵器和设施");
     }
 
