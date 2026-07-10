@@ -64,6 +64,7 @@ public partial class TerrainEditor : Control
     // ========== ✅ 批量地形放置模式 ==========
     private bool isBatchTerrainMode = false;
     private GridType batchTerrainType = GridType.GROUND;
+    private Grids lastBatchGrid = null;
     private Button batchTerrainBtn;
     private Panel batchTerrainPanel;
     private VBoxContainer batchTerrainButtonContainer;
@@ -3367,6 +3368,29 @@ private void OnTerrainSelected(GridType newTerrain)
 
             currentDraggedMenu.GlobalPosition = newPosition;
         }
+
+        // ✅ 批量地形滑动铺设：按住鼠标左键在地图上拖动时自动铺设
+        if (isBatchTerrainMode && IsEditMode && Input.IsMouseButtonPressed(MouseButton.Left))
+        {
+            if (gridManager != null && gridManager.map != null)
+            {
+                Vector2 mousePos = GetGlobalMousePosition();
+                int x = (int)((mousePos.X - gridManager.startPos.X) / gridManager.gridSize.X);
+                int y = (int)((mousePos.Y - gridManager.startPos.Y) / gridManager.gridSize.Y);
+
+                if (x >= 0 && x < gridManager.map.GetLength(0) && y >= 0 && y < gridManager.map.GetLength(1))
+                {
+                    var grid = gridManager.map[x, y];
+                    if (grid != null && grid != lastBatchGrid)
+                    {
+                        lastBatchGrid = grid;
+                        grid.gridType = batchTerrainType;
+                        UpdateGridVisual(grid);
+                        GD.Print($"[BatchTerrain] 滑动铺设 {batchTerrainType} @ ({x},{y})");
+                    }
+                }
+            }
+        }
     }
 
     // ========== ✅ 全局配置面板 ==========
@@ -6052,7 +6076,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
         // 提示
         var hint = new Label();
-        hint.Text = "🖱️ 滑动即选：鼠标划过地形自动选中\n点击地图格子直接铺设";
+        hint.Text = "🖱️ 点击地形选择，在地图滑动铺设\nESC 结束批量放置";
         hint.HorizontalAlignment = HorizontalAlignment.Center;
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.7f, 0.8f, 0.6f));
@@ -6151,12 +6175,6 @@ private void OpenWeaponTerrainMatrixEditor()
         GridType capturedType = terrainType;
         btn.Pressed += () => StartBatchTerrainMode(capturedType);
 
-        // ✅ 滑动即选：鼠标进入按钮时自动选中地形并关闭弹窗
-        btn.MouseEntered += () => {
-            StartBatchTerrainMode(capturedType);
-            CloseBatchTerrainPanel(); // 关闭弹窗，让用户直接在地图批量放置
-        };
-
         return btn;
     }
 
@@ -6192,6 +6210,7 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         batchTerrainType = type;
         isBatchTerrainMode = true;
+        lastBatchGrid = null;
         CloseBatchTerrainPanel();
         UpdateBatchTerrainButtonVisual();
         GD.Print($"[BatchTerrain] 开始批量放置: {type}");
@@ -6201,6 +6220,7 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         isBatchTerrainMode = false;
         batchTerrainType = GridType.GROUND;
+        lastBatchGrid = null;
         CloseBatchTerrainPanel();
         UpdateBatchTerrainButtonVisual();
         GD.Print("[BatchTerrain] 停止批量放置");
