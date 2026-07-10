@@ -2575,6 +2575,63 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         ShowProductionMenu(productionTargetFacility, productionTargetGrid);
     }
 
+    /// <summary>
+    /// AI自动生产单位：无需UI，直接检查条件并生产
+    /// </summary>
+    public bool AIProduceUnit(Facility facility, Grids grid, string unitName, string team)
+    {
+        if (facility == null || grid == null || !UnitProductionDatabase.HasUnit(unitName)) return false;
+        if (!facility.canProduce || !facility.producibleUnitNames.Contains(unitName)) return false;
+        if (facility.facilityTeam != team) return false;
+        if (grid.infantries.Count > 0 || grid.weapons.Count > 0) return false; // 格子必须为空
+
+        var info = UnitProductionDatabase.GetInfo(unitName);
+        int currentFunds = GetTeamFunds(team);
+        if (currentFunds < info.Cost) return false;
+
+        // 扣除资金
+        SetTeamFunds(team, currentFunds - info.Cost);
+
+        // 生成单位
+        var scene = GD.Load<PackedScene>(info.ScenePath);
+        if (scene == null)
+        {
+            GD.PrintErr($"[AI-Production] 无法加载场景: {info.ScenePath}");
+            return false;
+        }
+
+        var unit = scene.Instantiate<Infantry>();
+        if (unit == null) return false;
+
+        unit.Position = grid.Position;
+        unit.team = team;
+        int unitNumber = unitManager.AllUnits.Count + 1;
+        unit.Name = $"{team}_{unitName}_{unitNumber}";
+
+        unitManager.units.AddChild(unit);
+        bool bound = unitManager.BindUnitToGrid(unit, true);
+        if (!bound)
+        {
+            unit.QueueFree();
+            GD.PrintErr("[AI-Production] 绑定格子失败");
+            return false;
+        }
+
+        unitManager.AllUnits.Add(unit);
+
+        RegisterUnit(unit, InferCategory(unit));
+        unit.OnClickPiece = OnSelectPiece;
+        unit.UpdateTeamVisual();
+        unit.UpdateHpLabel();
+        unit.SetWaitVisual(true);
+
+        UpdateUnitLists();
+        RefreshSpecializedUnitLists();
+
+        GD.Print($"[AI-Production] {team} 在 {grid.GridIndex} 生产了 {unitName}，花费 {info.Cost}，剩余资金 {GetTeamFunds(team)}");
+        return true;
+    }
+
     public int GetTeamFunds(string team)
     {
         return team switch

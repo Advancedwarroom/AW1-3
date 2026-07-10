@@ -50,6 +50,10 @@ public partial class AI_Manager : Node
         if (!IsAITeam(phaseTeam)) return;
 
         GD.Print($"[AI] {phaseTeam} AI 回合开始");
+
+        // 先执行生产（在单位行动之前）
+        AIProduction(phaseTeam);
+
         isRunningAI = true;
         aiUnitIndex = 0;
         BuildAIQueue(phaseTeam);
@@ -347,6 +351,13 @@ public partial class AI_Manager : Node
             return;
         }
 
+        // ✅ 如果已经在可占领的城市上，直接执行占领（不依赖 moveRange 包含当前格子）
+        if (unit.grid?.city != null && unit.grid.city.facilityTeam != unit.team)
+        {
+            AICapture(unit);
+            return;
+        }
+
         // 找最近的可占领城市
         var cities = gameManager.gridManager?.grids
             ?.Where(g => g != null && IsInstanceValid(g) && g.city != null)
@@ -533,6 +544,69 @@ public partial class AI_Manager : Node
         }
         unit.originalGrid = null;
         GD.Print($"[AI] {unit.Name} 结束行动");
+    }
+
+    // ========== AI 智能生产系统 ==========
+    private void AIProduction(string team)
+    {
+        if (gameManager?.gridManager?.grids == null) return;
+
+        int currentFunds = gameManager.GetTeamFunds(team);
+        int minReserve = 1000; // 最便宜单位 Infantry 的价格
+
+        // 单位优先级（数值越高越优先，综合战略价值和性价比）
+        var unitPriority = new Dictionary<string, int>
+        {
+            ["Infantry"] = 100,
+            ["Bike"] = 95,
+            ["Mech"] = 90,
+            ["Recon"] = 80,
+            ["APC"] = 75,
+            ["Flare"] = 70,
+            ["Artillery"] = 60,
+            ["LightTank"] = 55,
+            ["AntiAir"] = 50,
+            ["AntiTank"] = 40,
+            ["Rocket"] = 30,
+            ["MdTank"] = 25,
+            ["Oozium"] = 15,
+            ["FlyBomb"] = 10
+        };
+
+        foreach (var grid in gameManager.gridManager.grids)
+        {
+            if (grid == null || !IsInstanceValid(grid)) continue;
+            var facility = grid.city;
+            if (facility == null || !facility.canProduce || facility.facilityTeam != team) continue;
+            if (grid.infantries.Count > 0 || grid.weapons.Count > 0) continue; // 格子必须为空
+            if (facility.producibleUnitNames == null || facility.producibleUnitNames.Count == 0) continue;
+
+            // 按优先级排序可生产单位
+            var candidates = facility.producibleUnitNames
+                .Where(name => UnitProductionDatabase.HasUnit(name))
+                .Select(name => new { Name = name, Info = UnitProductionDatabase.GetInfo(name) })
+                .Where(x => x.Info.Cost > 0)
+                .OrderByDescending(x => unitPriority.GetValueOrDefault(x.Name, 0))
+                .ThenBy(x => x.Info.Cost)
+                .ToList();
+
+            foreach (var candidate in candidates)
+            {
+                int cost = candidate.Info.Cost;
+                int reserve = Mathf.Max(minReserve, currentFunds / 3); // 保留至少1000或资金的1/3
+
+                // 存钱逻辑：生产后剩余资金必须 >= reserve
+                if (currentFunds - cost < reserve) continue;
+
+                bool success = gameManager.AIProduceUnit(facility, grid, candidate.Name, team);
+                if (success)
+                {
+                    currentFunds -= cost;
+                    GD.Print($"[AI-Production] {team} 在 {grid.GridIndex} 生产了 {candidate.Name}，花费 {cost}，剩余资金 {currentFunds}");
+                    break; // 每个设施每回合只生产一个单位
+                }
+            }
+        }
     }
 
     private List<object> GetAllEnemyUnitsAndWeapons(string team)

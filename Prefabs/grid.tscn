@@ -17,6 +17,7 @@
 [ext_resource type="Texture2D" uid="uid://dloef8jixlpda" path="res://art/Grids/地形/Road.png" id="14_b73tk"]
 [ext_resource type="Texture2D" uid="uid://bb734ha8bqmgr" path="res://art/Grids/地形/Pipe.png" id="14_tvkgv"]
 [ext_resource type="Texture2D" uid="uid://bf1qqlsrtj86o" path="res://art/Grids/地形/LAVASide.png" id="15_x3au7"]
+[ext_resource type="Texture2D" uid="uid://bbykd0k0j8tge" path="res://art/Grids/地形/BRIDGE.png" id="16_nquop"]
 [ext_resource type="Texture2D" uid="uid://0hq17p5572l4" path="res://art/Grids/地形/BrokenPipeSeam.png" id="16_p0itk"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_0ha60"]
@@ -38,6 +39,7 @@ terrainIconTextures = Dictionary[int, Texture2D]({
 11: ExtResource("13_fqpsr"),
 13: ExtResource("15_x3au7"),
 21: ExtResource("14_00fs3"),
+24: ExtResource("16_nquop"),
 29: ExtResource("16_p0itk")
 })
 
