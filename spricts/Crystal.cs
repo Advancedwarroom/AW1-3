@@ -167,7 +167,7 @@ public partial class Crystal : Weapon
     }
 
     // ========== 执行黑水晶效果（治疗 + 补给） ==========
-    private void PerformCrystalEffect(GameManager gm)
+    public void PerformCrystalEffect(GameManager gm)
     {
         if (gm == null || grid == null) return;
 

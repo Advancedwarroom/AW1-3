@@ -18,6 +18,8 @@ public partial class ActionMenu : Control
     [Export] public Button explodeButton; // ✅ 自爆按钮
     [Export] public Button illuminateButton; // ✅ 照明按钮
 
+    [Export] public Button healButton; // ✅ Crystal 黑水晶治疗按钮
+
     // APC专用按钮
     [Export] public Button loadButton;
     [Export] public PackedScene unloadButtonPreset;
@@ -57,6 +59,20 @@ public override void _Ready()
         if (!illuminateButton.IsConnected(BaseButton.SignalName.Pressed, illumCallable))
         {
             illuminateButton.Connect(BaseButton.SignalName.Pressed, illumCallable);
+        }
+    }
+    // ✅ 动态创建 Crystal 治疗按钮（如果场景中没有）
+    if (healButton == null)
+    {
+        var container = GetNodeOrNull<VBoxContainer>("ButtonContainer");
+        if (container != null)
+        {
+            healButton = new Button();
+            healButton.Name = "HealButton";
+            healButton.Text = "治疗";
+            healButton.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+            container.AddChild(healButton);
+            healButton.Pressed += OnHealPressed;
         }
     }
 }
@@ -573,39 +589,56 @@ private List<Grids> GetAdjacentGrids(Grids center)
 
    public void ShowWeaponMenu(Weapon weapon)
     {
-        supplyButton.Visible = false;
         currentUnit = null;
         currentWeapon = weapon;
 
         if (!IsNodeReady()) return;
 
+        // ✅ 统一隐藏所有不需要的按钮
         moveButton.Visible = false;
         captureButton.Visible = false;
         rotateButton?.Hide();
+        explodeButton?.Hide();
+        illuminateButton?.Hide();
+        loadButton?.Hide();
+        supplyButton.Visible = false;
 
-        // ✅ 修改：根据弹药和冷却状态判断是否可以攻击
-        bool canAttack = false;
-        bool hasTargetInRange = false;
-
-        // ✅ 究极自由：所有兵器使用统一的攻击检查逻辑
-        canAttack = weapon.CanAttack();
-
-        if (canAttack)
+        // ✅ Crystal 黑水晶：显示"治疗"按钮，隐藏"攻击"按钮
+        if (weapon is Crystal crystal)
         {
-            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-            var range = weapon.CalculateAttackRange();
-            var fog = gm?.fogOfWarManager;
-            bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
-            hasTargetInRange = range.Any(g => 
+            bool canHeal = crystal.CanAttack(); // CanAttack = !hasActed && remainingAttacks > 0
+            attackButton.Visible = false;
+            if (healButton != null)
             {
-                if (isFogEnabled && fog != null && !fog.IsGridVisible(g)) return false;
-                if (weapon is BlackCannon cannon)
-                    return cannon.HasValidTargetInGrid(g);
-                return g.HasEnemyInfantry(weapon.team) || (weapon.CanAttackWeapon && g.weapon != null && g.weapon.team != weapon.team);
-            });
+                healButton.Visible = canHeal;
+            }
+        }
+        else
+        {
+            if (healButton != null) healButton.Visible = false;
+
+            // ✅ 修改：根据弹药和冷却状态判断是否可以攻击
+            bool canAttack = weapon.CanAttack();
+            bool hasTargetInRange = false;
+
+            if (canAttack)
+            {
+                var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+                var range = weapon.CalculateAttackRange();
+                var fog = gm?.fogOfWarManager;
+                bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
+                hasTargetInRange = range.Any(g => 
+                {
+                    if (isFogEnabled && fog != null && !fog.IsGridVisible(g)) return false;
+                    if (weapon is BlackCannon cannon)
+                        return cannon.HasValidTargetInGrid(g);
+                    return g.HasEnemyInfantry(weapon.team) || (weapon.CanAttackWeapon && g.weapon != null && g.weapon.team != weapon.team);
+                });
+            }
+
+            attackButton.Visible = canAttack && hasTargetInRange;
         }
 
-        attackButton.Visible = canAttack && hasTargetInRange;
         waitButton.Visible = true;
         infoButton.Visible = true;
 
@@ -774,6 +807,7 @@ private List<Grids> GetAdjacentGrids(Grids center)
         waitButton.Visible = true;
         infoButton.Visible = true;
         if (loadButton != null) loadButton.Visible = false;
+        if (healButton != null) healButton.Visible = false;
         if (unloadContainer != null) unloadContainer.Visible = false;
         if (explodeButton != null)
         {
@@ -1160,6 +1194,26 @@ private void OnSupplyPressed()
         else if (currentUnit != null && currentWeapon == null)
         {
             currentUnit.OnAttackSelected();
+        }
+        Hide();
+    }
+
+    private void OnHealPressed()
+    {
+        GetViewport().SetInputAsHandled();
+        if (currentWeapon is Crystal crystal)
+        {
+            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            if (gm != null)
+            {
+                crystal.PerformCrystalEffect(gm);
+                crystal.hasActed = true;
+                crystal.remainingAttacks = 0;
+                crystal.SetVisualDark();
+            }
+            currentWeapon = null;
+            gm?.gridManager?.ClearWeaponRange();
+            gm?.selectedWeapon = null;
         }
         Hide();
     }
