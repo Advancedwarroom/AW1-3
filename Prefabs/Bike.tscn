@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bav1wcjvwgxh8"]
+[gd_scene format=3 uid="uid://c3k7p2m9n4x8q"]
 
 [ext_resource type="Script" uid="uid://hgs51mm8710x" path="res://spricts/Bike.cs" id="1_g7w8n"]
 [ext_resource type="SpriteFrames" uid="uid://bkmjpiqqtw4s5" path="res://asscets/AnimatedSprite/NoFuelIcno.tres" id="1_m37e8"]
