@@ -232,7 +232,23 @@ public partial class GridManager : Node
     public void OnMouseEnteredGrid(Grids grid)
     {
         if (!moveRange.Contains(grid)) return;
+
+        // ✅ 雾战紫色路径：恢复所有移动范围格子的颜色，再标记路径为紫色
+        foreach (var g in moveRange)
+        {
+            if (g?.pathIcon != null)
+                g.pathIcon.Modulate = Colors.White;
+        }
+
         previewPath = BuildPath(selectedUnit.grid, grid);
+
+        // ✅ 将路径上在移动范围内的格子标记为紫色
+        foreach (var g in previewPath)
+        {
+            if (moveRange.Contains(g) && g?.pathIcon != null)
+                g.pathIcon.Modulate = new Color(0.7f, 0.3f, 1.0f, 1.0f); // 紫色
+        }
+
         UpdatePathLine();
     }
 
@@ -240,6 +256,13 @@ public partial class GridManager : Node
     {
         previewPath.Clear();
         pathLine.ClearPoints();
+
+        // ✅ 恢复所有移动范围格子的颜色
+        foreach (var g in moveRange)
+        {
+            if (g?.pathIcon != null)
+                g.pathIcon.Modulate = Colors.White;
+        }
     }
 
     public void UpdatePathLine()
@@ -367,9 +390,12 @@ public partial class GridManager : Node
     }
 
     // ========== ✅ 核心修改：SetupMoveRangeCallbacks ==========
-    // ✅ 新增：通用移动范围计算方法（替代所有 ShowXXXMoveRange）
-    private void CalculateMoveRangeGeneric(Infantry infantry, int maxMove)
+    // ✅ 公共方法：纯计算移动范围（不修改UI，供玩家和AI统一使用）
+    public List<Grids> GetMoveRange(Infantry infantry, int maxMove)
     {
+        var result = new List<Grids>();
+        if (infantry == null || infantry.grid == null || map == null) return result;
+
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         var fog = gm?.fogOfWarManager;
         bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
@@ -382,7 +408,7 @@ public partial class GridManager : Node
         while (open.Count > 0)
         {
             var (cur, accCost) = open.Dequeue();
-            
+
             // ✅ 可见格子或迷雾关闭时：当前格子有敌方单位则阻挡后续路径扩展（仅NonOverlapping）
             if (cur != infantry.grid && infantry.overlapType == UnitOverlapType.NonOverlapping)
             {
@@ -395,12 +421,12 @@ public partial class GridManager : Node
                         continue;
                 }
             }
-            
+
             for (int dirIdx = 0; dirIdx < 4; dirIdx++)
             {
                 var dir = offset[dirIdx];
                 var nIdx = cur.GridIndex + dir;
-                
+
                 if (nIdx.X < 0 || nIdx.X >= searchRange.X ||
                     nIdx.Y < 0 || nIdx.Y >= searchRange.Y) continue;
 
@@ -416,7 +442,7 @@ public partial class GridManager : Node
                 int newCost = accCost + moveCost;
                 if (best.TryGetValue(neighbor, out int old) && newCost >= old) continue;
                 if (newCost > maxMove) continue;
-                
+
                 if (infantry is not Oozium && neighbor.weapon != null)
                     continue;
 
@@ -435,11 +461,20 @@ public partial class GridManager : Node
 
                 best[neighbor] = newCost;
                 open.Enqueue((neighbor, newCost));
-                
-                if (!moveRange.Contains(neighbor))
-                    moveRange.Add(neighbor);
+
+                if (!result.Contains(neighbor))
+                    result.Add(neighbor);
             }
         }
+        return result;
+    }
+
+    // ✅ 新增：通用移动范围计算方法（替代所有 ShowXXXMoveRange）
+    private void CalculateMoveRangeGeneric(Infantry infantry, int maxMove)
+    {
+        var range = GetMoveRange(infantry, maxMove);
+        moveRange.Clear();
+        moveRange.AddRange(range);
     }
 
 private void SetupMoveRangeCallbacks(Infantry infantry)
@@ -747,7 +782,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
         else
         {
-            // ✅ NonOverlapping单位检查路径上的敌方单位，有则截断待机
+            // ✅ NonOverlapping单位检查路径上的不可移动格子，有则截断待机
             if (infantry.overlapType == UnitOverlapType.NonOverlapping)
             {
                 var path = BuildPath(infantry.grid, to);
@@ -756,25 +791,39 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                 for (int i = 1; i < path.Count; i++)
                 {
                     var g = path[i];
+                    
+                    // 检查1: 敌方单位阻挡
                     g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
                     var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team).ToList();
                     if (enemies.Count > 0)
                     {
-                        // 遇到敌方单位，截断到最后一个可停留的格子，直接待机
-                        if (lastValidGrid != infantry.grid && CanStayOnGrid(lastValidGrid, infantry))
-                        {
-                            MoveTo(infantry, lastValidGrid, showMenu: false);
-                        }
-                        else
-                        {
-                            CloseRange();
-                            var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
-                            actionMenu?.Hide();
-                            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-                            gm?.ClearSelectedInfantry();
-                        }
+                        // 截断到最后一个可停留的格子
+                        TruncateAndMove(infantry, lastValidGrid);
                         return;
                     }
+                    
+                    // 检查2: 兵器阻挡（非Oozium单位）
+                    if (infantry is not Oozium && g.weapon != null)
+                    {
+                        TruncateAndMove(infantry, lastValidGrid);
+                        return;
+                    }
+                    
+                    // 检查3: 地形不可移动
+                    int moveCost = infantry.GetMoveCost(g.gridType);
+                    if (moveCost >= 999 || moveCost == int.MaxValue)
+                    {
+                        TruncateAndMove(infantry, lastValidGrid);
+                        return;
+                    }
+                    
+                    // 检查4: CanMoveTo判定
+                    if (unitManager?.CanMoveTo(g.GridIndex, infantry) == false)
+                    {
+                        TruncateAndMove(infantry, lastValidGrid);
+                        return;
+                    }
+                    
                     lastValidGrid = g;
                 }
             }
@@ -997,7 +1046,24 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     }
     }
 
-    // ========== ✅ 新增：移动截断（正序路径检查，遇到敌方单位截断后待机） ==========
+    // ========== ✅ 新增：移动截断辅助方法 ==========
+    private void TruncateAndMove(Infantry infantry, Grids lastValidGrid)
+    {
+        if (lastValidGrid != infantry.grid && CanStayOnGrid(lastValidGrid, infantry))
+        {
+            MoveTo(infantry, lastValidGrid, showMenu: false);
+        }
+        else
+        {
+            CloseRange();
+            var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
+            actionMenu?.Hide();
+            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            gm?.ClearSelectedInfantry();
+        }
+    }
+
+    // ========== ✅ 新增：移动截断（正序路径检查，遇到不可移动格子截断后待机） ==========
     public void HandleTruncatedMove(Infantry infantry, Grids target)
     {
         var path = BuildPath(infantry.grid, target);
@@ -1011,7 +1077,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         {
             var g = path[i];
             
-            // ✅ 检查路径上是否有敌方单位（NonOverlapping单位才被阻挡）
+            // ✅ 检查1: 敌方单位（NonOverlapping单位才被阻挡）
             if (infantry.overlapType == UnitOverlapType.NonOverlapping)
             {
                 g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
@@ -1020,6 +1086,25 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                 {
                     break; // 截断到上一个可停留格
                 }
+            }
+            
+            // ✅ 检查2: 兵器阻挡（非Oozium）
+            if (infantry is not Oozium && g.weapon != null)
+            {
+                break; // 截断到上一个可停留格
+            }
+            
+            // ✅ 检查3: 地形不可移动
+            int moveCost = infantry.GetMoveCost(g.gridType);
+            if (moveCost >= 999 || moveCost == int.MaxValue)
+            {
+                break; // 截断到上一个可停留格
+            }
+            
+            // ✅ 检查4: CanMoveTo判定
+            if (unitManager?.CanMoveTo(g.GridIndex, infantry) == false)
+            {
+                break; // 截断到上一个可停留格
             }
             
             if (CanStayOnGrid(g, infantry))

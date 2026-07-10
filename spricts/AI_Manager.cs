@@ -24,7 +24,7 @@ public partial class AI_Manager : Node
             gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 
         aiTimer = new Timer();
-        aiTimer.WaitTime = 0.15f;
+        aiTimer.WaitTime = 0.5f; // ✅ 增加延迟：让玩家能看到AI行动过程
         aiTimer.OneShot = true;
         aiTimer.Timeout += OnAIStep;
         AddChild(aiTimer);
@@ -170,7 +170,31 @@ public partial class AI_Manager : Node
             return;
         }
 
-        // 3. 战斗单位AI：先找可攻击的敌人
+        // ✅ 3. 特殊能力决策（按最优价值，优先于移动/攻击）
+        // 3.1 补给：如果附近有友方单位需要补给
+        if (unit.canSupplyUnits && unit.state != UnitState.Acted && !unit.hasActed)
+        {
+            if (TryAISupply(unit))
+                return;
+        }
+
+        // 3.2 照明弹：如果迷雾开启且前方有不可见敌人
+        if (unit.canIlluminate && unit.currentFlareAmmo > 0 && 
+            unit.state != UnitState.Acted && !unit.hasActed &&
+            (!unit.isMoved || unit.canIlluminateAfterMove))
+        {
+            if (TryAIIlluminate(unit))
+                return;
+        }
+
+        // 3.3 自爆：如果周围敌方价值远高于自身
+        if (unit.canExplode && unit.state != UnitState.Acted && !unit.hasActed)
+        {
+            if (TryAIExplode(unit))
+                return;
+        }
+
+        // 4. 战斗单位AI：先找可攻击的敌人
         var enemies = GetAllEnemyUnitsAndWeapons(unit.team);
         if (enemies.Count == 0)
         {
@@ -213,7 +237,7 @@ public partial class AI_Manager : Node
             }
         }
 
-        // 4. 无法攻击：占领或待机
+        // 5. 无法攻击：占领或待机
         AICaptureMove(unit);
     }
 
@@ -416,59 +440,15 @@ public partial class AI_Manager : Node
 
     private List<Grids> CalculateAIMoveRange(Infantry unit)
     {
-        var result = new List<Grids>();
-        if (unit.grid == null || gameManager?.gridManager == null) return result;
-
-        var gridMgr = gameManager.gridManager;
-        var open = new Queue<(Grids grid, int cost)>();
-        var best = new Dictionary<Grids, int>();
-        open.Enqueue((unit.grid, 0));
-        best[unit.grid] = 0;
+        if (unit == null || unit.grid == null || gameManager?.gridManager == null)
+            return new List<Grids>();
 
         int effectiveMove = unit.movePoints;
-        if (unit.consumeFuel) effectiveMove = Mathf.Min(unit.movePoints, unit.fuel);
+        if (unit.consumeFuel)
+            effectiveMove = Mathf.Min(unit.movePoints, unit.fuel);
 
-        while (open.Count > 0)
-        {
-            var (cur, accCost) = open.Dequeue();
-            if (cur != unit.grid && unit.overlapType == UnitOverlapType.NonOverlapping)
-            {
-                cur.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                var enemyOnCur = cur.infantries.FirstOrDefault(u => u != unit && u.team != unit.team);
-                if (enemyOnCur != null) continue;
-            }
-
-            for (int d = 0; d < 4; d++)
-            {
-                var dir = gridMgr.offset[d];
-                var nIdx = cur.GridIndex + dir;
-                if (nIdx.X < 0 || nIdx.X >= gridMgr.searchRange.X ||
-                    nIdx.Y < 0 || nIdx.Y >= gridMgr.searchRange.Y) continue;
-                var neighbor = gridMgr.map[nIdx.X, nIdx.Y];
-                if (neighbor == null) continue;
-
-                int moveCost = unit.GetMoveCost(neighbor.gridType);
-                if (moveCost >= 999 || moveCost == int.MaxValue) continue;
-
-                int newCost = accCost + moveCost;
-                if (best.TryGetValue(neighbor, out int old) && newCost >= old) continue;
-                if (newCost > effectiveMove) continue;
-
-                if (unit is not Oozium && neighbor.weapon != null) continue;
-
-                if (unit.overlapType == UnitOverlapType.NonOverlapping)
-                {
-                    neighbor.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                    var enemyOnNeighbor = neighbor.infantries.FirstOrDefault(u => u != unit && u.team != unit.team);
-                    if (enemyOnNeighbor != null) continue;
-                }
-
-                best[neighbor] = newCost;
-                open.Enqueue((neighbor, newCost));
-                if (!result.Contains(neighbor)) result.Add(neighbor);
-            }
-        }
-        return result;
+        // ✅ 统一使用 GridManager.GetMoveRange（与我方单位相同的移动判定）
+        return gameManager.gridManager.GetMoveRange(unit, effectiveMove);
     }
 
     private void AIMove(Infantry unit, Grids to)
@@ -525,9 +505,18 @@ public partial class AI_Manager : Node
         if (!IsInAttackRange(unit, target)) { AIEndTurn(unit); return; }
 
         GD.Print($"[AI] {unit.Name} 攻击 {target.Name}");
+
+        // ✅ 攻击前动画闪烁：让玩家看到攻击过程
+        if (unit.animSprite != null)
+        {
+            var tween = unit.CreateTween();
+            tween.TweenProperty(unit.animSprite, "modulate", Colors.Red, 0.15f);
+            tween.TweenProperty(unit.animSprite, "modulate", new Color(0.7f, 0.7f, 0.7f, 1f), 0.15f);
+        }
+
         unit.Attack(target);
 
-        // 更新UI
+        // ✅ 更新UI
         gameManager?.gridManager?.HideAttackRange();
         gameManager?.ClearSelectedInfantry();
         gameManager?.CallDeferred(nameof(gameManager.UpdateUnitLists));
@@ -549,14 +538,29 @@ public partial class AI_Manager : Node
     private List<object> GetAllEnemyUnitsAndWeapons(string team)
     {
         var result = new List<object>();
+        var fog = gameManager?.fogOfWarManager;
+        bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
+
         if (gameManager?.unitManager?.AllUnits != null)
             foreach (var u in gameManager.unitManager.AllUnits)
                 if (IsInstanceValid(u) && u.health > 0 && TeamHelper.IsEnemyForAttacker(team, u.team))
+                {
+                    // ✅ AI迷雾：雾外看不到，不能用底层统计
+                    if (isFogEnabled && u.grid != null && !fog.IsGridVisible(u.grid))
+                        continue;
                     result.Add(u);
+                }
+
         if (gameManager?.weaponManager?.AllWeapons != null)
             foreach (var w in gameManager.weaponManager.AllWeapons)
                 if (IsInstanceValid(w) && w.health > 0 && TeamHelper.IsEnemyForAttacker(team, w.team))
+                {
+                    // ✅ AI迷雾：雾外看不到，不能用底层统计
+                    if (isFogEnabled && w.grid != null && !fog.IsGridVisible(w.grid))
+                        continue;
                     result.Add(w);
+                }
+
         return result;
     }
 
@@ -571,5 +575,161 @@ public partial class AI_Manager : Node
     {
         if (a == null || b == null) return int.MaxValue;
         return Mathf.Abs(a.GridIndex.X - b.GridIndex.X) + Mathf.Abs(a.GridIndex.Y - b.GridIndex.Y);
+    }
+
+    // ========== ✅ AI特殊能力：寻找最优价值决策 ==========
+
+    /// <summary>
+    /// AI补给决策：如果附近有友方单位需要补给（弹药/燃料/照明弹），执行补给
+    /// </summary>
+    private bool TryAISupply(Infantry unit)
+    {
+        if (!unit.canSupplyUnits || unit.grid == null) return false;
+
+        var supplyableUnits = unit.GetSupplyRangeUnits();
+        if (supplyableUnits == null || supplyableUnits.Count == 0) return false;
+
+        int supplyValue = 0;
+        foreach (var target in supplyableUnits)
+        {
+            if (target == null || !IsInstanceValid(target)) continue;
+            if (target.hasPrimaryWeapon && target.primaryHasLimitedAmmo &&
+                target.currentPrimaryAmmo < target.maxPrimaryAmmo)
+                supplyValue += 30; // 弹药补给价值
+            if (target.canIlluminate && target.currentFlareAmmo < target.maxFlareAmmo)
+                supplyValue += 20; // 照明弹补给价值
+            if (target.consumeFuel && target.fuel < target.maxFuel)
+                supplyValue += 15; // 燃料补给价值
+        }
+
+        // 补给价值阈值：至少有一个单位需要补给
+        if (supplyValue > 0)
+        {
+            GD.Print($"[AI-Supply] {unit.Name} 执行补给，价值:{supplyValue}");
+            unit.PerformSupply();
+            unit.isAttacked = true;
+            unit.state = UnitState.Acted;
+            unit.SetWaitVisual(true);
+            unit.originalGrid = null;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// AI照明弹决策：如果迷雾开启且前方有不可见的敌人/重要区域，发射照明弹
+    /// </summary>
+    private bool TryAIIlluminate(Infantry unit)
+    {
+        if (!unit.canIlluminate || unit.currentFlareAmmo <= 0 || unit.grid == null) return false;
+
+        var fog = gameManager?.fogOfWarManager;
+        if (fog == null || !fog.isFogOfWarEnabled) return false;
+
+        var gridMgr = gameManager?.gridManager;
+        if (gridMgr == null) return false;
+
+        // 找到最佳照明目标：在投射射程内，能照亮最多不可见敌方单位的格子
+        Grids bestTarget = null;
+        int bestValue = 0;
+
+        var launchRange = gridMgr.FindRange(unit.grid, unit.maxLaunchRange, false);
+        var blindZone = unit.minLaunchRange > 0 ? gridMgr.FindRange(unit.grid, unit.minLaunchRange - 1, false) : new List<Grids>();
+
+        foreach (var g in launchRange)
+        {
+            if (blindZone.Contains(g)) continue; // 盲区内不发射
+            if (g == null) continue;
+
+            // 计算该格子作为照明中心的价值
+            int value = 0;
+            var illumRange = gridMgr.FindRange(g, unit.maxIlluminationRange, false);
+            var illumBlind = unit.minIlluminationRange > 0 ? gridMgr.FindRange(g, unit.minIlluminationRange - 1, false) : new List<Grids>();
+
+            foreach (var ig in illumRange)
+            {
+                if (illumBlind.Contains(ig)) continue;
+                if (ig == null) continue;
+                if (!fog.IsGridVisible(ig)) // 只计算不可见格子
+                {
+                    value += 5; // 照亮未知区域的基础价值
+                    // 如果格子有敌方单位，价值更高
+                    ig.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
+                    if (ig.infantries.Any(u => u.team != unit.team))
+                        value += 20; // 发现敌人的价值
+                    if (ig.weapon != null && ig.weapon.team != unit.team)
+                        value += 15; // 发现敌方兵器的价值
+                }
+            }
+
+            if (value > bestValue)
+            {
+                bestValue = value;
+                bestTarget = g;
+            }
+        }
+
+        // 照明价值阈值：至少照亮一个敌人或照亮大片未知区域
+        if (bestTarget != null && bestValue >= 25)
+        {
+            GD.Print($"[AI-Illuminate] {unit.Name} 在 {bestTarget.GridIndex} 发射照明弹，价值:{bestValue}");
+            unit.currentFlareAmmo--;
+            fog.AddIllumination(bestTarget, unit.minIlluminationRange, unit.maxIlluminationRange, unit.flareDurationTurns);
+            unit.isMoved = true;
+            unit.isAttacked = true;
+            unit.state = UnitState.Acted;
+            unit.originalGrid = null;
+            unit.SetWaitVisual(true);
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// AI自爆决策：如果周围敌方价值远高于自身，执行自爆
+    /// </summary>
+    private bool TryAIExplode(Infantry unit)
+    {
+        if (!unit.canExplode || unit.grid == null) return false;
+
+        var gm = gameManager;
+        var gridPos = unit.grid.GridIndex;
+        int minR = unit.explosionMinRange;
+        int maxR = unit.explosionMaxRange;
+
+        int totalEnemyDamage = 0;
+        int totalAllyDamage = 0;
+        int enemyCount = 0;
+
+        // 计算爆炸范围内的单位
+        foreach (var u in gm.unitManager.AllUnits)
+        {
+            if (u == null || !IsInstanceValid(u) || u == unit) continue;
+            var uGridPos = u.grid?.GridIndex ?? gm.unitManager.WorldToGrid(u.Position);
+            int dist = Mathf.Abs(uGridPos.X - gridPos.X) + Mathf.Abs(uGridPos.Y - gridPos.Y);
+            if (dist >= minR && dist <= maxR)
+            {
+                int damage = gm.CalculateExplosionDamage(unit, u);
+                if (u.team != unit.team)
+                {
+                    totalEnemyDamage += damage;
+                    enemyCount++;
+                }
+                else if (unit.explosionTargetMode != 1) // 不是仅敌
+                {
+                    totalAllyDamage += damage;
+                }
+            }
+        }
+
+        // 评估：敌方伤害价值 > 自身生命值 * 1.5，且敌方数量 >= 2
+        int selfValue = unit.health * unit.baseAttack / 100;
+        if (totalEnemyDamage > selfValue * 1.5f && enemyCount >= 2 && totalEnemyDamage > totalAllyDamage * 2)
+        {
+            GD.Print($"[AI-Explode] {unit.Name} 决定自爆！敌方伤害:{totalEnemyDamage}, 自身价值:{selfValue}, 敌人数量:{enemyCount}");
+            gm.ExecuteExplosion(unit);
+            return true;
+        }
+        return false;
     }
 }

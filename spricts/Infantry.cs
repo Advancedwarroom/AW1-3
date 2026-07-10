@@ -2288,6 +2288,13 @@ public virtual void Attack(Infantry target)
     if (!canAttackAfterMoving && state == UnitState.Moved) return;
     if (state == UnitState.Acted) return;
     
+    // ✅ 禁止隔空伤害：必须确认目标在攻击范围内
+    if (!IsTargetInAttackRange(target))
+    {
+        GD.PrintErr($"[Attack] {Name} 尝试攻击不在范围内的 {target.Name}，已阻止！");
+        return;
+    }
+    
     // 选择武器（新：攻防表系统）
     WeaponType weapon = SelectWeaponByMatrix(target);
     if (weapon == WeaponType.None) return;

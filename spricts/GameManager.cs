@@ -2230,7 +2230,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
     }
 
     // ========== ✅ 爆炸伤害计算 ==========
-    private int CalculateExplosionDamage(Infantry source, object target)
+    public int CalculateExplosionDamage(Infantry source, object target)
     {
         int maxHp = 100;
         if (target is Infantry inf) maxHp = inf.maxHealth;

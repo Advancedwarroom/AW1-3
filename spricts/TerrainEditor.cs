@@ -3374,9 +3374,13 @@ private void OnTerrainSelected(GridType newTerrain)
         {
             if (gridManager != null && gridManager.map != null)
             {
-                Vector2 mousePos = GetGlobalMousePosition();
-                int x = (int)((mousePos.X - gridManager.startPos.X) / gridManager.gridSize.X);
-                int y = (int)((mousePos.Y - gridManager.startPos.Y) / gridManager.gridSize.Y);
+                // ✅ 修复坐标偏移：使用视口坐标+CanvasTransform转换，正确处理Camera缩放/偏移
+                Vector2 viewportPos = GetViewport().GetMousePosition();
+                Transform2D canvasTransform = GetViewport().GetCanvasTransform();
+                Vector2 worldPos = canvasTransform.AffineInverse() * viewportPos;
+                
+                int x = (int)((worldPos.X - gridManager.startPos.X) / gridManager.gridSize.X);
+                int y = (int)((worldPos.Y - gridManager.startPos.Y) / gridManager.gridSize.Y);
 
                 if (x >= 0 && x < gridManager.map.GetLength(0) && y >= 0 && y < gridManager.map.GetLength(1))
                 {
