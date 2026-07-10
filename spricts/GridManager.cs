@@ -212,13 +212,14 @@ public partial class GridManager : Node
     {
         if (GridsNode == null) return;
 
-        // 1. 删除所有旧格子
+        // 1. 删除所有旧格子（立即删除，避免延迟删除导致 Init 遍历到旧格子）
         var oldChildren = GridsNode.GetChildren().ToList();
         foreach (var child in oldChildren)
         {
             if (child is Grids g)
             {
-                g.QueueFree();
+                GridsNode.RemoveChild(g);
+                g.Free();
             }
         }
         grids.Clear();
