@@ -205,6 +205,54 @@ public partial class GridManager : Node
         }
     }
 
+    /// <summary>
+    /// 重新调整地图大小：删除旧格子，创建新格子，重置 searchRange
+    /// </summary>
+    public void ResizeMap(int newWidth, int newHeight)
+    {
+        if (GridsNode == null) return;
+
+        // 1. 删除所有旧格子
+        var oldChildren = GridsNode.GetChildren().ToList();
+        foreach (var child in oldChildren)
+        {
+            if (child is Grids g)
+            {
+                g.QueueFree();
+            }
+        }
+        grids.Clear();
+        map = null;
+
+        // 2. 更新尺寸
+        searchRange = new Vector2I(newWidth, newHeight);
+
+        // 3. 加载格子场景并实例化
+        var gridScene = GD.Load<PackedScene>("res://Prefabs/grid.tscn");
+        if (gridScene == null)
+        {
+            GD.PrintErr("[GridManager] 无法加载 grid.tscn 场景");
+            return;
+        }
+
+        for (int y = 0; y < newHeight; y++)
+        {
+            for (int x = 0; x < newWidth; x++)
+            {
+                var grid = gridScene.Instantiate<Grids>();
+                grid.Name = $"Grid_{x}_{y}";
+                grid.Position = new Vector2(startPos.X + x * gridSize.X, startPos.Y + y * gridSize.Y);
+                grid.gridType = GridType.GROUND;
+                grid.GridIndex = new Vector2I(x, y);
+                GridsNode.AddChild(grid);
+            }
+        }
+
+        // 4. 重新初始化
+        Init();
+        GD.Print($"[GridManager] 地图已调整为 {newWidth}×{newHeight}");
+    }
+
     public Vector2I[] offset =
     {
         new Vector2I(0,1),

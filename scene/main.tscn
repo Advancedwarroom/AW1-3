@@ -2781,7 +2781,6 @@ script = ExtResource("27_camtouch")
 [node name="FogOfWarManager" type="Node2D" parent="." unique_id=345027698]
 position = Vector2(-464, -176)
 script = ExtResource("26_oldxj")
-isFogOfWarEnabled = false
 
 [connection signal="input_event" from="UnitManager/Units/Oozium/Area2D" to="UnitManager/Units/Oozium" method="InputClick"]
 [connection signal="input_event" from="UnitManager/Units/Oozium2/Area2D" to="UnitManager/Units/Oozium2" method="InputClick"]

@@ -4887,6 +4887,53 @@ private void OpenWeaponTerrainMatrixEditor()
             ClearAllMapEntities();
 
             var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            // ✅ 先扫描一遍计算地图尺寸
+            int mapWidth = 0, mapHeight = 0;
+            string scanSection = "";
+            foreach (var rawLine in lines)
+            {
+                string line = rawLine.Trim();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (line.StartsWith("=== ") && line.EndsWith(" ==="))
+                {
+                    scanSection = line.Substring(4, line.Length - 8).Trim();
+                    continue;
+                }
+
+                if (scanSection == "Terrain Matrix [x,y]=Type")
+                {
+                    var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var part in parts)
+                    {
+                        var m = System.Text.RegularExpressions.Regex.Match(part, @"\[(\d+),(\d+)\]=(.+?)");
+                        if (m.Success)
+                        {
+                            int tx = int.Parse(m.Groups[1].Value);
+                            int ty = int.Parse(m.Groups[2].Value);
+                            mapWidth = Math.Max(mapWidth, tx + 1);
+                            mapHeight = Math.Max(mapHeight, ty + 1);
+                        }
+                    }
+                }
+                else if (scanSection == "Units [x,y] Type Team HP" || scanSection == "Weapons [x,y] Type Team HP" || scanSection == "Facilities [x,y] Type Team")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]");
+                    if (m.Success)
+                    {
+                        int x = int.Parse(m.Groups[1].Value);
+                        int y = int.Parse(m.Groups[2].Value);
+                        mapWidth = Math.Max(mapWidth, x + 1);
+                        mapHeight = Math.Max(mapHeight, y + 1);
+                    }
+                }
+            }
+
+            if (mapWidth > 0 && mapHeight > 0)
+            {
+                gridManager?.ResizeMap(mapWidth, mapHeight);
+            }
+
             int lineIdx = 0;
             string section = "";
 
@@ -5441,6 +5488,48 @@ private void OpenWeaponTerrainMatrixEditor()
             ClearAllMapEntities();
 
             var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            // ✅ 先扫描一遍计算地图尺寸
+            int mapWidth = 0, mapHeight = 0;
+            string scanSection = "";
+            foreach (var rawLine in lines)
+            {
+                string line = rawLine.Trim();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (line.StartsWith("=== ") && line.EndsWith(" ==="))
+                {
+                    scanSection = line.Substring(4, line.Length - 8).Trim();
+                    continue;
+                }
+                if (scanSection == "T")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"^(\d+):\s+(.+)");
+                    if (m.Success)
+                    {
+                        int y = int.Parse(m.Groups[1].Value);
+                        var nums = m.Groups[2].Value.Trim().Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                        mapWidth = Math.Max(mapWidth, nums.Length);
+                        mapHeight = Math.Max(mapHeight, y + 1);
+                    }
+                }
+                else if (scanSection == "U" || scanSection == "W" || scanSection == "F")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]");
+                    if (m.Success)
+                    {
+                        int x = int.Parse(m.Groups[1].Value);
+                        int y = int.Parse(m.Groups[2].Value);
+                        mapWidth = Math.Max(mapWidth, x + 1);
+                        mapHeight = Math.Max(mapHeight, y + 1);
+                    }
+                }
+            }
+
+            if (mapWidth > 0 && mapHeight > 0)
+            {
+                gridManager?.ResizeMap(mapWidth, mapHeight);
+            }
+
             string section = "";
             foreach (var rawLine in lines)
             {
@@ -5927,6 +6016,23 @@ private void OpenWeaponTerrainMatrixEditor()
             ClearAllMapEntities();
 
             var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            // ✅ 计算 AWBW 地图尺寸
+            int mapWidth = 0;
+            int mapHeight = 0;
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var ids = line.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                mapWidth = Math.Max(mapWidth, ids.Length);
+                mapHeight++;
+            }
+
+            if (mapWidth > 0 && mapHeight > 0)
+            {
+                gridManager?.ResizeMap(mapWidth, mapHeight);
+            }
+
             int importedTiles = 0;
             int skippedTiles = 0;
             int facilityCount = 0;
@@ -6379,6 +6485,9 @@ private void OpenWeaponTerrainMatrixEditor()
                 ShowImportHint("❌ 不支持的文件格式");
                 return;
             }
+
+            // ✅ 重新调整地图大小，创建/删除格子以匹配导入尺寸
+            gridManager?.ResizeMap(width, height);
 
             int gridCount = width * height;
             int terrainDataSize = gridCount * 2;
