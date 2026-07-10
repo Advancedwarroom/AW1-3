@@ -6052,7 +6052,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
         // 提示
         var hint = new Label();
-        hint.Text = "点击地形开始批量放置\n点击地图格子直接铺设";
+        hint.Text = "🖱️ 滑动即选：鼠标划过地形自动选中\n点击地图格子直接铺设";
         hint.HorizontalAlignment = HorizontalAlignment.Center;
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.7f, 0.8f, 0.6f));
@@ -6093,8 +6093,26 @@ private void OpenWeaponTerrainMatrixEditor()
         endBtn.Pressed += StopBatchTerrainMode;
         batchTerrainPanel.AddChild(endBtn);
 
+        // ✅ 拖拽手柄（只在标题栏区域可拖拽）
+        var dragHandle = new Panel();
+        dragHandle.Name = "DragHandle";
+        dragHandle.CustomMinimumSize = new Vector2(340, 55);
+        dragHandle.Position = new Vector2(0, 0);
+        dragHandle.MouseFilter = MouseFilterEnum.Pass;
+        var handleStyle = new StyleBoxFlat();
+        handleStyle.BgColor = new Color(0.3f, 0.3f, 0.4f, 0.3f);
+        handleStyle.SetCornerRadiusAll(16);
+        dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
+        var dragHint = new Label();
+        dragHint.Text = "⋮⋮ 拖拽移动";
+        dragHint.AddThemeFontSizeOverride("font_size", 10);
+        dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
+        dragHint.Position = new Vector2(8, 2);
+        dragHandle.AddChild(dragHint);
+        batchTerrainPanel.AddChild(dragHandle);
+
         AddChild(batchTerrainPanel);
-        MakeMenuDraggable(batchTerrainPanel);
+        MakeMenuDraggable(batchTerrainPanel, dragHandle);
     }
 
     private Button CreateBatchTerrainSelectButton(GridType terrainType)
@@ -6132,6 +6150,12 @@ private void OpenWeaponTerrainMatrixEditor()
 
         GridType capturedType = terrainType;
         btn.Pressed += () => StartBatchTerrainMode(capturedType);
+
+        // ✅ 滑动即选：鼠标进入按钮时自动选中地形并关闭弹窗
+        btn.MouseEntered += () => {
+            StartBatchTerrainMode(capturedType);
+            CloseBatchTerrainPanel(); // 关闭弹窗，让用户直接在地图批量放置
+        };
 
         return btn;
     }
