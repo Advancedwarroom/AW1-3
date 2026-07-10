@@ -159,9 +159,11 @@ public partial class Crystal : Weapon
 
     private void OnRangeGridClicked(Grids targetGrid, GameManager gm)
     {
-        // 点击环形范围内任意格子 -> 执行治疗+补给
+        // 点击环形范围内任意格子 -> 执行治疗+补给，然后直接标记已行动
         PerformCrystalEffect(gm);
-        HandlePostAttack();
+        hasActed = true;
+        remainingAttacks = 0;
+        SetVisualDark();
         gm.gridManager.ClearWeaponRange();
         gm.selectedWeapon = null;
     }
