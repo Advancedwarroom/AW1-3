@@ -6463,8 +6463,8 @@ private void OpenWeaponTerrainMatrixEditor()
             if (header == "AWSMap001")
             {
                 if (fileData.Length < 13) { ShowImportHint("❌ AWS 文件过短"); return; }
-                height = fileData[10];
-                width = fileData[11];
+                width = fileData[10];   // 第1字节 = 宽度
+                height = fileData[11]; // 第2字节 = 高度
                 offset = 13;
             }
             else if (header == "AW2Map001" || header == "AWMap 001")
