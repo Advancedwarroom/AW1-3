@@ -1213,7 +1213,7 @@ private void OnSupplyPressed()
             }
             currentWeapon = null;
             gm?.gridManager?.ClearWeaponRange();
-            gm?.selectedWeapon = null;
+            if (gm != null) gm.selectedWeapon = null;
         }
         Hide();
     }
