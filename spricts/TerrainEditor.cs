@@ -169,6 +169,12 @@ private readonly List<UnitTemplate> facilityTemplates = new()
     new UnitTemplate { DisplayName = "🏙️ City", ScenePath = "res://Prefabs/City.tscn", 
         Category = "设施", Team = "Player0", DisplayColor = new Color(0.8f, 0.6f, 0.2f), 
         Description = "城市设施，可占领并提供补给" },
+    new UnitTemplate { DisplayName = "🏭 Base", ScenePath = "res://Prefabs/Base.tscn", 
+        Category = "设施", Team = "Player0", DisplayColor = new Color(0.7f, 0.5f, 0.3f), 
+        Description = "基地设施，可占领、补给并生产地面单位" },
+    new UnitTemplate { DisplayName = "✈️ Airport", ScenePath = "res://Prefabs/AirPort.tscn", 
+        Category = "设施", Team = "Player0", DisplayColor = new Color(0.4f, 0.6f, 0.8f), 
+        Description = "机场设施，可占领、补给并生产空军单位" },
 };
 
 // UI 引用
@@ -676,6 +682,11 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
         if (!bound)
         {
             unit.QueueFree();
+            // ✅ 从父节点中移除，防止 RefreshUnitList 遍历到已销毁对象
+            if (unit.GetParent() == gameManager.unitManager.units)
+            {
+                gameManager.unitManager.units.RemoveChild(unit);
+            }
             spawnHintLabel.Text = "❌ 绑定格子失败";
             return;
         }
@@ -701,8 +712,8 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
         spawnHintLabel.Text = $"❌ 生成失败: {e.Message}";
         spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
     }
-    gameManager.unitManager.RefreshUnitList();
-    gameManager.RefreshSpecializedUnitLists();
+    // 导入时不在此处调用 RefreshUnitList，避免遍历已废弃对象
+    // 统一在 ParseAndImportMap 结束后刷新
     gameManager.UpdateUnitLists();
 }
 
@@ -752,6 +763,11 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
         if (!bound)
         {
             weapon.QueueFree();
+            // ✅ 从父节点中移除，防止遍历到已销毁对象
+            if (weapon.GetParent() == gameManager.weaponManager.weaponsNode)
+            {
+                gameManager.weaponManager.weaponsNode.RemoveChild(weapon);
+            }
             spawnHintLabel.Text = "❌ 兵器绑定格子失败";
             return;
         }
@@ -1024,6 +1040,18 @@ public void OnGridClickedForEdit(Grids grid)
         });
     }
 
+    // 添加设施选项
+    if (grid.city != null)
+    {
+        allTargets.Add(new EditTarget
+        {
+            TargetType = "facility",
+            DisplayName = $"🏙️ [设施:{grid.city.GetType().Name}] {grid.city.facilityTeam}",
+            TargetObject = grid.city,
+            Color = new Color(0.8f, 0.6f, 0.2f)
+        });
+    }
+
     // 添加功能选项
     allTargets.Add(new EditTarget
     {
@@ -1089,6 +1117,12 @@ private void ShowMultiSelectMenu(List<EditTarget> targets)
                     OpenSpawnMenu();
                 });
                 break;
+            case "facility":
+                btn = CreateSelectionButton(target.DisplayName, target.Color, () => {
+                    CloseSelectionMenu();
+                    OpenFacilityMenu(selectedGrid);
+                });
+                break;
             default:
                 continue;
         }
@@ -1143,6 +1177,12 @@ private void CreateMemberControl(object target, string name, Type memberType, Fu
         if (name == "team" && target is Node2D node)
         {
             RefreshTeamVisual(target);
+        }
+        else if (name == "facilityTeam" && target is Facility facility)
+        {
+            facility.UpdateCityVisual();
+            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            gm?.UpdateUnitLists();
         }
         else
         {
@@ -2169,12 +2209,37 @@ private void BuildGridPropertyEditor(Grids grid)
 
         CreateMemberControl(grid.city, "facilityTeam", typeof(string),
             () => grid.city.facilityTeam, (v) => { grid.city.facilityTeam = (string)v; });
-        CreateMemberControl(grid.city, "isSupplyPoint", typeof(bool),
-            () => grid.city.isSupplyPoint, (v) => { grid.city.isSupplyPoint = (bool)v; });
         CreateMemberControl(grid.city, "healAmount", typeof(int),
             () => grid.city.healAmount, (v) => { grid.city.healAmount = (int)v; });
+        CreateMemberControl(grid.city, "flareAmmoSupply", typeof(int),
+            () => grid.city.flareAmmoSupply, (v) => { grid.city.flareAmmoSupply = (int)v; });
+        CreateMemberControl(grid.city, "explodeAmmoSupply", typeof(int),
+            () => grid.city.explodeAmmoSupply, (v) => { grid.city.explodeAmmoSupply = (int)v; });
+        CreateMemberControl(grid.city, "primaryAmmoSupply", typeof(int),
+            () => grid.city.primaryAmmoSupply, (v) => { grid.city.primaryAmmoSupply = (int)v; });
+        CreateMemberControl(grid.city, "fuelSupply", typeof(int),
+            () => grid.city.fuelSupply, (v) => { grid.city.fuelSupply = (int)v; });
         CreateMemberControl(grid.city, "capturePointsRequired", typeof(int),
             () => grid.city.capturePointsRequired, (v) => { grid.city.capturePointsRequired = (int)v; });
+
+        // ✅ City 每回合资金收入
+        if (grid.city is City city)
+        {
+            CreateMemberControl(city, "fundsPerTurn", typeof(int),
+                () => city.fundsPerTurn, (v) => { city.fundsPerTurn = (int)v; });
+        }
+
+        // ✅ 生产模块
+        var prodLabel = new Label();
+        prodLabel.Text = "=== 生产模块 ===";
+        prodLabel.AddThemeFontSizeOverride("font_size", 14);
+        prodLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+        propertyContainer.AddChild(prodLabel);
+
+        CreateMemberControl(grid.city, "canProduce", typeof(bool),
+            () => grid.city.canProduce, (v) => { grid.city.canProduce = (bool)v; });
+        CreateMemberControl(grid.city, "producibleUnitNames", typeof(Godot.Collections.Array<string>),
+            () => grid.city.producibleUnitNames, (v) => { grid.city.producibleUnitNames = (Godot.Collections.Array<string>)v; });
 
         // ✅ 占领进度（只读显示）
         var captureLabel = new Label();
@@ -2426,7 +2491,13 @@ private void OnPropertyChanged(object target, string propertyName)
     {
         RefreshTeamVisual(target);
     }
-        else if (propertyName.Contains("health") || propertyName.Contains("Health"))
+    else if (propertyName == "facilityTeam" && target is Facility facility)
+    {
+        facility.UpdateCityVisual();
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        gm?.UpdateUnitLists();
+    }
+    else if (propertyName.Contains("health") || propertyName.Contains("Health"))
         {
             if (target is Infantry infantry) infantry.UpdateHpLabel();
             if (target is Weapon weapon) weapon.UpdateHpLabel();
@@ -2739,8 +2810,7 @@ private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
     
     // 设置势力
     facility.facilityTeam = team;
-    facility.isSupplyPoint = true;
-    facility.healAmount = 20;
+    facility.healAmount = 20;facility.flareAmmoSupply = 999;facility.explodeAmmoSupply = 999;facility.primaryAmmoSupply = 999;facility.fuelSupply = 999;
     facility.capturePointsRequired = 20;
     
     if (facility is City city)
@@ -3602,6 +3672,96 @@ private void RefreshAllUnitVision()
         weaponMatrixBtn.Pressed += OpenWeaponTerrainMatrixEditor;
         globalConfigContainer.AddChild(weaponMatrixBtn);
 
+        // ✅ 资金系统配置
+        var fundsSection = CreateConfigSectionTitle("💰 资金系统配置");
+        globalConfigContainer.AddChild(fundsSection);
+
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+
+        // P1 现有资金
+        var p1FundsHBox = new HBoxContainer();
+        p1FundsHBox.AddThemeConstantOverride("separation", 10);
+        var p1FundsLabel = new Label();
+        p1FundsLabel.Text = "P1 现有资金:";
+        p1FundsLabel.CustomMinimumSize = new Vector2(120, 28);
+        p1FundsLabel.AddThemeFontSizeOverride("font_size", 13);
+        p1FundsHBox.AddChild(p1FundsLabel);
+        var p1FundsSpin = new SpinBox();
+        p1FundsSpin.MinValue = 0;
+        p1FundsSpin.MaxValue = 999999;
+        p1FundsSpin.Value = gm?.p1Funds ?? 0;
+        p1FundsSpin.CustomMinimumSize = new Vector2(100, 28);
+        p1FundsSpin.AddThemeFontSizeOverride("font_size", 12);
+        p1FundsSpin.ValueChanged += (newVal) => {
+            if (gm != null) gm.p1Funds = (int)newVal;
+            GD.Print($"[全局配置] P1 现有资金 = {newVal}");
+        };
+        p1FundsHBox.AddChild(p1FundsSpin);
+        globalConfigContainer.AddChild(p1FundsHBox);
+
+        // P1 资金上限
+        var p1MaxHBox = new HBoxContainer();
+        p1MaxHBox.AddThemeConstantOverride("separation", 10);
+        var p1MaxLabel = new Label();
+        p1MaxLabel.Text = "P1 资金上限:";
+        p1MaxLabel.CustomMinimumSize = new Vector2(120, 28);
+        p1MaxLabel.AddThemeFontSizeOverride("font_size", 13);
+        p1MaxHBox.AddChild(p1MaxLabel);
+        var p1MaxSpin = new SpinBox();
+        p1MaxSpin.MinValue = 0;
+        p1MaxSpin.MaxValue = 9999999;
+        p1MaxSpin.Value = gm?.p1FundsMax ?? 999999;
+        p1MaxSpin.CustomMinimumSize = new Vector2(100, 28);
+        p1MaxSpin.AddThemeFontSizeOverride("font_size", 12);
+        p1MaxSpin.ValueChanged += (newVal) => {
+            if (gm != null) gm.p1FundsMax = (int)newVal;
+            GD.Print($"[全局配置] P1 资金上限 = {newVal}");
+        };
+        p1MaxHBox.AddChild(p1MaxSpin);
+        globalConfigContainer.AddChild(p1MaxHBox);
+
+        // P2 现有资金
+        var p2FundsHBox = new HBoxContainer();
+        p2FundsHBox.AddThemeConstantOverride("separation", 10);
+        var p2FundsLabel = new Label();
+        p2FundsLabel.Text = "P2 现有资金:";
+        p2FundsLabel.CustomMinimumSize = new Vector2(120, 28);
+        p2FundsLabel.AddThemeFontSizeOverride("font_size", 13);
+        p2FundsHBox.AddChild(p2FundsLabel);
+        var p2FundsSpin = new SpinBox();
+        p2FundsSpin.MinValue = 0;
+        p2FundsSpin.MaxValue = 999999;
+        p2FundsSpin.Value = gm?.p2Funds ?? 0;
+        p2FundsSpin.CustomMinimumSize = new Vector2(100, 28);
+        p2FundsSpin.AddThemeFontSizeOverride("font_size", 12);
+        p2FundsSpin.ValueChanged += (newVal) => {
+            if (gm != null) gm.p2Funds = (int)newVal;
+            GD.Print($"[全局配置] P2 现有资金 = {newVal}");
+        };
+        p2FundsHBox.AddChild(p2FundsSpin);
+        globalConfigContainer.AddChild(p2FundsHBox);
+
+        // P2 资金上限
+        var p2MaxHBox = new HBoxContainer();
+        p2MaxHBox.AddThemeConstantOverride("separation", 10);
+        var p2MaxLabel = new Label();
+        p2MaxLabel.Text = "P2 资金上限:";
+        p2MaxLabel.CustomMinimumSize = new Vector2(120, 28);
+        p2MaxLabel.AddThemeFontSizeOverride("font_size", 13);
+        p2MaxHBox.AddChild(p2MaxLabel);
+        var p2MaxSpin = new SpinBox();
+        p2MaxSpin.MinValue = 0;
+        p2MaxSpin.MaxValue = 9999999;
+        p2MaxSpin.Value = gm?.p2FundsMax ?? 999999;
+        p2MaxSpin.CustomMinimumSize = new Vector2(100, 28);
+        p2MaxSpin.AddThemeFontSizeOverride("font_size", 12);
+        p2MaxSpin.ValueChanged += (newVal) => {
+            if (gm != null) gm.p2FundsMax = (int)newVal;
+            GD.Print($"[全局配置] P2 资金上限 = {newVal}");
+        };
+        p2MaxHBox.AddChild(p2MaxSpin);
+        globalConfigContainer.AddChild(p2MaxHBox);
+
         // ✅ AI 与地图导出配置
         var aiSection = CreateConfigSectionTitle("🤖 AI 控制与地图导出");
         globalConfigContainer.AddChild(aiSection);
@@ -3665,6 +3825,28 @@ private void RefreshAllUnitVision()
         exportMapBtn.AddThemeFontSizeOverride("font_size", 13);
         exportMapBtn.Pressed += ExportMapToTxt;
         globalConfigContainer.AddChild(exportMapBtn);
+
+        var importMapBtn = new Button();
+        importMapBtn.Text = "📥 导入地图配置";
+        importMapBtn.CustomMinimumSize = new Vector2(300, 40);
+        importMapBtn.AddThemeFontSizeOverride("font_size", 13);
+        importMapBtn.Pressed += OpenImportDialog;
+        globalConfigContainer.AddChild(importMapBtn);
+
+        // ✅ 极简导出/导入按钮
+        var compactExportBtn = new Button();
+        compactExportBtn.Text = "📤 极简导出";
+        compactExportBtn.CustomMinimumSize = new Vector2(300, 40);
+        compactExportBtn.AddThemeFontSizeOverride("font_size", 13);
+        compactExportBtn.Pressed += ExportCompactMap;
+        globalConfigContainer.AddChild(compactExportBtn);
+
+        var compactImportBtn = new Button();
+        compactImportBtn.Text = "📥 极简导入";
+        compactImportBtn.CustomMinimumSize = new Vector2(300, 40);
+        compactImportBtn.AddThemeFontSizeOverride("font_size", 13);
+        compactImportBtn.Pressed += OpenCompactImportDialog;
+        globalConfigContainer.AddChild(compactImportBtn);
 
         var btnSeparator = new HSeparator();
         btnSeparator.CustomMinimumSize = new Vector2(0, 10);
@@ -4028,7 +4210,7 @@ private void OpenWeaponTerrainMatrixEditor()
         { GridType.LAVAFOG, new Color(0.7f, 0.2f, 0.1f) }
     };
 
-    // ✅ 导出地图配置为 txt
+    // ✅ 导出地图配置为 txt（增强版：全图、价值统计、真实资金、Test差异、迷雾状态）
     private void ExportMapToTxt()
     {
         if (gridManager?.map == null)
@@ -4037,28 +4219,45 @@ private void OpenWeaponTerrainMatrixEditor()
             return;
         }
 
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+        foreach (var grid in gridManager.grids)
+        {
+            if (grid == null) continue;
+            minX = System.Math.Min(minX, grid.GridIndex.X);
+            minY = System.Math.Min(minY, grid.GridIndex.Y);
+            maxX = System.Math.Max(maxX, grid.GridIndex.X);
+            maxY = System.Math.Max(maxY, grid.GridIndex.Y);
+        }
+        if (minX == int.MaxValue) { minX = 0; minY = 0; maxX = 0; maxY = 0; }
+        int width = maxX - minX + 1;
+        int height = maxY - minY + 1;
+
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("=== AW-1-3 Map Export ===");
-        sb.AppendLine($"Width: {gridManager.searchRange.X}");
-        sb.AppendLine($"Height: {gridManager.searchRange.Y}");
+        sb.AppendLine($"Width: {width}");
+        sb.AppendLine($"Height: {height}");
         sb.AppendLine($"ExportTime: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        bool fogEnabled = gameManager?.fogOfWarManager?.isFogOfWarEnabled ?? false;
+        sb.AppendLine($"FogOfWar: {(fogEnabled ? "Enabled" : "Disabled")}");
         sb.AppendLine();
 
-        // 1. 地形矩阵
         sb.AppendLine("=== Terrain Matrix [x,y]=Type ===");
-        for (int y = 0; y < gridManager.searchRange.Y; y++)
+        for (int y = minY; y <= maxY; y++)
         {
-            for (int x = 0; x < gridManager.searchRange.X; x++)
+            for (int x = minX; x <= maxX; x++)
             {
-                var grid = gridManager.map[x, y];
+                Grids grid = null;
+                if (x >= 0 && x < gridManager.map.GetLength(0) && y >= 0 && y < gridManager.map.GetLength(1))
+                    grid = gridManager.map[x, y];
                 if (grid != null)
                     sb.Append($"[{x},{y}]={grid.gridType}  ");
+                else
+                    sb.Append($"[{x},{y}]=NULL  ");
             }
             sb.AppendLine();
         }
         sb.AppendLine();
 
-        // 2. 单位
         sb.AppendLine("=== Units [x,y] Type Team HP ===");
         if (gameManager?.unitManager?.AllUnits != null)
         {
@@ -4070,13 +4269,13 @@ private void OpenWeaponTerrainMatrixEditor()
                     int hy = unit.grid.GridIndex.Y;
                     string typeName = unit.GetType().Name;
                     int hp = Mathf.CeilToInt(unit.health / 10f);
-                    sb.AppendLine($"[{hx},{hy}] {typeName} {unit.team} HP{hp}");
+                    string diff = GetUnitDiffString(unit);
+                    sb.AppendLine($"[{hx},{hy}] {typeName} {unit.team} HP{hp}{diff}");
                 }
             }
         }
         sb.AppendLine();
 
-        // 3. 兵器
         sb.AppendLine("=== Weapons [x,y] Type Team HP ===");
         if (gameManager?.weaponManager?.AllWeapons != null)
         {
@@ -4088,13 +4287,13 @@ private void OpenWeaponTerrainMatrixEditor()
                     int hy = weapon.grid.GridIndex.Y;
                     string typeName = weapon.GetType().Name;
                     int hp = Mathf.CeilToInt(weapon.health / 10f);
-                    sb.AppendLine($"[{hx},{hy}] {typeName} {weapon.team} HP{hp}");
+                    string diff = GetWeaponDiffString(weapon);
+                    sb.AppendLine($"[{hx},{hy}] {typeName} {weapon.team} HP{hp}{diff}");
                 }
             }
         }
         sb.AppendLine();
 
-        // 4. 设施
         sb.AppendLine("=== Facilities [x,y] Type Team ===");
         if (gridManager?.grids != null)
         {
@@ -4112,9 +4311,8 @@ private void OpenWeaponTerrainMatrixEditor()
         }
         sb.AppendLine();
 
-        // 5. 资金统计
-        sb.AppendLine("=== Funds Statistics ===");
-        long pn1Funds = 0, p0Funds = 0, p1Funds = 0, p2Funds = 0;
+        sb.AppendLine("=== Unit Value Statistics ===");
+        long pn1Value = 0, p0Value = 0, p1Value = 0, p2Value = 0;
         if (gameManager?.unitManager?.AllUnits != null)
         {
             foreach (var unit in gameManager.unitManager.AllUnits)
@@ -4123,10 +4321,10 @@ private void OpenWeaponTerrainMatrixEditor()
                 {
                     switch (unit.team)
                     {
-                        case "Player": pn1Funds += unit.cost; break;
-                        case "Player0": p0Funds += unit.cost; break;
-                        case "Player1": p1Funds += unit.cost; break;
-                        case "Player2": p2Funds += unit.cost; break;
+                        case "Player": pn1Value += unit.cost; break;
+                        case "Player0": p0Value += unit.cost; break;
+                        case "Player1": p1Value += unit.cost; break;
+                        case "Player2": p2Value += unit.cost; break;
                     }
                 }
             }
@@ -4139,21 +4337,29 @@ private void OpenWeaponTerrainMatrixEditor()
                 {
                     switch (weapon.team)
                     {
-                        case "Player": pn1Funds += weapon.cost; break;
-                        case "Player0": p0Funds += weapon.cost; break;
-                        case "Player1": p1Funds += weapon.cost; break;
-                        case "Player2": p2Funds += weapon.cost; break;
+                        case "Player": pn1Value += weapon.cost; break;
+                        case "Player0": p0Value += weapon.cost; break;
+                        case "Player1": p1Value += weapon.cost; break;
+                        case "Player2": p2Value += weapon.cost; break;
                     }
                 }
             }
         }
-        long totalFunds = pn1Funds + p0Funds + p1Funds + p2Funds;
-        sb.AppendLine($"P-1 (Player):  {pn1Funds} G");
-        sb.AppendLine($"P0  (Neutral): {p0Funds} G");
-        sb.AppendLine($"P1  (Red):     {p1Funds} G");
-        sb.AppendLine($"P2  (Blue):    {p2Funds} G");
-        sb.AppendLine($"Total:         {totalFunds} G");
+        long totalValue = pn1Value + p0Value + p1Value + p2Value;
+        sb.AppendLine($"P-1 (Player):  {pn1Value} G");
+        sb.AppendLine($"P0  (Neutral): {p0Value} G");
+        sb.AppendLine($"P1  (Red):     {p1Value} G");
+        sb.AppendLine($"P2  (Blue):    {p2Value} G");
+        sb.AppendLine($"Total:         {totalValue} G");
         sb.AppendLine();
+
+        sb.AppendLine("=== Funds Statistics ===");
+        int realP1Funds = gameManager?.p1Funds ?? 0;
+        int realP2Funds = gameManager?.p2Funds ?? 0;
+        sb.AppendLine($"P1  (Red):     {realP1Funds} G");
+        sb.AppendLine($"P2  (Blue):    {realP2Funds} G");
+        sb.AppendLine();
+
         sb.AppendLine("=== End of Export ===");
 
         string content = sb.ToString();
@@ -4161,7 +4367,6 @@ private void OpenWeaponTerrainMatrixEditor()
         string savedPath = "";
         bool savedToDownloads = false;
 
-        // 尝试保存到下载目录
         try
         {
             string downloadDir = OS.GetSystemDir(OS.SystemDir.Downloads);
@@ -4179,7 +4384,6 @@ private void OpenWeaponTerrainMatrixEditor()
             GD.Print($"[ExportMap] 下载目录保存失败: {ex.Message}，将回退到用户目录");
         }
 
-        // 回退到 user:// 目录
         if (!savedToDownloads)
         {
             try
@@ -4196,7 +4400,6 @@ private void OpenWeaponTerrainMatrixEditor()
             }
         }
 
-        // 复制到剪贴板作为备选
         try
         {
             DisplayServer.ClipboardSet(content);
@@ -4207,7 +4410,6 @@ private void OpenWeaponTerrainMatrixEditor()
             GD.PrintErr($"[ExportMap] 剪贴板复制失败: {ex.Message}");
         }
 
-        // 显示提示
         string hintText;
         if (savedToDownloads)
             hintText = $"✅ 已导出到下载目录:\n{savedPath}\n📋 内容已复制到剪贴板";
@@ -4232,5 +4434,1170 @@ private void OpenWeaponTerrainMatrixEditor()
         timer.Timeout += () => { hintLabel.QueueFree(); timer.QueueFree(); };
         globalConfigPanel.AddChild(timer);
         timer.Start();
+    }
+
+    // ========== ✅ 模板差异比较 ==========
+    private Dictionary<string, object> _templateInstanceCache = new();
+
+    private object GetTemplateInstance(Type type, string scenePath)
+    {
+        string key = $"{type.Name}:{scenePath}";
+        if (_templateInstanceCache.ContainsKey(key)) return _templateInstanceCache[key];
+
+        var scene = GD.Load<PackedScene>(scenePath);
+        if (scene == null) return null;
+
+        var instance = scene.Instantiate();
+        if (instance == null || !type.IsInstanceOfType(instance))
+        {
+            instance?.QueueFree();
+            return null;
+        }
+        _templateInstanceCache[key] = instance;
+        return instance;
+    }
+
+    private string GetUnitDiffString(Infantry unit)
+    {
+        string scenePath = GetScenePathForUnitType(unit.GetType().Name);
+        if (string.IsNullOrEmpty(scenePath)) return "";
+
+        var template = GetTemplateInstance(unit.GetType(), scenePath);
+        if (template == null) return "";
+
+        var diffs = GetDiffs(unit, template);
+        if (diffs.Count == 0) return "";
+        return "{Test:true;" + string.Join(";", diffs) + "}";
+    }
+
+    private string GetWeaponDiffString(Weapon weapon)
+    {
+        string scenePath = GetScenePathForWeaponType(weapon.GetType().Name);
+        if (string.IsNullOrEmpty(scenePath)) return "";
+
+        var template = GetTemplateInstance(weapon.GetType(), scenePath);
+        if (template == null) return "";
+
+        var diffs = GetDiffs(weapon, template);
+        if (diffs.Count == 0) return "";
+        return "{Test:true;" + string.Join(";", diffs) + "}";
+    }
+
+    private string GetFacilityDiffString(Facility facility)
+    {
+        string scenePath = GetScenePathForFacilityType(facility.GetType().Name);
+        if (string.IsNullOrEmpty(scenePath)) return "";
+
+        var template = GetTemplateInstance(facility.GetType(), scenePath);
+        if (template == null) return "";
+
+        var diffs = GetDiffs(facility, template);
+        if (diffs.Count == 0) return "";
+        return "{Test:true;" + string.Join(";", diffs) + "}";
+    }
+
+    private List<string> GetDiffs(object instance, object template)
+    {
+        var diffs = new List<string>();
+        var type = instance.GetType();
+
+        var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance)
+            .Where(f => f.GetCustomAttribute<ExportAttribute>() != null);
+        foreach (var field in fields)
+        {
+            var v1 = field.GetValue(instance);
+            var v2 = field.GetValue(template);
+            if (!AreValuesEqual(v1, v2))
+                diffs.Add($"{field.Name}:{FormatValue(v1)}");
+        }
+
+        var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.GetCustomAttribute<ExportAttribute>() != null && p.CanRead && p.CanWrite);
+        foreach (var prop in props)
+        {
+            var v1 = prop.GetValue(instance);
+            var v2 = prop.GetValue(template);
+            if (!AreValuesEqual(v1, v2))
+                diffs.Add($"{prop.Name}:{FormatValue(v1)}");
+        }
+
+        return diffs;
+    }
+
+    private bool AreValuesEqual(object a, object b)
+    {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        if (a.GetType() != b.GetType()) return false;
+        if (a is Godot.Collections.Dictionary dictA && b is Godot.Collections.Dictionary dictB)
+            return dictA.Count == dictB.Count;
+        if (a is Godot.Collections.Array arrA && b is Godot.Collections.Array arrB)
+            return arrA.Count == arrB.Count;
+        return a.Equals(b);
+    }
+
+    private string FormatValue(object val)
+    {
+        if (val == null) return "null";
+        if (val is bool b) return b ? "true" : "false";
+        if (val is float f) return f.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (val is double d) return d.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return val.ToString();
+    }
+
+    private string GetScenePathForUnitType(string typeName)
+    {
+        var tmpl = unitTemplates.FirstOrDefault(t => System.IO.Path.GetFileNameWithoutExtension(t.ScenePath).Replace("_", "").Replace("(1)", "").Equals(typeName, StringComparison.OrdinalIgnoreCase));
+        if (tmpl != null) return tmpl.ScenePath;
+        tmpl = unitTemplates.FirstOrDefault(t => t.ScenePath.IndexOf(typeName, StringComparison.OrdinalIgnoreCase) >= 0);
+        return tmpl?.ScenePath ?? "";
+    }
+
+    private string GetScenePathForWeaponType(string typeName)
+    {
+        var tmpl = weaponTemplates.FirstOrDefault(t => System.IO.Path.GetFileNameWithoutExtension(t.ScenePath).Replace("_", "").Equals(typeName, StringComparison.OrdinalIgnoreCase));
+        if (tmpl != null) return tmpl.ScenePath;
+        tmpl = weaponTemplates.FirstOrDefault(t => t.ScenePath.IndexOf(typeName, StringComparison.OrdinalIgnoreCase) >= 0);
+        return tmpl?.ScenePath ?? "";
+    }
+
+    private string GetScenePathForFacilityType(string typeName)
+    {
+        var tmpl = facilityTemplates.FirstOrDefault(t => System.IO.Path.GetFileNameWithoutExtension(t.ScenePath).Replace("_", "").Equals(typeName, StringComparison.OrdinalIgnoreCase));
+        if (tmpl != null) return tmpl.ScenePath;
+        tmpl = facilityTemplates.FirstOrDefault(t => t.ScenePath.IndexOf(typeName, StringComparison.OrdinalIgnoreCase) >= 0);
+        return tmpl?.ScenePath ?? "";
+    }
+
+    // ========== ✅ 地图导入 ==========
+    private void OpenImportDialog()
+    {
+        var dialog = new Panel();
+        dialog.Name = "ImportDialog";
+        dialog.CustomMinimumSize = new Vector2(420, 320);
+        dialog.SetAnchorsPreset(LayoutPreset.Center);
+        dialog.ZIndex = 1400;
+
+        var panelStyle = new StyleBoxFlat();
+        panelStyle.BgColor = new Color(0.08f, 0.1f, 0.15f, 0.98f);
+        panelStyle.SetCornerRadiusAll(16);
+        panelStyle.SetBorderWidthAll(3);
+        panelStyle.BorderColor = new Color(0.5f, 0.7f, 0.9f);
+        dialog.AddThemeStyleboxOverride("panel", panelStyle);
+
+        var title = new Label();
+        title.Text = "📥 导入地图配置";
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 20);
+        title.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
+        title.CustomMinimumSize = new Vector2(0, 40);
+        title.Position = new Vector2(0, 15);
+        title.Size = new Vector2(420, 40);
+        dialog.AddChild(title);
+
+        var closeBtn = new Button();
+        closeBtn.Text = "✕";
+        closeBtn.CustomMinimumSize = new Vector2(32, 32);
+        closeBtn.Position = new Vector2(380, 12);
+        closeBtn.Pressed += () => dialog.QueueFree();
+        dialog.AddChild(closeBtn);
+
+        var vbox = new VBoxContainer();
+        vbox.Position = new Vector2(30, 70);
+        vbox.Size = new Vector2(360, 220);
+        vbox.AddThemeConstantOverride("separation", 12);
+
+        var fileBtn = new Button();
+        fileBtn.Text = "📁 选择 txt 文件导入";
+        fileBtn.CustomMinimumSize = new Vector2(360, 45);
+        fileBtn.AddThemeFontSizeOverride("font_size", 14);
+        fileBtn.Pressed += () => {
+            dialog.QueueFree();
+            OpenFileImportDialog();
+        };
+        vbox.AddChild(fileBtn);
+
+        var clipBtn = new Button();
+        clipBtn.Text = "📋 从剪贴板导入";
+        clipBtn.CustomMinimumSize = new Vector2(360, 45);
+        clipBtn.AddThemeFontSizeOverride("font_size", 14);
+        clipBtn.Pressed += () => {
+            dialog.QueueFree();
+            ImportMapFromClipboard();
+        };
+        vbox.AddChild(clipBtn);
+
+        var hint = new Label();
+        hint.Text = "提示：导入会清空当前所有单位、兵器和设施，\n并重建地图。请确保已导出备份！";
+        hint.AddThemeFontSizeOverride("font_size", 11);
+        hint.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 0.3f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        vbox.AddChild(hint);
+
+        dialog.AddChild(vbox);
+        AddChild(dialog);
+    }
+
+    private void OpenFileImportDialog()
+    {
+        var fd = new FileDialog();
+        fd.FileMode = FileDialog.FileModeEnum.OpenFile;
+        fd.Access = FileDialog.AccessEnum.Filesystem;
+        fd.Filters = new string[] { "*.txt ; Text Files" };
+        fd.Title = "选择地图导出文件";
+        fd.Size = new Vector2I(800, 600);
+        fd.FileSelected += (path) => {
+            try
+            {
+                string content = File.ReadAllText(path);
+                ShowImportConfirmDialog(content);
+            }
+            catch (Exception ex)
+            {
+                GD.PrintErr($"[Import] 读取文件失败: {ex.Message}");
+                ShowImportHint($"❌ 读取文件失败:\n{ex.Message}");
+            }
+            fd.QueueFree();
+        };
+        fd.Canceled += () => fd.QueueFree();
+        AddChild(fd);
+        fd.PopupCentered();
+    }
+
+    private void ImportMapFromClipboard()
+    {
+        string content = DisplayServer.ClipboardGet();
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            ShowImportHint("❌ 剪贴板为空或无法读取");
+            return;
+        }
+        ShowImportConfirmDialog(content);
+    }
+
+    private void ShowImportConfirmDialog(string content)
+    {
+        var confirm = new ConfirmationDialog();
+        confirm.Title = "⚠️ 确认导入";
+        confirm.DialogText = "导入将清空当前所有单位、兵器和设施，\n并用文件内容重建地图。\n\n是否继续？";
+        confirm.Size = new Vector2I(400, 180);
+        confirm.Confirmed += () => {
+            ParseAndImportMap(content);
+            confirm.QueueFree();
+        };
+        confirm.Canceled += () => confirm.QueueFree();
+        AddChild(confirm);
+        confirm.PopupCentered();
+    }
+
+    private void ShowImportHint(string text)
+    {
+        var hint = new Label();
+        hint.Text = text;
+        hint.AddThemeFontSizeOverride("font_size", 13);
+        hint.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.2f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        hint.Position = new Vector2(0, globalConfigPanel.Size.Y - 80);
+        hint.Size = new Vector2(globalConfigPanel.Size.X, 70);
+        globalConfigPanel.AddChild(hint);
+        var t = new Timer();
+        t.WaitTime = 3.0f;
+        t.OneShot = true;
+        t.Timeout += () => { hint.QueueFree(); t.QueueFree(); };
+        globalConfigPanel.AddChild(t);
+        t.Start();
+    }
+
+    private void ClearAllMapEntities()
+    {
+        // ✅ 批量清理，避免逐个调用 gameManager.RemoveUnit 触发胜利检查
+        
+        // 1. 清理单位 - 直接从 units 子节点遍历，确保包含所有对象
+        if (gameManager?.unitManager?.units != null)
+        {
+            var allChildren = gameManager.unitManager.units.GetChildren().ToList();
+            foreach (var child in allChildren)
+            {
+                if (child is Infantry unit)
+                {
+                    if (IsInstanceValid(unit))
+                    {
+                        gameManager.unitCategories.Remove(unit);
+                        if (unit.grid != null)
+                        {
+                            unit.grid.infantries.Remove(unit);
+                            if (unit.grid.infantry == unit)
+                                unit.grid.infantry = unit.grid.infantries.Count > 0 ? unit.grid.infantries[0] : null;
+                        }
+                        // ✅ 使用 Free() 立即释放，避免 QueueFree 延迟导致遍历到废弃对象
+                        unit.Free();
+                    }
+                    else
+                    {
+                        try { gameManager.unitManager.units.RemoveChild(unit); } catch { }
+                    }
+                }
+            }
+            gameManager.unitManager.AllUnits.Clear();
+        }
+
+        // 2. 清理兵器
+        if (gameManager?.weaponManager?.weaponsNode != null)
+        {
+            var allWeapons = gameManager.weaponManager.weaponsNode.GetChildren().ToList();
+            foreach (var child in allWeapons)
+            {
+                if (child is Weapon weapon)
+                {
+                    if (IsInstanceValid(weapon))
+                    {
+                        if (weapon.grid != null)
+                        {
+                            weapon.grid.weapons.Remove(weapon);
+                            if (weapon.grid.weapon == weapon)
+                                weapon.grid.weapon = null;
+                        }
+                        weapon.Free();
+                    }
+                    else
+                    {
+                        try { gameManager.weaponManager.weaponsNode.RemoveChild(weapon); } catch { }
+                    }
+                }
+            }
+            gameManager.weaponManager.AllWeapons.Clear();
+        }
+
+        // 3. 清理所有格子的引用
+        if (gridManager?.grids != null)
+        {
+            foreach (var grid in gridManager.grids)
+            {
+                if (grid == null) continue;
+                grid.infantries.Clear();
+                grid.infantry = null;
+                grid.weapons.Clear();
+                grid.weapon = null;
+                if (grid.city != null && IsInstanceValid(grid.city))
+                {
+                    grid.city.Free();
+                }
+                grid.city = null;
+            }
+        }
+
+        GD.Print("[Import] 已清空所有单位、兵器和设施");
+    }
+
+    private void ParseAndImportMap(string content)
+    {
+        try
+        {
+            if (gameManager != null) gameManager.blockVictoryCheck = true; // ✅ 屏蔽胜利检查
+            ClearAllMapEntities();
+
+            var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            int lineIdx = 0;
+            string section = "";
+
+            while (lineIdx < lines.Length)
+            {
+                string line = lines[lineIdx].Trim();
+                lineIdx++;
+
+                if (line.StartsWith("=== ") && line.EndsWith(" ==="))
+                {
+                    section = line.Substring(4, line.Length - 8).Trim();
+                    continue;
+                }
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                if (section == "Terrain Matrix [x,y]=Type")
+                {
+                    var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var part in parts)
+                    {
+                        var m = System.Text.RegularExpressions.Regex.Match(part, @"\[(\d+),(\d+)\]=(.+?)");
+                        if (m.Success)
+                        {
+                            int tx = int.Parse(m.Groups[1].Value);
+                            int ty = int.Parse(m.Groups[2].Value);
+                            string tType = m.Groups[3].Value.Trim();
+                            if (tx >= 0 && tx < gridManager.map.GetLength(0) && ty >= 0 && ty < gridManager.map.GetLength(1))
+                            {
+                                var g = gridManager.map[tx, ty];
+                                if (g != null)
+                                {
+                                    if (Enum.TryParse<GridType>(tType, out var gt))
+                                    {
+                                        g.gridType = gt;
+                                    }
+                                    else
+                                    {
+                                        // ✅ 无法解析的地形类型默认 GROUND，并记录日志
+                                        GD.Print($"[Import] 地形类型 '{tType}' 无法解析，默认设为 GROUND at [{tx},{ty}]");
+                                        g.gridType = GridType.GROUND;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (section == "Units [x,y] Type Team HP")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]\s+(\w+)\s+(\w+)\s+HP(\d+)(.*)");
+                    if (m.Success)
+                    {
+                        int ux = int.Parse(m.Groups[1].Value);
+                        int uy = int.Parse(m.Groups[2].Value);
+                        string uType = m.Groups[3].Value;
+                        string uTeam = m.Groups[4].Value;
+                        int uHp = int.Parse(m.Groups[5].Value);
+                        string diffPart = m.Groups[6].Value;
+
+                        string scenePath = GetScenePathForUnitType(uType);
+                        if (!string.IsNullOrEmpty(scenePath) && ux >= 0 && ux < gridManager.map.GetLength(0) && uy >= 0 && uy < gridManager.map.GetLength(1))
+                        {
+                            var grid = gridManager.map[ux, uy];
+                            if (grid != null)
+                            {
+                                SpawnUnitAtGrid(grid, scenePath, uTeam);
+                                var spawned = grid.infantries.LastOrDefault();
+                                if (spawned != null)
+                                {
+                                    spawned.health = uHp * 10;
+                                    spawned.UpdateHpLabel();
+                                    ApplyDiffString(spawned, diffPart);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (section == "Weapons [x,y] Type Team HP")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]\s+(\w+)\s+(\w+)\s+HP(\d+)(.*)");
+                    if (m.Success)
+                    {
+                        int wx = int.Parse(m.Groups[1].Value);
+                        int wy = int.Parse(m.Groups[2].Value);
+                        string wType = m.Groups[3].Value;
+                        string wTeam = m.Groups[4].Value;
+                        int wHp = int.Parse(m.Groups[5].Value);
+                        string diffPart = m.Groups[6].Value;
+
+                        string scenePath = GetScenePathForWeaponType(wType);
+                        if (!string.IsNullOrEmpty(scenePath) && wx >= 0 && wx < gridManager.map.GetLength(0) && wy >= 0 && wy < gridManager.map.GetLength(1))
+                        {
+                            var grid = gridManager.map[wx, wy];
+                            if (grid != null)
+                            {
+                                SpawnWeaponAtGrid(grid, scenePath, wTeam);
+                                var spawned = grid.weapon;
+                                if (spawned != null)
+                                {
+                                    spawned.health = wHp * 10;
+                                    spawned.UpdateHpLabel();
+                                    ApplyDiffString(spawned, diffPart);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (section == "Facilities [x,y] Type Team")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]\s+(\w+)\s+(\w+)");
+                    if (m.Success)
+                    {
+                        int fx = int.Parse(m.Groups[1].Value);
+                        int fy = int.Parse(m.Groups[2].Value);
+                        string fType = m.Groups[3].Value;
+                        string fTeam = m.Groups[4].Value;
+
+                        string scenePath = GetScenePathForFacilityType(fType);
+                        if (!string.IsNullOrEmpty(scenePath) && fx >= 0 && fx < gridManager.map.GetLength(0) && fy >= 0 && fy < gridManager.map.GetLength(1))
+                        {
+                            var grid = gridManager.map[fx, fy];
+                            if (grid != null)
+                                SpawnFacilityAtGrid(grid, scenePath, fTeam);
+                        }
+                    }
+                }
+                else if (section == "Funds Statistics")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"P1\s+\(Red\):\s*(\d+)");
+                    if (m.Success && gameManager != null) gameManager.p1Funds = int.Parse(m.Groups[1].Value);
+                    m = System.Text.RegularExpressions.Regex.Match(line, @"P2\s+\(Blue\):\s*(\d+)");
+                    if (m.Success && gameManager != null) gameManager.p2Funds = int.Parse(m.Groups[1].Value);
+                }
+            }
+
+            if (gameManager != null) gameManager.blockVictoryCheck = false; // ✅ 恢复胜利检查
+            gameManager?.UpdateUnitLists();
+            gameManager?.RefreshSpecializedUnitLists();
+            gameManager?.fogOfWarManager?.RefreshFog();
+            gameManager?.ResetGameState(); // ✅ 重置游戏状态，防止胜利面板残留
+            ShowImportHint("✅ 地图导入成功！");
+            GD.Print("[Import] 地图导入完成");
+        }
+        catch (Exception ex)
+        {
+            if (gameManager != null) gameManager.blockVictoryCheck = false; // ✅ 异常时也要恢复
+            GD.PrintErr($"[Import] 导入失败: {ex.Message}\n{ex.StackTrace}");
+            ShowImportHint($"❌ 导入失败:\n{ex.Message}");
+        }
+    }
+
+    private void ApplyDiffString(object target, string diffPart)
+    {
+        if (target == null || string.IsNullOrWhiteSpace(diffPart)) return;
+
+        // 使用嵌套花括号计数器提取 Test 内容
+        int startIdx = diffPart.IndexOf("{Test:");
+        if (startIdx < 0) return;
+        startIdx += 6; // 跳过 "{Test:"
+
+        int braceCount = 1;
+        int endIdx = startIdx;
+        while (endIdx < diffPart.Length && braceCount > 0)
+        {
+            if (diffPart[endIdx] == '{') braceCount++;
+            else if (diffPart[endIdx] == '}') braceCount--;
+            endIdx++;
+        }
+        if (braceCount != 0) return; // 花括号不匹配，跳过
+
+        string inner = diffPart.Substring(startIdx, endIdx - startIdx - 1);
+        if (string.IsNullOrWhiteSpace(inner)) return;
+
+        var items = inner.Split(';');
+        var type = target.GetType();
+        int successCount = 0;
+        int skipCount = 0;
+
+        foreach (var item in items)
+        {
+            if (string.IsNullOrWhiteSpace(item)) continue;
+
+            var kv = item.Split(new[] { ':' }, 2);
+            if (kv.Length < 2) continue;
+            string key = kv[0].Trim();
+            string valStr = kv[1].Trim();
+            if (string.IsNullOrEmpty(key) || key == "true") continue;
+
+            // 跳过中文字段名
+            if (ContainsChinese(key)) { skipCount++; continue; }
+
+            // ✅ 值层面过滤：跳过节点引用/贴图/空集合/复杂值
+            if (ShouldSkipValue(valStr)) { skipCount++; continue; }
+
+            var field = type.GetField(key, BindingFlags.Public | BindingFlags.Instance);
+            if (field != null && field.GetCustomAttribute<ExportAttribute>() != null)
+            {
+                if (!IsSupportedType(field.FieldType)) { skipCount++; continue; }
+                try
+                {
+                    object val = ParseValue(valStr, field.FieldType);
+                    if (val != null) { field.SetValue(target, val); successCount++; }
+                }
+                catch { skipCount++; }
+            }
+            else
+            {
+                var prop = type.GetProperty(key, BindingFlags.Public | BindingFlags.Instance);
+                if (prop != null && prop.GetCustomAttribute<ExportAttribute>() != null && prop.CanWrite)
+                {
+                    if (!IsSupportedType(prop.PropertyType)) { skipCount++; continue; }
+                    try
+                    {
+                        object val = ParseValue(valStr, prop.PropertyType);
+                        if (val != null) { prop.SetValue(target, val); successCount++; }
+                    }
+                    catch { skipCount++; }
+                }
+            }
+        }
+
+        // 只打印一次总结，不打印每个字段
+        if (successCount > 0 || skipCount > 0)
+            GD.Print($"[ApplyDiffString] {target.GetType().Name}: 成功 {successCount} 个, 跳过 {skipCount} 个");
+    }
+
+    // ✅ 值层面：跳过节点引用/贴图/空集合等不需要导入的值
+    private bool ShouldSkipValue(string valStr)
+    {
+        if (string.IsNullOrEmpty(valStr)) return true;
+        // 节点引用格式：<NodeName#ID>
+        if (valStr.StartsWith("<") && valStr.EndsWith(">")) return true;
+        // Godot 集合类型格式（如 Dictionary、Array 的 ToString）
+        if (valStr == "{}" || valStr == "[]" || valStr == "{ }" || valStr == "[ ]") return true;
+        // 包含空字典或空数组的格式
+        if (valStr.Contains("<")) return true; // 任何包含 < 的（节点引用）
+        return false;
+    }
+
+    // ✅ 检测字符串是否包含中文
+    private bool ContainsChinese(string str)
+    {
+        if (string.IsNullOrEmpty(str)) return false;
+        foreach (char c in str)
+        {
+            if (c >= 0x4E00 && c <= 0x9FFF) return true; // CJK 统一表意文字
+            if (c >= 0x3400 && c <= 0x4DBF) return true; // CJK 扩展A
+            if (c >= 0x3000 && c <= 0x303F) return true; // CJK 标点符号
+        }
+        return false;
+    }
+
+    // ✅ 判断类型是否为支持的基本类型
+    private bool IsSupportedType(Type t)
+    {
+        if (t == null) return false;
+        if (t == typeof(bool)) return true;
+        if (t == typeof(int)) return true;
+        if (t == typeof(uint)) return true;
+        if (t == typeof(long)) return true;
+        if (t == typeof(float)) return true;
+        if (t == typeof(double)) return true;
+        if (t == typeof(string)) return true;
+        if (t.IsEnum) return true;
+        if (t == typeof(Color)) return true;
+        if (t == typeof(Vector2)) return true;
+        if (t == typeof(Vector2I)) return true;
+        if (t == typeof(Vector3)) return true;
+        if (t == typeof(Vector3I)) return true;
+        return false;
+    }
+
+    private object ParseValue(string str, Type targetType)
+    {
+        if (targetType == null || str == null) return null;
+
+        // ✅ 如果是字符串类型，直接返回（包括中文内容）
+        if (targetType == typeof(string)) return str;
+
+        if (targetType == typeof(bool))
+        {
+            if (bool.TryParse(str, out bool bv)) return bv;
+            if (str == "1" || str.Equals("true", StringComparison.OrdinalIgnoreCase)) return true;
+            if (str == "0" || str.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
+            return null;
+        }
+        if (targetType == typeof(int))
+        {
+            if (int.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out int iv)) return iv;
+            return null;
+        }
+        if (targetType == typeof(uint))
+        {
+            if (uint.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out uint uv)) return uv;
+            return null;
+        }
+        if (targetType == typeof(long))
+        {
+            if (long.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out long lv)) return lv;
+            return null;
+        }
+        if (targetType == typeof(float))
+        {
+            if (float.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float fv)) return fv;
+            return null;
+        }
+        if (targetType == typeof(double))
+        {
+            if (double.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double dv)) return dv;
+            return null;
+        }
+        if (targetType.IsEnum)
+        {
+            if (int.TryParse(str, out int ev)) return ev;
+            if (Enum.TryParse(targetType, str, true, out object ev2)) return ev2;
+            return null;
+        }
+        // ✅ Godot 颜色类型解析 (R,G,B,A) 或 Color 构造函数
+        if (targetType == typeof(Color))
+        {
+            // 尝试从 Godot 的 ToString 格式解析，如 "Color(1, 0, 0, 1)"
+            var colorMatch = System.Text.RegularExpressions.Regex.Match(str, @"Color\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)(?:,\s*([-\d.]+))?\)");
+            if (colorMatch.Success)
+            {
+                float r = float.Parse(colorMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                float g = float.Parse(colorMatch.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                float b = float.Parse(colorMatch.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
+                float a = colorMatch.Groups[4].Success ? float.Parse(colorMatch.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture) : 1.0f;
+                return new Color(r, g, b, a);
+            }
+            // 尝试从 HTML 颜色格式解析（如 #FF0000）
+            try
+            {
+                if (str.StartsWith("#"))
+                {
+                    return new Color(str);
+                }
+            }
+            catch { }
+            return null;
+        }
+        // ✅ Godot Vector2 类型解析
+        if (targetType == typeof(Vector2))
+        {
+            var vec2Match = System.Text.RegularExpressions.Regex.Match(str, @"\(([-\d.]+),\s*([-\d.]+)\)");
+            if (vec2Match.Success)
+            {
+                float x = float.Parse(vec2Match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                float y = float.Parse(vec2Match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                return new Vector2(x, y);
+            }
+            return null;
+        }
+        // ✅ Godot Vector2I 类型解析
+        if (targetType == typeof(Vector2I))
+        {
+            var vec2iMatch = System.Text.RegularExpressions.Regex.Match(str, @"\(([-\d.]+),\s*([-\d.]+)\)");
+            if (vec2iMatch.Success)
+            {
+                int x = int.Parse(vec2iMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                int y = int.Parse(vec2iMatch.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                return new Vector2I(x, y);
+            }
+            return null;
+        }
+        // ✅ Godot Vector3 类型解析
+        if (targetType == typeof(Vector3))
+        {
+            var vec3Match = System.Text.RegularExpressions.Regex.Match(str, @"\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)\)");
+            if (vec3Match.Success)
+            {
+                float x = float.Parse(vec3Match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                float y = float.Parse(vec3Match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                float z = float.Parse(vec3Match.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
+                return new Vector3(x, y, z);
+            }
+            return null;
+        }
+        // ✅ Godot Vector3I 类型解析
+        if (targetType == typeof(Vector3I))
+        {
+            var vec3iMatch = System.Text.RegularExpressions.Regex.Match(str, @"\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)\)");
+            if (vec3iMatch.Success)
+            {
+                int x = int.Parse(vec3iMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                int y = int.Parse(vec3iMatch.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                int z = int.Parse(vec3iMatch.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
+                return new Vector3I(x, y, z);
+            }
+            return null;
+        }
+        return null;
+    }
+
+    // ========== ✅ 极简/紧凑导出格式 ==========
+
+    private readonly Dictionary<string, string> compactUnitAbbr = new()
+    {
+        { "Infantry", "Inf" }, { "Mech", "Mch" }, { "Oozium", "Ooz" },
+        { "LightTank", "LTk" }, { "MdTank", "MTk" }, { "Rocket", "Rck" },
+        { "Artillery", "Art" }, { "APC", "APC" }, { "Recon", "Rec" },
+        { "AntiAir", "AA" }, { "AntiTank", "AT" }, { "Flare", "Flr" },
+        { "Bike", "Bke" }, { "FlyBomb", "FBo" }
+    };
+    private readonly Dictionary<string, string> compactWeaponAbbr = new()
+    {
+        { "BlackCannon", "BCn" }, { "Laser", "Lsr" }
+    };
+    private readonly Dictionary<string, string> compactFacilityAbbr = new()
+    {
+        { "City", "Cty" }, { "Base", "Bse" }, { "AirPort", "Apt" }
+    };
+    private readonly Dictionary<string, string> compactTeamAbbr = new()
+    {
+        { "Player1", "P1" }, { "Player2", "P2" }, { "Player0", "P0" }, { "Player", "PN" }
+    };
+
+    // 反向映射（缩写→完整名）
+    private string AbbrToUnitType(string abbr) => compactUnitAbbr.FirstOrDefault(kv => kv.Value == abbr).Key ?? abbr;
+    private string AbbrToWeaponType(string abbr) => compactWeaponAbbr.FirstOrDefault(kv => kv.Value == abbr).Key ?? abbr;
+    private string AbbrToFacilityType(string abbr) => compactFacilityAbbr.FirstOrDefault(kv => kv.Value == abbr).Key ?? abbr;
+    private string AbbrToTeam(string abbr) => compactTeamAbbr.FirstOrDefault(kv => kv.Value == abbr).Key ?? abbr;
+
+    private string UnitTypeToAbbr(string typeName) => compactUnitAbbr.GetValueOrDefault(typeName, typeName);
+    private string WeaponTypeToAbbr(string typeName) => compactWeaponAbbr.GetValueOrDefault(typeName, typeName);
+    private string FacilityTypeToAbbr(string typeName) => compactFacilityAbbr.GetValueOrDefault(typeName, typeName);
+    private string TeamToAbbr(string team) => compactTeamAbbr.GetValueOrDefault(team, team);
+
+    private int TerrainToNumber(GridType gt) => (int)gt + 1;
+    private GridType NumberToTerrain(int num)
+    {
+        var values = Enum.GetValues<GridType>();
+        if (num >= 1 && num <= values.Length) return values[num - 1];
+        return GridType.GROUND; // 默认
+    }
+
+    // ✅ 极简导出
+    private void ExportCompactMap()
+    {
+        if (gridManager?.map == null) { ShowImportHint("❌ GridManager 未初始化"); return; }
+
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+        foreach (var grid in gridManager.grids)
+        { if (grid == null) continue; minX = Math.Min(minX, grid.GridIndex.X); minY = Math.Min(minY, grid.GridIndex.Y); maxX = Math.Max(maxX, grid.GridIndex.X); maxY = Math.Max(maxY, grid.GridIndex.Y); }
+        if (minX == int.MaxValue) { minX = 0; minY = 0; maxX = 0; maxY = 0; }
+        int width = maxX - minX + 1, height = maxY - minY + 1;
+        bool fog = gameManager?.fogOfWarManager?.isFogOfWarEnabled ?? false;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("=== AW Compact ===");
+        sb.AppendLine($"W:{width} H:{height} F:{(fog ? 1 : 0)}");
+        sb.AppendLine();
+
+        sb.AppendLine("=== T ===");
+        for (int y = minY; y <= maxY; y++)
+        {
+            sb.Append($"{y}:");
+            for (int x = minX; x <= maxX; x++)
+            {
+                var grid = (x >= 0 && x < gridManager.map.GetLength(0) && y >= 0 && y < gridManager.map.GetLength(1)) ? gridManager.map[x, y] : null;
+                int num = grid != null ? TerrainToNumber(grid.gridType) : 0;
+                sb.Append($" {num}");
+            }
+            sb.AppendLine();
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("=== U ===");
+        if (gameManager?.unitManager?.AllUnits != null)
+        {
+            foreach (var unit in gameManager.unitManager.AllUnits)
+            {
+                if (unit == null || !IsInstanceValid(unit) || unit.grid == null) continue;
+                int hx = unit.grid.GridIndex.X, hy = unit.grid.GridIndex.Y;
+                string abbr = UnitTypeToAbbr(unit.GetType().Name);
+                string team = TeamToAbbr(unit.team);
+                int hp = Mathf.CeilToInt(unit.health / 10f);
+                string diff = GetUnitDiffString(unit);
+                sb.AppendLine($"[{hx},{hy}] {abbr} {team} {hp}{diff}");
+            }
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("=== W ===");
+        if (gameManager?.weaponManager?.AllWeapons != null)
+        {
+            foreach (var weapon in gameManager.weaponManager.AllWeapons)
+            {
+                if (weapon == null || !IsInstanceValid(weapon) || weapon.grid == null) continue;
+                int hx = weapon.grid.GridIndex.X, hy = weapon.grid.GridIndex.Y;
+                string abbr = WeaponTypeToAbbr(weapon.GetType().Name);
+                string team = TeamToAbbr(weapon.team);
+                int hp = Mathf.CeilToInt(weapon.health / 10f);
+                string diff = GetWeaponDiffString(weapon);
+                sb.AppendLine($"[{hx},{hy}] {abbr} {team} {hp}{diff}");
+            }
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("=== F ===");
+        if (gridManager?.grids != null)
+        {
+            foreach (var grid in gridManager.grids)
+            {
+                if (grid?.city == null || !IsInstanceValid(grid.city)) continue;
+                int hx = grid.GridIndex.X, hy = grid.GridIndex.Y;
+                string abbr = FacilityTypeToAbbr(grid.city.GetType().Name);
+                string team = TeamToAbbr(grid.city.facilityTeam ?? "Player0");
+                string diff = GetFacilityDiffString(grid.city);
+                sb.AppendLine($"[{hx},{hy}] {abbr} {team}{diff}");
+            }
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("=== $ ===");
+        sb.AppendLine($"P1:{gameManager?.p1Funds ?? 0}");
+        sb.AppendLine($"P2:{gameManager?.p2Funds ?? 0}");
+        sb.AppendLine();
+        sb.AppendLine("=== E ===");
+
+        string content = sb.ToString();
+        string fileName = $"AW13_Compact_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+        try
+        {
+            string dir = OS.GetSystemDir(OS.SystemDir.Downloads);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+            {
+                string path = Path.Combine(dir, fileName);
+                File.WriteAllText(path, content);
+                DisplayServer.ClipboardSet(content);
+                ShowImportHint($"✅ 极简导出成功！\n📁 {path}\n📋 已复制到剪贴板");
+                GD.Print("[CompactExport] 已导出到下载目录");
+                return;
+            }
+        }
+        catch { }
+        try
+        {
+            string path = Path.Combine(OS.GetUserDataDir(), fileName);
+            File.WriteAllText(path, content);
+            DisplayServer.ClipboardSet(content);
+            ShowImportHint($"✅ 极简导出成功！\n📁 {path}\n📋 已复制到剪贴板");
+        }
+        catch (Exception ex) { ShowImportHint($"❌ 导出失败: {ex.Message}"); }
+    }
+
+    // ✅ 极简导入
+    private void ParseCompactMap(string content)
+    {
+        try
+        {
+            if (gameManager != null) gameManager.blockVictoryCheck = true;
+            ClearAllMapEntities();
+
+            var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            string section = "";
+            foreach (var rawLine in lines)
+            {
+                string line = rawLine.Trim();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (line.StartsWith("=== ") && line.EndsWith(" ==="))
+                {
+                    section = line.Substring(4, line.Length - 8).Trim();
+                    continue;
+                }
+
+                if (section == "T")
+                {
+                    // y: n1 n2 n3 ...
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"^(\d+):\s+(.+)");
+                    if (m.Success)
+                    {
+                        int y = int.Parse(m.Groups[1].Value);
+                        var nums = m.Groups[2].Value.Trim().Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                        for (int x = 0; x < nums.Length; x++)
+                        {
+                            if (int.TryParse(nums[x], out int num))
+                            {
+                                if (x >= 0 && x < gridManager.map.GetLength(0) && y >= 0 && y < gridManager.map.GetLength(1))
+                                {
+                                    var g = gridManager.map[x, y];
+                                    if (g != null) g.gridType = NumberToTerrain(num);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (section == "U")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]\s+(\w+)\s+(\w+)\s+(\d+)(.*)");
+                    if (m.Success)
+                    {
+                        int ux = int.Parse(m.Groups[1].Value), uy = int.Parse(m.Groups[2].Value);
+                        string uAbbr = m.Groups[3].Value, tAbbr = m.Groups[4].Value;
+                        int uHp = int.Parse(m.Groups[5].Value);
+                        string diffPart = m.Groups[6].Value;
+                        string fullType = AbbrToUnitType(uAbbr);
+                        string fullTeam = AbbrToTeam(tAbbr);
+                        string scenePath = GetScenePathForUnitType(fullType);
+                        if (!string.IsNullOrEmpty(scenePath) && ux >= 0 && ux < gridManager.map.GetLength(0) && uy >= 0 && uy < gridManager.map.GetLength(1))
+                        {
+                            var grid = gridManager.map[ux, uy];
+                            if (grid != null)
+                            {
+                                SpawnUnitAtGrid(grid, scenePath, fullTeam);
+                                var spawned = grid.infantries.LastOrDefault();
+                                if (spawned != null)
+                                {
+                                    spawned.health = uHp * 10;
+                                    spawned.UpdateHpLabel();
+                                    ApplyDiffString(spawned, diffPart);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (section == "W")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]\s+(\w+)\s+(\w+)\s+(\d+)(.*)");
+                    if (m.Success)
+                    {
+                        int wx = int.Parse(m.Groups[1].Value), wy = int.Parse(m.Groups[2].Value);
+                        string wAbbr = m.Groups[3].Value, tAbbr = m.Groups[4].Value;
+                        int wHp = int.Parse(m.Groups[5].Value);
+                        string diffPart = m.Groups[6].Value;
+                        string fullType = AbbrToWeaponType(wAbbr);
+                        string fullTeam = AbbrToTeam(tAbbr);
+                        string scenePath = GetScenePathForWeaponType(fullType);
+                        if (!string.IsNullOrEmpty(scenePath) && wx >= 0 && wx < gridManager.map.GetLength(0) && wy >= 0 && wy < gridManager.map.GetLength(1))
+                        {
+                            var grid = gridManager.map[wx, wy];
+                            if (grid != null)
+                            {
+                                SpawnWeaponAtGrid(grid, scenePath, fullTeam);
+                                var spawned = grid.weapon;
+                                if (spawned != null)
+                                {
+                                    spawned.health = wHp * 10;
+                                    spawned.UpdateHpLabel();
+                                    ApplyDiffString(spawned, diffPart);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (section == "F")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"\[(\d+),(\d+)\]\s+(\w+)\s+(\w+)(.*)");
+                    if (m.Success)
+                    {
+                        int fx = int.Parse(m.Groups[1].Value), fy = int.Parse(m.Groups[2].Value);
+                        string fAbbr = m.Groups[3].Value, tAbbr = m.Groups[4].Value;
+                        string diffPart = m.Groups[5].Value;
+                        string fullType = AbbrToFacilityType(fAbbr);
+                        string fullTeam = AbbrToTeam(tAbbr);
+                        string scenePath = GetScenePathForFacilityType(fullType);
+                        if (!string.IsNullOrEmpty(scenePath) && fx >= 0 && fx < gridManager.map.GetLength(0) && fy >= 0 && fy < gridManager.map.GetLength(1))
+                        {
+                            var grid = gridManager.map[fx, fy];
+                            if (grid != null)
+                            {
+                                SpawnFacilityAtGrid(grid, scenePath, fullTeam);
+                                var spawned = grid.city;
+                                if (spawned != null) ApplyDiffString(spawned, diffPart);
+                            }
+                        }
+                    }
+                }
+                else if (section == "$")
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(line, @"P1:(\d+)");
+                    if (m.Success && gameManager != null) gameManager.p1Funds = int.Parse(m.Groups[1].Value);
+                    m = System.Text.RegularExpressions.Regex.Match(line, @"P2:(\d+)");
+                    if (m.Success && gameManager != null) gameManager.p2Funds = int.Parse(m.Groups[1].Value);
+                }
+            }
+
+            // ✅ 重新收集所有单位和兵器（确保 AllUnits/AllWeapons 列表正确）
+            gameManager?.unitManager?.RefreshUnitList();
+            gameManager?.weaponManager?.RefreshWeaponList();
+
+            // ✅ 重新设置所有回调和视觉状态
+            if (gameManager != null)
+            {
+                foreach (var unit in gameManager.unitManager?.AllUnits ?? new List<Infantry>())
+                {
+                    if (unit != null && IsInstanceValid(unit))
+                    {
+                        unit.OnClickPiece = gameManager.OnSelectPiece;
+                        unit.UpdateTeamVisual();
+                        unit.UpdateHpLabel();
+                    }
+                }
+                foreach (var weapon in gameManager.weaponManager?.AllWeapons ?? new List<Weapon>())
+                {
+                    if (weapon != null && IsInstanceValid(weapon))
+                    {
+                        weapon.OnClickWeapon = gameManager.OnSelectWeapon;
+                        weapon.UpdateHpLabel();
+                    }
+                }
+            }
+
+            // ✅ 重置游戏状态为初始回合
+            if (gameManager != null)
+            {
+                gameManager.turnPhase = 1;
+                gameManager.selectedInfantry = null;
+                gameManager.UpdateTurnLabel();
+            }
+
+            gameManager?.UpdateUnitLists();
+            gameManager?.RefreshSpecializedUnitLists();
+            gameManager?.fogOfWarManager?.RefreshFog();
+            gameManager?.ResetGameState();
+            ShowImportHint("✅ 极简导入成功！");
+            GD.Print("[CompactImport] 极简导入完成");
+        }
+        catch (Exception ex)
+        {
+            if (gameManager != null) gameManager.blockVictoryCheck = false;
+            GD.PrintErr($"[CompactImport] 导入失败: {ex.Message}\n{ex.StackTrace}");
+            ShowImportHint($"❌ 导入失败:\n{ex.Message}");
+        }
+        finally
+        {
+            if (gameManager != null) gameManager.blockVictoryCheck = false;
+        }
+    }
+
+    // ✅ 极简导入对话框
+    private void OpenCompactImportDialog()
+    {
+        var dialog = new Panel();
+        dialog.Name = "CompactImportDialog";
+        dialog.CustomMinimumSize = new Vector2(420, 240);
+        dialog.SetAnchorsPreset(LayoutPreset.Center);
+        dialog.ZIndex = 1400;
+
+        var panelStyle = new StyleBoxFlat();
+        panelStyle.BgColor = new Color(0.08f, 0.1f, 0.15f, 0.98f);
+        panelStyle.SetCornerRadiusAll(16);
+        panelStyle.SetBorderWidthAll(3);
+        panelStyle.BorderColor = new Color(0.5f, 0.7f, 0.9f);
+        dialog.AddThemeStyleboxOverride("panel", panelStyle);
+
+        var vbox = new VBoxContainer();
+        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.OffsetLeft = 20; vbox.OffsetRight = -20;
+        vbox.OffsetTop = 20; vbox.OffsetBottom = -20;
+        vbox.AddThemeConstantOverride("separation", 12);
+
+        var title = new Label();
+        title.Text = "📥 极简导入";
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 20);
+        title.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
+        vbox.AddChild(title);
+
+        var fileBtn = new Button();
+        fileBtn.Text = "📁 选择 txt 文件";
+        fileBtn.CustomMinimumSize = new Vector2(360, 45);
+        fileBtn.AddThemeFontSizeOverride("font_size", 14);
+        fileBtn.Pressed += () => {
+            dialog.QueueFree();
+            var fd = new FileDialog();
+            fd.FileMode = FileDialog.FileModeEnum.OpenFile;
+            fd.Access = FileDialog.AccessEnum.Filesystem;
+            fd.Filters = new string[] { "*.txt ; Text Files" };
+            fd.Title = "选择极简导出文件";
+            fd.Size = new Vector2I(800, 600);
+            fd.FileSelected += (path) => {
+                try { ParseCompactMap(File.ReadAllText(path)); } catch (Exception ex) { ShowImportHint($"❌ 读取失败: {ex.Message}"); }
+                fd.QueueFree();
+            };
+            fd.Canceled += () => fd.QueueFree();
+            AddChild(fd); fd.PopupCentered();
+        };
+        vbox.AddChild(fileBtn);
+
+        var clipBtn = new Button();
+        clipBtn.Text = "📋 从剪贴板导入";
+        clipBtn.CustomMinimumSize = new Vector2(360, 45);
+        clipBtn.AddThemeFontSizeOverride("font_size", 14);
+        clipBtn.Pressed += () => {
+            dialog.QueueFree();
+            string content = DisplayServer.ClipboardGet();
+            if (string.IsNullOrWhiteSpace(content)) { ShowImportHint("❌ 剪贴板为空"); return; }
+            ParseCompactMap(content);
+        };
+        vbox.AddChild(clipBtn);
+
+        var hint = new Label();
+        hint.Text = "极简格式：每行一个对象，无复杂Test块\n更可靠、更紧凑";
+        hint.AddThemeFontSizeOverride("font_size", 11);
+        hint.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 0.3f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        vbox.AddChild(hint);
+
+        dialog.AddChild(vbox);
+        AddChild(dialog);
     }
 }

@@ -1167,7 +1167,6 @@ public void CloseRange()
         {
             if (grid != null && grid.city != null)
             {
-                grid.city.isSupplyPoint = true;
                 cities.Add(grid.city);
             }
         }

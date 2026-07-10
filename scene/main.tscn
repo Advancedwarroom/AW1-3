@@ -5,6 +5,8 @@
 [ext_resource type="TileSet" uid="uid://c0eafeymufwj5" path="res://asscets/item.tres" id="3_0ha60"]
 [ext_resource type="PackedScene" uid="uid://l5vcjpofibjj" path="res://Prefabs/infantry(1).tscn" id="4_p1hux"]
 [ext_resource type="PackedScene" uid="uid://dpabwwj6tnqnu" path="res://Prefabs/grid.tscn" id="6_4j5ol"]
+[ext_resource type="PackedScene" uid="uid://bvje1xmtbv1xq" path="res://Prefabs/AirPort.tscn" id="6_bmc2w"]
+[ext_resource type="PackedScene" uid="uid://c2hkpjjh5k6uh" path="res://Prefabs/Base.tscn" id="6_gj7ui"]
 [ext_resource type="Texture2D" uid="uid://ndlxc2gl71jc" path="res://art/Buttons/RotateButton.png" id="7_4jm02"]
 [ext_resource type="Script" uid="uid://boq0f4qqwym0k" path="res://spricts/GameManager.cs" id="7_of57s"]
 [ext_resource type="Script" uid="uid://dkq6iykxmb5bp" path="res://spricts/GridManager.cs" id="7_p1hux"]
@@ -30,6 +32,7 @@
 [ext_resource type="PackedScene" uid="uid://sfbmwapwn124" path="res://Prefabs/AntiAir.tscn" id="25_p8adh"]
 [ext_resource type="Script" uid="uid://b45e5l1rdl2f6" path="res://spricts/FogOfWarManager.cs" id="26_oldxj"]
 [ext_resource type="Script" uid="uid://cu0kmm7m1n6tk" path="res://spricts/CameraTouchController.cs" id="27_camtouch"]
+[ext_resource type="PackedScene" uid="uid://bav1wcjvwgxh8" path="res://Prefabs/Bike.tscn" id="28_7ty4q"]
 [ext_resource type="PackedScene" uid="uid://dt34620naxdc3" path="res://Prefabs/FlyBomb.tscn" id="28_vneqc"]
 [ext_resource type="PackedScene" uid="uid://b2721lm0rscie" path="res://Prefabs/Anti_Tank.tscn" id="29_antitan"]
 
@@ -870,6 +873,7 @@ position = Vector2(416, 64)
 
 [node name="Grid262" parent="Grids" unique_id=159302835 instance=ExtResource("6_4j5ol")]
 position = Vector2(416, 96)
+gridType = 10
 
 [node name="Grid263" parent="Grids" unique_id=1181977081 instance=ExtResource("6_4j5ol")]
 position = Vector2(416, 128)
@@ -931,12 +935,15 @@ gridType = 7
 
 [node name="Grid281" parent="Grids" unique_id=284852400 instance=ExtResource("6_4j5ol")]
 position = Vector2(448, 64)
+gridType = 7
 
 [node name="Grid282" parent="Grids" unique_id=299070460 instance=ExtResource("6_4j5ol")]
 position = Vector2(448, 96)
+gridType = 8
 
 [node name="Grid283" parent="Grids" unique_id=830297964 instance=ExtResource("6_4j5ol")]
 position = Vector2(448, 128)
+gridType = 7
 
 [node name="Grid284" parent="Grids" unique_id=1058682566 instance=ExtResource("6_4j5ol")]
 position = Vector2(448, 160)
@@ -992,12 +999,14 @@ gridType = 7
 
 [node name="Grid301" parent="Grids" unique_id=1681564544 instance=ExtResource("6_4j5ol")]
 position = Vector2(480, 64)
+gridType = 7
 
 [node name="Grid302" parent="Grids" unique_id=2017920134 instance=ExtResource("6_4j5ol")]
 position = Vector2(480, 96)
 
 [node name="Grid303" parent="Grids" unique_id=1006357703 instance=ExtResource("6_4j5ol")]
 position = Vector2(480, 128)
+gridType = 7
 
 [node name="Grid304" parent="Grids" unique_id=829172129 instance=ExtResource("6_4j5ol")]
 position = Vector2(480, 160)
@@ -1053,12 +1062,15 @@ gridType = 7
 
 [node name="Grid321" parent="Grids" unique_id=1526266412 instance=ExtResource("6_4j5ol")]
 position = Vector2(512, 64)
+gridType = 7
 
 [node name="Grid322" parent="Grids" unique_id=494672717 instance=ExtResource("6_4j5ol")]
 position = Vector2(512, 96)
+gridType = 7
 
 [node name="Grid323" parent="Grids" unique_id=1614380521 instance=ExtResource("6_4j5ol")]
 position = Vector2(512, 128)
+gridType = 7
 
 [node name="Grid324" parent="Grids" unique_id=1780093613 instance=ExtResource("6_4j5ol")]
 position = Vector2(512, 160)
@@ -1117,6 +1129,7 @@ position = Vector2(544, 64)
 
 [node name="Grid342" parent="Grids" unique_id=889619698 instance=ExtResource("6_4j5ol")]
 position = Vector2(544, 96)
+gridType = 7
 
 [node name="Grid343" parent="Grids" unique_id=1993040261 instance=ExtResource("6_4j5ol")]
 position = Vector2(544, 128)
@@ -1144,6 +1157,9 @@ position = Vector2(544, 352)
 
 [node name="Grid351" parent="Grids" unique_id=1116551186 instance=ExtResource("6_4j5ol")]
 position = Vector2(544, 384)
+
+[node name="Airport" parent="Grids/Grid351" unique_id=1037633379 instance=ExtResource("6_bmc2w")]
+facilityTeam = "Player1"
 
 [node name="Grid352" parent="Grids" unique_id=481467749 instance=ExtResource("6_4j5ol")]
 position = Vector2(544, 416)
@@ -1178,6 +1194,7 @@ position = Vector2(576, 64)
 
 [node name="Grid362" parent="Grids" unique_id=1358517788 instance=ExtResource("6_4j5ol")]
 position = Vector2(576, 96)
+gridType = 7
 
 [node name="Grid363" parent="Grids" unique_id=1451241602 instance=ExtResource("6_4j5ol")]
 position = Vector2(576, 128)
@@ -1206,8 +1223,13 @@ towerCanRotate = true
 [node name="Grid370" parent="Grids" unique_id=414086775 instance=ExtResource("6_4j5ol")]
 position = Vector2(576, 352)
 
+[node name="Base" parent="Grids/Grid370" unique_id=368237231 instance=ExtResource("6_gj7ui")]
+facilityTeam = "Player2"
+
 [node name="Grid371" parent="Grids" unique_id=175994872 instance=ExtResource("6_4j5ol")]
 position = Vector2(576, 384)
+
+[node name="Base" parent="Grids/Grid371" unique_id=2007180038 instance=ExtResource("6_gj7ui")]
 
 [node name="Grid372" parent="Grids" unique_id=495203772 instance=ExtResource("6_4j5ol")]
 position = Vector2(576, 416)
@@ -1242,6 +1264,7 @@ position = Vector2(608, 64)
 
 [node name="Grid382" parent="Grids" unique_id=1274357428 instance=ExtResource("6_4j5ol")]
 position = Vector2(608, 96)
+gridType = 7
 
 [node name="Grid383" parent="Grids" unique_id=1082284048 instance=ExtResource("6_4j5ol")]
 position = Vector2(608, 128)
@@ -1303,6 +1326,7 @@ position = Vector2(640, 64)
 
 [node name="Grid402" parent="Grids" unique_id=1034321312 instance=ExtResource("6_4j5ol")]
 position = Vector2(640, 96)
+gridType = 7
 
 [node name="Grid403" parent="Grids" unique_id=1774581990 instance=ExtResource("6_4j5ol")]
 position = Vector2(640, 128)
@@ -1364,6 +1388,7 @@ position = Vector2(672, 64)
 
 [node name="Grid422" parent="Grids" unique_id=737805079 instance=ExtResource("6_4j5ol")]
 position = Vector2(672, 96)
+gridType = 7
 
 [node name="Grid423" parent="Grids" unique_id=1282631037 instance=ExtResource("6_4j5ol")]
 position = Vector2(672, 128)
@@ -1426,6 +1451,7 @@ position = Vector2(704, 64)
 
 [node name="Grid442" parent="Grids" unique_id=531127505 instance=ExtResource("6_4j5ol")]
 position = Vector2(704, 96)
+gridType = 7
 
 [node name="Grid443" parent="Grids" unique_id=1750239341 instance=ExtResource("6_4j5ol")]
 position = Vector2(704, 128)
@@ -2394,7 +2420,6 @@ units = NodePath("Units")
 script = ExtResource("7_p1hux")
 GridsNode = NodePath("../../Grids")
 searchRange = Vector2i(40, 30)
-startPos = Vector2i(0, 32)
 gridSize = Vector2i(32, 32)
 unitManager = NodePath("..")
 
@@ -2568,6 +2593,8 @@ explosionFixedValue = 9999
 explosionDestroysSelf = false
 explosionCanKill = true
 explosionAffectsWeapons = true
+maxExplodeAmmo = 1
+currentExplodeAmmo = 1
 team = "Player2"
 
 [node name="FlyBomb4" parent="UnitManager/Units" unique_id=1415390045 instance=ExtResource("28_vneqc")]
@@ -2607,6 +2634,13 @@ team = "Player1"
 position = Vector2(352, 512)
 gridManager = NodePath("../../GridManager")
 team = "Player1"
+
+[node name="Bike" parent="UnitManager/Units" unique_id=939063714 instance=ExtResource("28_7ty4q")]
+position = Vector2(480, 128)
+useDefaultConfig = false
+cost = 2500
+moveType = 12
+team = "Player2"
 
 [node name="AntiAir" parent="UnitManager/Units" unique_id=365018763 instance=ExtResource("25_p8adh")]
 position = Vector2(480, 512)

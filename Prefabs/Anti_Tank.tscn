@@ -19,6 +19,7 @@ visionRange = 2
 isArmoredUnit = true
 loadedIcon = NodePath("HpLabel/loaded")
 noFuelIcon = NodePath("HpLabel/NoFuelIcno")
+moveType = 13
 defaultMovePoints = 4
 movePoints = 4
 baseAttack = 550

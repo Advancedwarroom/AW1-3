@@ -34,8 +34,13 @@ public partial class WeaponManager : Node
 
         foreach (var child in weaponsNode.GetChildren())
         {
+            // ✅ 跳过已销毁的对象
+            if (!IsInstanceValid(child)) continue;
+            
             if (child is Weapon weapon)
             {
+                if (!IsInstanceValid(weapon)) continue;
+                
                 AllWeapons.Add(weapon);
                 BindWeaponToGrid(weapon);
 
@@ -49,7 +54,7 @@ public partial class WeaponManager : Node
     // 绑定兵器到格子
     public bool BindWeaponToGrid(Weapon weapon, bool forceRebind = false)
     {
-        if (weapon == null) return false;
+        if (weapon == null || !IsInstanceValid(weapon)) return false;
 
         // 如果已有格子且不是强制重新绑定，跳过
         if (weapon.grid != null && !forceRebind) return true;

@@ -18,7 +18,7 @@ public enum MoveType
     HeliCopter,     // 直升机（不能过LAVA，可以过SEA）
     SpaceShiper,    // 战舰（全部地形=1，无任何限制）
     Hover,          // 气垫（水陆两用）
-    PiperRunner,    // 管道行者（仅限管道地形）
+    PipeRunner,    // 管道行者（仅限管道地形）
     Tire,
 
     LAVARUNNER,     // 岩浆行者 - 仅通过LAVA(1)和TP(0)
@@ -658,6 +658,11 @@ public virtual bool ConsumePrimaryAmmo()
     [Export] public int maxIlluminationRange = 2;                    // 照明覆盖最大射程（黄色预览）
     [Export] public int flareDurationTurns = 1;                      // 照明效果持续大回合数
     [Export] public bool canIlluminateAfterMove = false;             // 移动后是否可以照明
+
+    // ========== ✅ 通用自爆弹模块（无限自爆模式单位需要）==========
+    [ExportGroup("自爆弹模块")]
+    [Export] public int maxExplodeAmmo = 0;                          // 最大自爆弹数
+    [Export] public int currentExplodeAmmo = 0;                      // 当前自爆弹数
 
 
     // 当前占领进度（运行时）
@@ -1511,8 +1516,8 @@ public virtual int GetMoveCost(GridType gridType)
             _ => 999
         },
 
-        // ========== PiperRunner（管道行者）==========
-        MoveType.PiperRunner => gridType switch
+        // ========== PipeRunner（管道行者）==========
+        MoveType.PipeRunner => gridType switch
         {
             GridType.PIPE => 1,
             GridType.PIPESEAM => 1,    // 管道行者可通过管道接缝

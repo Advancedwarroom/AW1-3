@@ -20,5 +20,5 @@ shape = SubResource("RectangleShape2D_bx6pw")
 position = Vector2(16, 16)
 scale = Vector2(0.99999994, 0.9166667)
 sprite_frames = ExtResource("1_bxqij")
-animation = &"cityteam1"
-frame_progress = 0.37271476
+animation = &"P0City"
+frame_progress = 0.935788

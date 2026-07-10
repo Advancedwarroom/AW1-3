@@ -163,7 +163,7 @@ public partial class Weapon : Node2D
             if (targetGrid.weapon == this) targetGrid.weapon = targetGrid.weapons.Count > 0 ? targetGrid.weapons[0] : null;
             targetGrid.gridType = GridType.BROKENPIPE;
             if (targetGrid.city != null)
-                targetGrid.city.isSupplyPoint = false;
+                targetGrid.city.healAmount = 0; targetGrid.city.flareAmmoSupply = 0; targetGrid.city.explodeAmmoSupply = 0; targetGrid.city.primaryAmmoSupply = 0; targetGrid.city.fuelSupply = 0;
             var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
             if (sprite != null) { var tween = CreateTween(); tween.TweenProperty(sprite, "modulate", new Color(0.4f, 0.7f, 0.3f), 0.5f).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut); }
         }

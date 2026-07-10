@@ -67,6 +67,9 @@ func _is_any_menu_open() -> bool:
 	var action_menu = get_tree().get_first_node_in_group("action_menu")
 	if action_menu is Control and action_menu.visible:
 		return true
+	var gm = get_tree().get_first_node_in_group("game_manager")
+	if gm and gm.call("IsProductionMenuOpen") == true:
+		return true
 	return false
 
 func _input(event):

@@ -14,6 +14,8 @@ script = ExtResource("1_g7w8n")
 animSprite = NodePath("Base2D")
 loadedIcon = NodePath("HpLabel/loaded")
 noFuelIcon = NodePath("HpLabel/NoFuelIcno")
+defaultMovePoints = 5
+movePoints = 5
 noAmmoIcon = NodePath("HpLabel/NoAmmoIcon")
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]

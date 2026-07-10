@@ -36,14 +36,19 @@ public void RefreshUnitList()
     
     foreach (var child in units.GetChildren())
     {
+        // ✅ 跳过已销毁的对象
+        if (!IsInstanceValid(child)) continue;
+        
         // ✅ 同时检查 Infantry 和它的子类 Oozium
         if (child is Infantry unit)
         {
+            if (!IsInstanceValid(unit)) continue;
+            
             AllUnits.Add(unit);
             BindUnitToGrid(unit);
             
             // 如果是 Oozium，输出日志确认
-            if (unit is Oozium oozium)
+            if (unit is Oozium oozium && IsInstanceValid(oozium))
             {
                 GD.Print($"[UnitManager] 发现 Oozium: {oozium.Name}");
             }
@@ -54,7 +59,7 @@ public void RefreshUnitList()
     // 绑定单位到格子
 public bool BindUnitToGrid(Infantry unit, bool forceRebind = false)
 {
-    if (unit == null) return false;
+    if (unit == null || !IsInstanceValid(unit)) return false;
 
     // 如果已有格子且不是强制重新绑定，跳过
     if (unit.grid != null && !forceRebind) return true;

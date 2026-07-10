@@ -777,8 +777,9 @@ private List<Grids> GetAdjacentGrids(Grids center)
         if (unloadContainer != null) unloadContainer.Visible = false;
         if (explodeButton != null)
         {
-            // ✅ 爆炸按钮：只要单位可自爆且未行动就显示（移动前后均可）
-            explodeButton.Visible = unit.canExplode && !unit.hasActed && unit.state != UnitState.Acted;
+            // ✅ 爆炸按钮：单位可自爆、未行动，且（一次性自爆 或 有自爆弹）时显示
+            bool hasExplodeAmmo = !unit.explosionDestroysSelf ? unit.currentExplodeAmmo > 0 : true;
+            explodeButton.Visible = unit.canExplode && !unit.hasActed && unit.state != UnitState.Acted && hasExplodeAmmo;
             explodeButton.Text = isExplosionPreview ? "确认爆炸" : "爆炸";
         }
 
@@ -1353,7 +1354,7 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             MoveType.LAVAHOVER => "岩浆登陆者移动",
             MoveType.LAVARUNNER => "岩浆行者移动",
             MoveType.SpaceShiper => "星舰移动",
-            MoveType.PiperRunner => "管道行者移动",
+            MoveType.PipeRunner => "管道行者移动",
             MoveType.Train => "普通火车移动",
             MoveType.GasTrain => "蒸汽机移动",
             MoveType.FASTER => "高铁移动",

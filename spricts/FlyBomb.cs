@@ -108,6 +108,9 @@ public partial class FlyBomb : Infantry
         explosionMaxRange = 3;
         explosionDamageMode = 1;
         explosionSelfDamageEnabled = false;
+        explosionDestroysSelf = false;  // 无限自爆模式
+        maxExplodeAmmo = 5;
+        currentExplodeAmmo = 5;
 
         cost = 25000;  // FlyBomb造价
     }

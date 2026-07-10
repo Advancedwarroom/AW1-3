@@ -82,6 +82,18 @@ public partial class Grids : Node2D
         attackRangeIcon?.Hide();
 
         city = GetNodeOrNull<Facility>("City");
+        if (city == null)
+        {
+            // 兼容不同名称的设施子节点
+            foreach (Node child in GetChildren())
+            {
+                if (child is Facility f)
+                {
+                    city = f;
+                    break;
+                }
+            }
+        }
 
         var area2D = GetNodeOrNull<Area2D>("Area2D");
         if (area2D != null)
@@ -499,6 +511,18 @@ public partial class Grids : Node2D
                     {
                         var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
                         actionMenu?.ShowGridRotateMenu(this);
+                        GetViewport().SetInputAsHandled();
+                        return;
+                    }
+                }
+
+                // ✅ 检查设施生产功能
+                if (city != null && city.canProduce && city.producibleUnitNames.Count > 0 && gm?.selectedInfantry == null)
+                {
+                    string currentTeam = gm?.turnPhase == 1 ? "Player1" : "Player2";
+                    if (city.CanBeProducedBy(currentTeam))
+                    {
+                        gm?.ShowProductionMenu(city, this);
                         GetViewport().SetInputAsHandled();
                         return;
                     }

@@ -59,6 +59,12 @@ public partial class GameManager : Node
     public int turnPhase = 1;
     public const int totalPhases = 3;
 
+    // 资金系统
+    [Export] public int p1Funds = 0;
+    [Export] public int p2Funds = 0;
+    [Export] public int p1FundsMax = 999999;
+    [Export] public int p2FundsMax = 999999;
+
     // 当前选中的单位
     public Infantry selectedInfantry = null;
     public Weapon selectedWeapon = null;
@@ -77,11 +83,21 @@ public partial class GameManager : Node
     private CameraTouchController cameraController;
 
     public Dictionary<Infantry, UnitCategory> unitCategories = new();
-    public enum StatsMode { Units, Facilities, Funds }
+    public enum StatsMode { Units, Facilities, Funds, Value }
     public StatsMode statsMode = StatsMode.Units;
     private Button unitStatsBtn;
     private Button facilityStatsBtn;
     private Button fundsStatsBtn;
+    private Button valueStatsBtn;
+    private Button nextPhaseButton;
+
+    // ✅ 生产菜单拖拽
+    private bool isDraggingProductionMenu = false;
+    private Vector2 dragOffsetProduction = Vector2.Zero;
+    private Control currentDraggedProductionMenu = null;
+
+    // ✅ 导入地图时屏蔽胜利检查
+    public bool blockVictoryCheck = false;
 
     public override void _Ready()
     {   
@@ -153,9 +169,7 @@ private void DeferredFogRefresh()
     GD.Print($"[GameManager] 延迟刷新战争迷雾完成");
 }
     // GameManager.cs - 在类顶部添加
-private double lastLeftClickTime = 0;
-private int leftClickCount = 0;
-private const double TRIPLE_CLICK_WINDOW = 0.5; // 500ms内算一次连击
+// 已移除：三连击/右键切换回合逻辑，改用独立 UI 按钮
 
 public override void _Input(InputEvent @event)
 {
@@ -163,39 +177,19 @@ public override void _Input(InputEvent @event)
     if (terrainEditor != null && terrainEditor.ShouldBlockUnitOperations())
         return;
 
+    if (@event is InputEventKey keyEvent && keyEvent.Pressed && keyEvent.Keycode == Key.Escape)
+    {
+        if (productionMenuPanel != null && productionMenuPanel.Visible)
+        {
+            HideProductionMenu();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+    }
+
     if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
     {
-        // ✅ 右键单击：直接切换回合（保留原版功能）
-        if (mouseEvent.ButtonIndex == MouseButton.Right)
-        {
-            GD.Print("😊👌右键单击切换回合");
-            NextPhase();
-        }
-        
-        // ✅ 左键三连击：切换回合（防止双击误触）
-        if (mouseEvent.ButtonIndex == MouseButton.Left)
-        {
-            double now = Time.GetTicksMsec() / 1000.0;
-            
-            if (now - lastLeftClickTime < TRIPLE_CLICK_WINDOW)
-            {
-                leftClickCount++;
-                GD.Print($"[左键连击] 第 {leftClickCount} 次点击");
-                
-                // 只有三连击才能切换回合
-                if (leftClickCount >= 3)
-                {
-                    GD.Print("🔥🔥🔥 左键三连击成功！切换回合！");
-                    NextPhase();
-                    leftClickCount = 0;
-                }
-            }
-            else
-            {
-                leftClickCount = 1;
-            }
-            lastLeftClickTime = now;
-        }
+        // 左键/右键不再用于切换回合，使用专用 UI 按钮
     }
 }
 
@@ -250,6 +244,7 @@ public void OnSelectWeapon(Weapon weapon)
     gridManager.CloseRange(); // 清除移动范围
 
     selectedWeapon = weapon;
+    HideProductionMenu();
 
     var menu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
     menu?.ShowWeaponMenu(weapon); // 这会清除 currentUnit
@@ -498,19 +493,40 @@ private void AutoCategorizeUnit(Infantry unit)
         var canvasLayer = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("CanvasLayer");
         if (canvasLayer == null) return;
         
-        // 使用 TopRight 锚点，与 UnitListsToggleBtn 放在同一行
-        // UnitListsToggleBtn 在 TopRight, OffsetLeft=-120, OffsetRight=-60
-        // 我们在它左边放两个按钮
+        // 5个按钮排成一排（价值、单位、设施、资金、统计）
+        // 每个按钮宽80px，统计按钮宽60px
         
-        // 单位按钮
+        // 价值按钮
+        valueStatsBtn = new Button();
+        valueStatsBtn.Name = "ValueStatsBtn";
+        valueStatsBtn.Text = "💎 价值";
+        valueStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        valueStatsBtn.OffsetLeft = -400;
+        valueStatsBtn.OffsetTop = 0;
+        valueStatsBtn.OffsetRight = -320;
+        valueStatsBtn.OffsetBottom = 32;
+        valueStatsBtn.AddThemeFontSizeOverride("font_size", 14);
+        valueStatsBtn.AddThemeColorOverride("font_color", Colors.White);
+        var vStyle = new StyleBoxFlat();
+        vStyle.BgColor = new Color(0.7f, 0.4f, 0.6f, 0.9f);
+        vStyle.SetCornerRadiusAll(8);
+        valueStatsBtn.AddThemeStyleboxOverride("normal", vStyle);
+        var vStyleHover = new StyleBoxFlat();
+        vStyleHover.BgColor = new Color(0.8f, 0.5f, 0.7f, 0.95f);
+        vStyleHover.SetCornerRadiusAll(8);
+        valueStatsBtn.AddThemeStyleboxOverride("hover", vStyleHover);
+        valueStatsBtn.ZIndex = 200;
+        valueStatsBtn.Pressed += () => { statsMode = StatsMode.Value; UpdateUnitLists(); };
+        canvasLayer.AddChild(valueStatsBtn);
+        
         // 单位按钮
         unitStatsBtn = new Button();
         unitStatsBtn.Name = "UnitStatsBtn";
         unitStatsBtn.Text = "📊 单位";
         unitStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
-        unitStatsBtn.OffsetLeft = -360;
+        unitStatsBtn.OffsetLeft = -320;
         unitStatsBtn.OffsetTop = 0;
-        unitStatsBtn.OffsetRight = -280;
+        unitStatsBtn.OffsetRight = -240;
         unitStatsBtn.OffsetBottom = 32;
         unitStatsBtn.AddThemeFontSizeOverride("font_size", 14);
         unitStatsBtn.AddThemeColorOverride("font_color", Colors.White);
@@ -531,9 +547,9 @@ private void AutoCategorizeUnit(Infantry unit)
         facilityStatsBtn.Name = "FacilityStatsBtn";
         facilityStatsBtn.Text = "🏙️ 设施";
         facilityStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
-        facilityStatsBtn.OffsetLeft = -280;
+        facilityStatsBtn.OffsetLeft = -240;
         facilityStatsBtn.OffsetTop = 0;
-        facilityStatsBtn.OffsetRight = -200;
+        facilityStatsBtn.OffsetRight = -160;
         facilityStatsBtn.OffsetBottom = 32;
         facilityStatsBtn.AddThemeFontSizeOverride("font_size", 14);
         facilityStatsBtn.AddThemeColorOverride("font_color", Colors.White);
@@ -554,9 +570,9 @@ private void AutoCategorizeUnit(Infantry unit)
         fundsStatsBtn.Name = "FundsStatsBtn";
         fundsStatsBtn.Text = "💰 资金";
         fundsStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
-        fundsStatsBtn.OffsetLeft = -200;
+        fundsStatsBtn.OffsetLeft = -160;
         fundsStatsBtn.OffsetTop = 0;
-        fundsStatsBtn.OffsetRight = -120;
+        fundsStatsBtn.OffsetRight = -80;
         fundsStatsBtn.OffsetBottom = 32;
         fundsStatsBtn.AddThemeFontSizeOverride("font_size", 14);
         fundsStatsBtn.AddThemeColorOverride("font_color", Colors.White);
@@ -571,6 +587,29 @@ private void AutoCategorizeUnit(Infantry unit)
         fundsStatsBtn.ZIndex = 200;
         fundsStatsBtn.Pressed += () => { statsMode = StatsMode.Funds; UpdateUnitLists(); };
         canvasLayer.AddChild(fundsStatsBtn);
+
+        // ✅ 切换回合按钮（替代右键/三连击）
+        nextPhaseButton = new Button();
+        nextPhaseButton.Name = "NextPhaseButton";
+        nextPhaseButton.Text = "🔄 切换回合";
+        nextPhaseButton.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        nextPhaseButton.OffsetLeft = -400;
+        nextPhaseButton.OffsetTop = 36;
+        nextPhaseButton.OffsetRight = -240;
+        nextPhaseButton.OffsetBottom = 72;
+        nextPhaseButton.AddThemeFontSizeOverride("font_size", 16);
+        nextPhaseButton.AddThemeColorOverride("font_color", Colors.White);
+        var npStyle = new StyleBoxFlat();
+        npStyle.BgColor = new Color(0.9f, 0.3f, 0.2f, 0.9f);
+        npStyle.SetCornerRadiusAll(8);
+        nextPhaseButton.AddThemeStyleboxOverride("normal", npStyle);
+        var npStyleHover = new StyleBoxFlat();
+        npStyleHover.BgColor = new Color(1.0f, 0.4f, 0.3f, 0.95f);
+        npStyleHover.SetCornerRadiusAll(8);
+        nextPhaseButton.AddThemeStyleboxOverride("hover", npStyleHover);
+        nextPhaseButton.ZIndex = 200;
+        nextPhaseButton.Pressed += () => { GD.Print("🔄 点击切换回合按钮"); NextPhase(); };
+        canvasLayer.AddChild(nextPhaseButton);
     }
     public void UpdateUnitLists()
     {
@@ -582,6 +621,9 @@ private void AutoCategorizeUnit(Infantry unit)
                 return;
             case StatsMode.Funds:
                 UpdateFundsLists();
+                return;
+            case StatsMode.Value:
+                UpdateValueLists();
                 return;
         }
 
@@ -834,6 +876,44 @@ private void AutoCategorizeUnit(Infantry unit)
     {
         if (UnitLists == null) return;
         
+        // 计算P1/P2每回合收入
+        int p1Income = 0, p2Income = 0;
+        if (gridManager?.grids != null)
+        {
+            foreach (var grid in gridManager.grids)
+            {
+                if (grid?.city == null) continue;
+                if (grid.city is City c)
+                {
+                    if (grid.city.facilityTeam == "Player1")
+                        p1Income += c.fundsPerTurn;
+                    else if (grid.city.facilityTeam == "Player2")
+                        p2Income += c.fundsPerTurn;
+                }
+            }
+        }
+        
+        string cP1 = "#ff4d4d";
+        string cP2 = "#4d80ff";
+        string cTitle = "#ffaa33";
+        
+        string text = $" [color={cTitle}]💰 资金统计[/color] \n\n";
+        text += $"[color={cP1}]🔴 P1 资金[/color]\n";
+        text += $"  现有: {p1Funds} G\n";
+        text += $"  收入: +{p1Income} G/回合\n";
+        text += $"  上限: {p1FundsMax} G\n\n";
+        text += $"[color={cP2}]🔵 P2 资金[/color]\n";
+        text += $"  现有: {p2Funds} G\n";
+        text += $"  收入: +{p2Income} G/回合\n";
+        text += $"  上限: {p2FundsMax} G\n";
+        
+        UnitLists.Text = text;
+    }
+    
+    public void UpdateValueLists()
+    {
+        if (UnitLists == null) return;
+        
         long pn1Funds = 0, p0Funds = 0, p1Funds = 0, p2Funds = 0;
         
         // 统计单位造价
@@ -874,7 +954,7 @@ private void AutoCategorizeUnit(Infantry unit)
         string cPN1 = "#b366ff";
         string cTitle = "#ffaa33";
         
-        string text = $" [color={cTitle}]💰 资金统计[/color] \n";
+        string text = $" [color={cTitle}]💎 单位价值统计[/color] \n";
         text += $"  [color={cPN1}]🟣P-1[/color]  [color={cP0}]⚪P0[/color]  [color={cP1}]🔴P1[/color]  [color={cP2}]🔵P2[/color]\n";
         text += $"💵 [color={cPN1}]{pn1Funds,7}|[color={cP0}]{p0Funds,7}|[color={cP1}]{p1Funds,7}|[color={cP2}]{p2Funds,7}[/color]\n";
         text += $"\n[color={cTitle}]===总计===[/color]\n";
@@ -1011,9 +1091,9 @@ private void AutoCategorizeUnit(Infantry unit)
         unitListsToggleBtn = new Button();
         unitListsToggleBtn.Name = "UnitListsToggleBtn";
         unitListsToggleBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
-        unitListsToggleBtn.OffsetLeft = -120;
+        unitListsToggleBtn.OffsetLeft = -80;
         unitListsToggleBtn.OffsetTop = 0;
-        unitListsToggleBtn.OffsetRight = -60;
+        unitListsToggleBtn.OffsetRight = -20;
         unitListsToggleBtn.OffsetBottom = 32;
         unitListsToggleBtn.Text = "📊 统计";
         unitListsToggleBtn.AddThemeFontSizeOverride("font_size", 14);
@@ -1107,7 +1187,7 @@ private void AutoCategorizeUnit(Infantry unit)
     // 动态移除单位
        public void CheckVictoryCondition()
 {
-    if (gameEnded) return;
+    if (gameEnded || blockVictoryCheck) return;
 
     // 获取所有存活单位
     var allUnits = unitManager?.AllUnits.Where(u => IsInstanceValid(u) && u.health > 0).ToList();
@@ -1388,6 +1468,7 @@ public void RestartGame()
     // 切换回合
     public void NextPhase()
     {
+        HideProductionMenu();
         turnEndLabel?.Show();
         GetTree().CreateTimer(1.2f).Timeout += () => turnEndLabel?.Hide();
         int previousTurn = turns; 
@@ -1408,6 +1489,16 @@ public void RestartGame()
 
         string currentTeam = TeamHelper.GetPhaseTeamName(turnPhase);
         GD.Print($"阶段 {turnPhase}/{totalPhases} - {currentTeam} 的回合");
+
+        // ✅ 资金系统：每回合开始时给对应势力增加资金
+        if (turnPhase == 1)
+        {
+            AddFundsForTeam("Player1");
+        }
+        else if (turnPhase == 2)
+        {
+            AddFundsForTeam("Player2");
+        }
 
         // ✅ P0 阶段：P0 和 P-1 兵器自动执行 AI
         if (turnPhase == 3)
@@ -1545,6 +1636,35 @@ public void RestartGame()
         }
     }
 
+    // ✅ 资金系统：给指定势力增加设施资金收入
+    private void AddFundsForTeam(string team)
+    {
+        if (gridManager?.grids == null) return;
+        int income = 0;
+        foreach (var grid in gridManager.grids)
+        {
+            if (grid?.city == null) continue;
+            if (grid.city.facilityTeam != team) continue;
+            if (grid.city is City c)
+            {
+                income += c.fundsPerTurn;
+            }
+        }
+
+        if (team == "Player1")
+        {
+            p1Funds = Mathf.Min(p1Funds + income, p1FundsMax);
+            GD.Print($"[Funds] P1 获得资金 {income}，当前资金: {p1Funds}/{p1FundsMax}");
+        }
+        else if (team == "Player2")
+        {
+            p2Funds = Mathf.Min(p2Funds + income, p2FundsMax);
+            GD.Print($"[Funds] P2 获得资金 {income}，当前资金: {p2Funds}/{p2FundsMax}");
+        }
+
+        UpdateUnitLists();
+    }
+
     // ========== ✅ 新增：对所有单位应用地形伤害 ==========
     private void ApplyTerrainDamageToAllUnits()
     {
@@ -1641,12 +1761,14 @@ public void RestartGame()
             gridManager.HideAttackRange();
             gridManager.ClearWeaponRange();
             (GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu)?.Hide();
+            HideProductionMenu();
             selectedInfantry = null;
             selectedWeapon = null; 
             return;
         }
             if (infantry.isAttacked || infantry.state == UnitState.Acted)
         {
+        HideProductionMenu();
         return;
         }
 
@@ -1664,6 +1786,7 @@ public void RestartGame()
             gridManager.ClearWeaponRange(); 
 
             selectedInfantry = infantry;
+            HideProductionMenu();
             var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
             actionMenu?.ShowMenu(infantry);
         }
@@ -1688,6 +1811,7 @@ public void RestartGame()
 
 public void RollbackMove()
 {
+    HideProductionMenu();
 
     if (selectedInfantry == null)
     {
@@ -1943,10 +2067,27 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         return fogOfWarManager?.isFogOfWarEnabled ?? false;
     }
 
+    public bool IsProductionMenuOpen()
+    {
+        return productionMenuPanel != null && productionMenuPanel.Visible;
+    }
+
     // ========== ✅ 爆炸执行 ==========
     public void ExecuteExplosion(Infantry unit)
     {
         if (unit == null || !unit.canExplode) return;
+
+        // ✅ 无限自爆模式消耗自爆弹
+        if (!unit.explosionDestroysSelf)
+        {
+            if (unit.currentExplodeAmmo <= 0)
+            {
+                GD.Print($"[Explode] {unit.Name} 自爆弹不足，无法自爆");
+                return;
+            }
+            unit.currentExplodeAmmo--;
+            GD.Print($"[Explode] {unit.Name} 消耗1发自爆弹，剩余 {unit.currentExplodeAmmo}/{unit.maxExplodeAmmo}");
+        }
 
         var gridPos = unit.grid?.GridIndex ?? unitManager.WorldToGrid(unit.Position);
         int minR = unit.explosionMinRange;
@@ -2167,6 +2308,304 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
                 inf.health = newHealth;
                 inf.UpdateHpLabel();
             }
+        }
+    }
+
+    // ========== ✅ 生产系统 ==========
+    private Panel productionMenuPanel;
+    private Label productionMenuTitle;
+    private VBoxContainer productionMenuContainer;
+    private Grids productionTargetGrid;
+    private Facility productionTargetFacility;
+
+    public void ShowProductionMenu(Facility facility, Grids grid)
+    {
+        if (facility == null || !facility.canProduce || facility.producibleUnitNames.Count == 0) return;
+
+        // 关闭行动菜单，避免重叠
+        (GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu)?.Hide();
+
+        productionTargetGrid = grid;
+        productionTargetFacility = facility;
+
+        if (productionMenuPanel == null)
+        {
+            CreateProductionMenuUI();
+        }
+
+        // 刷新列表
+        foreach (var child in productionMenuContainer.GetChildren())
+            child.QueueFree();
+
+        string currentTeam = turnPhase == 1 ? "Player1" : "Player2";
+        int currentFunds = GetTeamFunds(currentTeam);
+
+        productionMenuTitle.Text = $"🏭 生产菜单 ({facility.GetType().Name})\n💰 资金: {currentFunds} G";
+
+        foreach (string unitName in facility.producibleUnitNames)
+        {
+            if (!UnitProductionDatabase.HasUnit(unitName)) continue;
+
+            var info = UnitProductionDatabase.GetInfo(unitName);
+            bool canAfford = currentFunds >= info.Cost;
+            bool gridEmpty = grid.infantries.Count == 0 && grid.weapons.Count == 0;
+
+            var btn = new Button();
+            btn.CustomMinimumSize = new Godot.Vector2(300, 50);
+            btn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            btn.Text = $"{info.DisplayName}\n💰 {info.Cost} G";
+            btn.AddThemeFontSizeOverride("font_size", 13);
+
+            if (!gridEmpty)
+            {
+                btn.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
+                var disabledStyle = new StyleBoxFlat();
+                disabledStyle.BgColor = new Color(0.2f, 0.2f, 0.2f, 0.6f);
+                disabledStyle.SetCornerRadiusAll(6);
+                btn.AddThemeStyleboxOverride("normal", disabledStyle);
+                btn.TooltipText = "格子已被占据";
+                btn.Disabled = true;
+            }
+            else if (!canAfford)
+            {
+                btn.AddThemeColorOverride("font_color", new Color(0.8f, 0.3f, 0.3f));
+                var poorStyle = new StyleBoxFlat();
+                poorStyle.BgColor = new Color(0.3f, 0.1f, 0.1f, 0.6f);
+                poorStyle.SetCornerRadiusAll(6);
+                btn.AddThemeStyleboxOverride("normal", poorStyle);
+                btn.TooltipText = "资金不足";
+                btn.Disabled = true;
+            }
+            else
+            {
+                btn.AddThemeColorOverride("font_color", Colors.White);
+                var normalStyle = new StyleBoxFlat();
+                normalStyle.BgColor = new Color(0.2f, 0.4f, 0.3f, 0.8f);
+                normalStyle.SetCornerRadiusAll(6);
+                btn.AddThemeStyleboxOverride("normal", normalStyle);
+                var hoverStyle = new StyleBoxFlat();
+                hoverStyle.BgColor = new Color(0.3f, 0.6f, 0.4f, 0.9f);
+                hoverStyle.SetCornerRadiusAll(6);
+                btn.AddThemeStyleboxOverride("hover", hoverStyle);
+
+                string capturedUnitName = unitName;
+                btn.Pressed += () => OnProduceUnitClicked(capturedUnitName);
+            }
+
+            productionMenuContainer.AddChild(btn);
+        }
+
+        var closeBtn = new Button();
+        closeBtn.Text = "❌ 关闭";
+        closeBtn.CustomMinimumSize = new Godot.Vector2(300, 40);
+        closeBtn.AddThemeColorOverride("font_color", Colors.White);
+        var closeStyle = new StyleBoxFlat();
+        closeStyle.BgColor = new Color(0.4f, 0.2f, 0.2f, 0.8f);
+        closeStyle.SetCornerRadiusAll(6);
+        closeBtn.AddThemeStyleboxOverride("normal", closeStyle);
+        closeBtn.Pressed += HideProductionMenu;
+        productionMenuContainer.AddChild(closeBtn);
+
+        productionMenuPanel.Visible = true;
+    }
+
+    private void CreateProductionMenuUI()
+    {
+        var canvas = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("CanvasLayer");
+        if (canvas == null) return;
+
+        productionMenuPanel = new Panel();
+        productionMenuPanel.Name = "ProductionMenuPanel";
+        productionMenuPanel.CustomMinimumSize = new Godot.Vector2(360, 500);
+        productionMenuPanel.SetAnchorsPreset(Control.LayoutPreset.Center);
+        productionMenuPanel.Visible = false;
+        productionMenuPanel.ZIndex = 1200;
+
+        var panelStyle = new StyleBoxFlat();
+        panelStyle.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.97f);
+        panelStyle.SetCornerRadiusAll(16);
+        panelStyle.SetBorderWidthAll(3);
+        panelStyle.BorderColor = new Color(0.4f, 0.7f, 0.9f);
+        productionMenuPanel.AddThemeStyleboxOverride("panel", panelStyle);
+
+        productionMenuTitle = new Label();
+        productionMenuTitle.Name = "ProductionMenuTitle";
+        productionMenuTitle.Text = "🏭 生产菜单";
+        productionMenuTitle.HorizontalAlignment = HorizontalAlignment.Center;
+        productionMenuTitle.AddThemeFontSizeOverride("font_size", 18);
+        productionMenuTitle.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
+        productionMenuTitle.CustomMinimumSize = new Godot.Vector2(0, 60);
+        productionMenuTitle.Position = new Godot.Vector2(0, 12);
+        productionMenuTitle.Size = new Godot.Vector2(360, 60);
+        productionMenuPanel.AddChild(productionMenuTitle);
+
+        // ✅ 拖拽手柄
+        var dragHandle = new Panel();
+        dragHandle.Name = "ProductionDragHandle";
+        dragHandle.CustomMinimumSize = new Godot.Vector2(360, 28);
+        dragHandle.Position = new Godot.Vector2(0, 0);
+        var handleStyle = new StyleBoxFlat();
+        handleStyle.BgColor = new Color(0.3f, 0.3f, 0.4f, 0.5f);
+        handleStyle.SetCornerRadiusAll(8);
+        dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
+        var dragHint = new Label();
+        dragHint.Text = "⋮⋮ 拖拽移动";
+        dragHint.AddThemeFontSizeOverride("font_size", 10);
+        dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
+        dragHint.Position = new Godot.Vector2(8, 2);
+        dragHandle.AddChild(dragHint);
+        productionMenuPanel.AddChild(dragHandle);
+
+        // ✅ 绑定拖拽
+        dragHandle.GuiInput += (InputEvent @event) => {
+            if (@event is InputEventMouseButton mouseEvent && mouseEvent.ButtonIndex == MouseButton.Left)
+            {
+                if (mouseEvent.Pressed)
+                {
+                    isDraggingProductionMenu = true;
+                    currentDraggedProductionMenu = productionMenuPanel;
+                    dragOffsetProduction = productionMenuPanel.GlobalPosition - dragHandle.GetGlobalMousePosition();
+                }
+                else
+                {
+                    isDraggingProductionMenu = false;
+                    currentDraggedProductionMenu = null;
+                }
+            }
+        };
+
+        var closeBtn = new Button();
+        closeBtn.Name = "ProductionCloseBtn";
+        closeBtn.Text = "✕";
+        closeBtn.CustomMinimumSize = new Godot.Vector2(32, 32);
+        closeBtn.Position = new Godot.Vector2(320, 10);
+        closeBtn.ZIndex = 10;
+        closeBtn.Pressed += HideProductionMenu;
+        productionMenuPanel.AddChild(closeBtn);
+
+        var scroll = new ScrollContainer();
+        scroll.Position = new Godot.Vector2(15, 80);
+        scroll.Size = new Godot.Vector2(330, 400);
+        scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+
+        productionMenuContainer = new VBoxContainer();
+        productionMenuContainer.AddThemeConstantOverride("separation", 6);
+        productionMenuContainer.Size = new Godot.Vector2(330, 0);
+
+        scroll.AddChild(productionMenuContainer);
+        productionMenuPanel.AddChild(scroll);
+
+        canvas.AddChild(productionMenuPanel);
+    }
+
+    private void HideProductionMenu()
+    {
+        if (productionMenuPanel != null)
+            productionMenuPanel.Visible = false;
+        productionTargetGrid = null;
+        productionTargetFacility = null;
+    }
+
+    private void OnProduceUnitClicked(string unitName)
+    {
+        if (productionTargetGrid == null || productionTargetFacility == null) return;
+        if (!UnitProductionDatabase.HasUnit(unitName)) return;
+
+        var info = UnitProductionDatabase.GetInfo(unitName);
+        string currentTeam = turnPhase == 1 ? "Player1" : "Player2";
+
+        // 编辑模式不判定资金
+        bool isEditMode = terrainEditor != null && terrainEditor.IsEditMode;
+        if (!isEditMode)
+        {
+            int currentFunds = GetTeamFunds(currentTeam);
+            if (currentFunds < info.Cost)
+            {
+                GD.Print($"[Production] 资金不足: {currentFunds} < {info.Cost}");
+                return;
+            }
+            SetTeamFunds(currentTeam, currentFunds - info.Cost);
+        }
+
+        // 生成单位
+        var scene = GD.Load<PackedScene>(info.ScenePath);
+        if (scene == null)
+        {
+            GD.PrintErr($"[Production] 无法加载场景: {info.ScenePath}");
+            return;
+        }
+
+        var unit = scene.Instantiate<Infantry>();
+        if (unit == null) return;
+
+        unit.Position = productionTargetGrid.Position;
+        unit.team = currentTeam;
+        int unitNumber = unitManager.AllUnits.Count + 1;
+        unit.Name = $"{currentTeam}_{unitName}_{unitNumber}";
+
+        unitManager.units.AddChild(unit);
+        bool bound = unitManager.BindUnitToGrid(unit, true);
+        if (!bound)
+        {
+            unit.QueueFree();
+            GD.PrintErr("[Production] 绑定格子失败");
+            return;
+        }
+
+        unitManager.AllUnits.Add(unit);
+
+        RegisterUnit(unit, InferCategory(unit));
+        unit.OnClickPiece = OnSelectPiece;
+        unit.UpdateTeamVisual();
+        unit.UpdateHpLabel();
+        if (unit.sprite != null)
+            unit.StartBreath();
+
+        UpdateUnitLists();
+        RefreshSpecializedUnitLists();
+
+        GD.Print($"[Production] 生产成功: {unit.Name} at {productionTargetGrid.GridIndex}, cost={info.Cost}");
+
+        // 刷新菜单（资金已变化，可能有些按钮要变灰）
+        ShowProductionMenu(productionTargetFacility, productionTargetGrid);
+    }
+
+    public int GetTeamFunds(string team)
+    {
+        return team switch
+        {
+            "Player1" => p1Funds,
+            "Player2" => p2Funds,
+            _ => 0
+        };
+    }
+
+    public void SetTeamFunds(string team, int value)
+    {
+        if (team == "Player1") p1Funds = Mathf.Clamp(value, 0, p1FundsMax);
+        else if (team == "Player2") p2Funds = Mathf.Clamp(value, 0, p2FundsMax);
+        UpdateUnitLists();
+    }
+
+    // ========== ✅ 重置游戏状态（导入地图后调用）==========
+    public void ResetGameState()
+    {
+        gameEnded = false;
+        if (victoryPanel != null)
+        {
+            victoryPanel.Hide();
+            victoryPanel.Modulate = new Color(1, 1, 1, 1);
+        }
+        GD.Print("[GameManager] 游戏状态已重置");
+    }
+
+    // ========== ✅ 生产菜单拖拽处理 ==========
+    public override void _Process(double delta)
+    {
+        if (isDraggingProductionMenu && currentDraggedProductionMenu != null)
+        {
+            Vector2 newPosition = currentDraggedProductionMenu.GetGlobalMousePosition() + dragOffsetProduction;
+            currentDraggedProductionMenu.GlobalPosition = newPosition;
         }
     }
 

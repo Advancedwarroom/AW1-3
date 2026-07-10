@@ -7,10 +7,29 @@ public partial class Facility : Node2D
 {
     public Grids ParentGrid { get; private set; }
 
+    [ExportGroup("生产模块")]
+    [Export] public bool canProduce = false;
+    [Export] public Godot.Collections.Array<string> producibleUnitNames = new();
+
+    [ExportGroup("设施基础")]
     [Export] public string facilityTeam = "";
     [Export] public int capturePointsRequired = 20;
-    [Export] public bool isSupplyPoint = true;
-    [Export] public int healAmount = 20;
+    [Export] public int healMode = 0;               // 0=固定数值(用healAmount), 1=固定百分比(用healPercent)
+    [Export] public int healAmount = 0;             // 数值模式：每回合回血值（负扣血，零不动，正回血）
+    [Export] public float healPercent = 0.0f;       // 百分比模式：每回合回血百分比（如0.2=20%最大HP，负值扣血）
+
+    [ExportGroup("补给配置：数值驱动")]
+    [Export] public int flareAmmoSupply = 0;     // 照明弹补给量（999=补满）
+    [Export] public int explodeAmmoSupply = 0;   // 自爆弹补给量（999=补满）
+    [Export] public int primaryAmmoSupply = 0;   // 主武器弹药补给量（999=补满）
+    [Export] public int fuelSupply = 0;          // 燃料补给量（999=补满）
+
+    [ExportGroup("补给支持兵种过滤（为空=不限制）")]
+    [Export] public Godot.Collections.Array<string> supportedUnitTypesForHeal = new();
+    [Export] public Godot.Collections.Array<string> supportedUnitTypesForFlare = new();
+    [Export] public Godot.Collections.Array<string> supportedUnitTypesForExplode = new();
+    [Export] public Godot.Collections.Array<string> supportedUnitTypesForPrimaryAmmo = new();
+    [Export] public Godot.Collections.Array<string> supportedUnitTypesForFuel = new();
 
     public List<Infantry> capturingUnits = new();
     private CaptureContestEffect contestEffect;
@@ -26,6 +45,19 @@ public partial class Facility : Node2D
         }
 
         UpdateCityVisual();
+    }
+
+    public bool CanBeProducedBy(string team)
+    {
+        if (!canProduce || string.IsNullOrEmpty(facilityTeam)) return false;
+        if (facilityTeam == TeamHelper.Player0) return false; // P0中立设施不能生产
+        if (facilityTeam == TeamHelper.Player) return true;   // P-1设施所有势力可用
+        return facilityTeam == team;                          // P1/P2只能用自己的
+    }
+
+    public bool CanProduceUnit(string unitName)
+    {
+        return canProduce && producibleUnitNames.Contains(unitName);
     }
 
     // ========== 占领系统 ==========
@@ -137,31 +169,144 @@ public partial class Facility : Node2D
 
     public void PerformSupply()
     {
-        if (!isSupplyPoint || ParentGrid == null) return;
+        if (ParentGrid == null) return;
         ParentGrid.infantries?.RemoveAll(i => !IsInstanceValid(i));
         bool anySupplied = false;
+
         foreach (var unit in ParentGrid.infantries)
         {
             if (unit == null || !IsInstanceValid(unit)) continue;
             bool canSupply = TeamHelper.CanFacilitySupply(facilityTeam, unit.team);
             if (!canSupply) continue;
-            if (!canSupply) continue;
 
-            bool supplied = false; string supplyText = ""; Color supplyColor = Colors.Green;
-            int oldHealth = unit.health;
-            int healAmt = Mathf.Max(1, Mathf.RoundToInt(unit.maxHealth * 0.2f));
-            unit.health = Mathf.Min(unit.maxHealth, unit.health + healAmt);
-            int actualHeal = unit.health - oldHealth;
-            if (actualHeal > 0) { supplied = true; supplyText = $"+{actualHeal}HP"; supplyColor = new Color(0.2f, 0.9f, 0.3f); }
+            string unitType = unit.GetType().Name;
+            bool supplied = false;
+            string supplyText = "";
+            Color supplyColor = Colors.Green;
+            var supplyParts = new List<string>();
 
-            if (unit.consumeFuel && unit.fuel < unit.maxFuel)
-            { unit.fuel = unit.maxFuel; if (!supplied) { supplyText = "Fuel+"; supplyColor = new Color(0.9f, 0.7f, 0.2f); } else supplyText += " Fuel+"; supplied = true; }
-            if (unit.hasPrimaryWeapon && !unit.CanUsePrimaryWeapon())
-            { unit.ReloadAmmo(); if (!supplied) { supplyText = "Ammo+"; supplyColor = new Color(0.9f, 0.3f, 0.2f); } else supplyText += " Ammo+"; supplied = true; }
-            if (unit.maxPrimaryAmmo > 0 && unit.currentPrimaryAmmo < unit.maxPrimaryAmmo)
-            { unit.ReloadAmmo(); if (!supplied) { supplyText = "Ammo+"; supplyColor = new Color(0.9f, 0.3f, 0.2f); } else supplyText += " Ammo+"; supplied = true; }
+            // 1. 回血（数值模式 或 百分比模式）
+            int healValue = 0;
+            if (healMode == 0)
+                healValue = healAmount;
+            else if (healMode == 1)
+                healValue = Mathf.RoundToInt(unit.maxHealth * healPercent);
 
-            if (supplied) { anySupplied = true; unit.UpdateHpLabel(); ShowSupplyEffectNew(unit, supplyText, supplyColor); }
+            if (healValue != 0)
+            {
+                if (supportedUnitTypesForHeal.Count == 0 || supportedUnitTypesForHeal.Contains(unitType))
+                {
+                    int oldHealth = unit.health;
+                    unit.health += healValue;
+                    if (!unit.explosionCanExceedMaxHealth)
+                        unit.health = Mathf.Clamp(unit.health, 1, unit.maxHealth);
+                    else
+                        unit.health = Mathf.Max(1, unit.health);
+                    int delta = unit.health - oldHealth;
+                    if (delta != 0)
+                    {
+                        supplied = true;
+                        supplyParts.Add(delta > 0 ? $"+{delta}HP" : $"{delta}HP");
+                        supplyColor = new Color(0.2f, 0.9f, 0.3f);
+                    }
+                }
+            }
+
+            // 2. 主武器弹药补给
+            if (primaryAmmoSupply != 0)
+            {
+                if (unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && unit.maxPrimaryAmmo < 99)
+                {
+                    if (supportedUnitTypesForPrimaryAmmo.Count == 0 || supportedUnitTypesForPrimaryAmmo.Contains(unitType))
+                    {
+                        int oldAmmo = unit.currentPrimaryAmmo;
+                        if (primaryAmmoSupply >= 999)
+                            unit.currentPrimaryAmmo = unit.maxPrimaryAmmo;
+                        else
+                            unit.currentPrimaryAmmo = Mathf.Clamp(unit.currentPrimaryAmmo + primaryAmmoSupply, 0, unit.maxPrimaryAmmo);
+                        if (unit.currentPrimaryAmmo != oldAmmo)
+                        {
+                            supplied = true;
+                            supplyParts.Add("Ammo+");
+                            if (supplyColor == Colors.Green) supplyColor = new Color(0.9f, 0.3f, 0.2f);
+                        }
+                    }
+                }
+            }
+
+            // 3. 燃料补给
+            if (fuelSupply != 0)
+            {
+                if (unit.consumeFuel)
+                {
+                    if (supportedUnitTypesForFuel.Count == 0 || supportedUnitTypesForFuel.Contains(unitType))
+                    {
+                        int oldFuel = unit.fuel;
+                        if (fuelSupply >= 999)
+                            unit.fuel = unit.maxFuel;
+                        else
+                            unit.fuel = Mathf.Clamp(unit.fuel + fuelSupply, 0, unit.maxFuel);
+                        if (unit.fuel != oldFuel)
+                        {
+                            supplied = true;
+                            supplyParts.Add("Fuel+");
+                            if (supplyColor == Colors.Green) supplyColor = new Color(0.9f, 0.7f, 0.2f);
+                        }
+                    }
+                }
+            }
+
+            // 4. 照明弹补给
+            if (flareAmmoSupply != 0)
+            {
+                if (unit.canIlluminate)
+                {
+                    if (supportedUnitTypesForFlare.Count == 0 || supportedUnitTypesForFlare.Contains(unitType))
+                    {
+                        int oldFlare = unit.currentFlareAmmo;
+                        if (flareAmmoSupply >= 999)
+                            unit.currentFlareAmmo = unit.maxFlareAmmo;
+                        else
+                            unit.currentFlareAmmo = Mathf.Clamp(unit.currentFlareAmmo + flareAmmoSupply, 0, unit.maxFlareAmmo);
+                        if (unit.currentFlareAmmo != oldFlare)
+                        {
+                            supplied = true;
+                            supplyParts.Add("Flare+");
+                            if (supplyColor == Colors.Green) supplyColor = new Color(0.9f, 0.9f, 0.2f);
+                        }
+                    }
+                }
+            }
+
+            // 5. 自爆弹补给
+            if (explodeAmmoSupply != 0)
+            {
+                if (unit.canExplode && !unit.explosionDestroysSelf) // 只有无限自爆模式的单位才需要自爆弹
+                {
+                    if (supportedUnitTypesForExplode.Count == 0 || supportedUnitTypesForExplode.Contains(unitType))
+                    {
+                        int oldExplode = unit.currentExplodeAmmo;
+                        if (explodeAmmoSupply >= 999)
+                            unit.currentExplodeAmmo = unit.maxExplodeAmmo;
+                        else
+                            unit.currentExplodeAmmo = Mathf.Clamp(unit.currentExplodeAmmo + explodeAmmoSupply, 0, unit.maxExplodeAmmo);
+                        if (unit.currentExplodeAmmo != oldExplode)
+                        {
+                            supplied = true;
+                            supplyParts.Add("Bomb+");
+                            if (supplyColor == Colors.Green) supplyColor = new Color(0.9f, 0.5f, 0.1f);
+                        }
+                    }
+                }
+            }
+
+            if (supplied)
+            {
+                anySupplied = true;
+                supplyText = string.Join(" ", supplyParts);
+                unit.UpdateHpLabel();
+                ShowSupplyEffectNew(unit, supplyText, supplyColor);
+            }
         }
         if (anySupplied) ShowGridSupplyEffectNew();
     }
