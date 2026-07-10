@@ -507,11 +507,11 @@ public partial class AI_Manager : Node
         GD.Print($"[AI] {unit.Name} 攻击 {target.Name}");
 
         // ✅ 攻击前动画闪烁：让玩家看到攻击过程
-        if (unit.animSprite != null)
+        if (unit.sprite != null)
         {
             var tween = unit.CreateTween();
-            tween.TweenProperty(unit.animSprite, "modulate", Colors.Red, 0.15f);
-            tween.TweenProperty(unit.animSprite, "modulate", new Color(0.7f, 0.7f, 0.7f, 1f), 0.15f);
+            tween.TweenProperty(unit.sprite, "modulate", Colors.Red, 0.15f);
+            tween.TweenProperty(unit.sprite, "modulate", new Color(0.7f, 0.7f, 0.7f, 1f), 0.15f);
         }
 
         unit.Attack(target);
