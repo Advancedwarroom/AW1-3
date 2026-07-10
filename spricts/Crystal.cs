@@ -32,6 +32,11 @@ public partial class Crystal : Weapon
     [Export] public Godot.Collections.Array<string> crystalSupplyUnitTypes = new(); // 准许类型（空=所有类型）
     [Export] public bool crystalSupplyAffectsWeapons = true; // 能否给兵器补给
 
+    // --- 补给消耗弹药设置（防止无限卡 Bug）---
+    [Export] public bool crystalSupplyConsumesAmmo = true;      // 补给是否消耗自身弹药
+    [Export] public int crystalSupplyAmmoCostPerTarget = 1;      // 每个补给目标消耗弹药数
+    [Export] public bool crystalSupplyAffectsSelf = false;       // 补给是否对自身生效（默认 false 防无限循环）
+
     // --- Flare 弹补给 ---
     [Export] public int crystalSupplyFlareAmmo = 0;
     [Export] public Godot.Collections.Array<string> crystalSupplyFlareSupportedTypes = new();
@@ -166,40 +171,108 @@ public partial class Crystal : Weapon
     {
         if (gm == null || grid == null) return;
 
-        // 1. 范围治疗
+        // 1. 范围治疗（不消耗弹药）
         var healGrids = CalculateRingRange(crystalHealMinRange, crystalHealMaxRange);
         foreach (var g in healGrids)
         {
-            // 治疗单位
             foreach (var unit in g.infantries.ToList())
             {
                 if (!IsInstanceValid(unit)) continue;
                 TryHealUnit(unit);
             }
-            // 治疗兵器
-            if (crystalHealAffectsWeapons && g.weapon != null && IsInstanceValid(g.weapon))
+            if (crystalHealAffectsWeapons && g.weapon != null && IsInstanceValid(g.weapon) && g.weapon != this)
             {
                 TryHealWeapon(g.weapon);
             }
         }
 
-        // 2. 范围补给
+        // 2. 范围补给（先检查弹药，再执行，避免无限卡 Bug）
         var supplyGrids = CalculateRingRange(crystalSupplyMinRange, crystalSupplyMaxRange);
+        var supplyTargets = new List<object>(); // 收集所有需要补给的目标
         foreach (var g in supplyGrids)
         {
+            // 自身过滤
+            if (!crystalSupplyAffectsSelf && g == grid) continue;
+
             foreach (var unit in g.infantries.ToList())
             {
                 if (!IsInstanceValid(unit)) continue;
-                TrySupplyUnit(unit);
+                if (WouldSupplyUnit(unit)) supplyTargets.Add(unit);
             }
-            if (crystalSupplyAffectsWeapons && g.weapon != null && IsInstanceValid(g.weapon))
+            if (crystalSupplyAffectsWeapons && g.weapon != null && IsInstanceValid(g.weapon) && g.weapon != this)
             {
-                TrySupplyWeapon(g.weapon);
+                if (WouldSupplyWeapon(g.weapon)) supplyTargets.Add(g.weapon);
             }
+        }
+
+        // 检查弹药是否足够（如果开启消耗）
+        int totalCost = supplyTargets.Count * crystalSupplyAmmoCostPerTarget;
+        if (crystalSupplyConsumesAmmo && useAmmoSystem && totalCost > 0)
+        {
+            if (currentAmmo < totalCost)
+            {
+                GD.Print($"[Crystal] 弹药不足！需要 {totalCost}，当前 {currentAmmo}，跳过补给");
+                ShowCrystalPulseEffect();
+                return; // 弹药不够，全部跳过（避免部分执行导致卡死）
+            }
+            // 先扣弹药，再执行补给
+            currentAmmo -= totalCost;
+            GD.Print($"[Crystal] 消耗 {totalCost} 弹药执行补给，剩余 {currentAmmo}");
+            UpdateHpLabel(); // 刷新弹药显示
+        }
+
+        // 执行补给
+        foreach (var target in supplyTargets)
+        {
+            if (target is Infantry unit && IsInstanceValid(unit))
+                ExecuteSupplyUnit(unit);
+            else if (target is Weapon weapon && IsInstanceValid(weapon))
+                ExecuteSupplyWeapon(weapon);
         }
 
         // 播放特效
         ShowCrystalPulseEffect();
+    }
+
+    // 预检：单位是否会被补给（不实际修改）
+    private bool WouldSupplyUnit(Infantry unit)
+    {
+        if (!CheckTeamFilter(unit.team, crystalSupplyTeamMode)) return false;
+        if (!CheckTypeFilter(unit.GetType().Name, crystalSupplyUnitTypes)) return false;
+        // 检查是否有任何一种补给会实际改变数值
+        if (crystalSupplyFlareAmmo != 0 && unit.canIlluminate)
+            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.GetType().Name))
+                if (ApplySupplyPreview(unit.currentFlareAmmo, unit.maxFlareAmmo, crystalSupplyFlareAmmo, crystalSupplyFlareCanOverMax, crystalSupplyFlareMaxCap) != unit.currentFlareAmmo) return true;
+        if (crystalSupplyExplodeAmmo != 0 && unit.canExplode && !unit.explosionDestroysSelf)
+            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.GetType().Name))
+                if (ApplySupplyPreview(unit.currentExplodeAmmo, unit.maxExplodeAmmo, crystalSupplyExplodeAmmo, crystalSupplyExplodeCanOverMax, crystalSupplyExplodeMaxCap) != unit.currentExplodeAmmo) return true;
+        if (crystalSupplyPrimaryAmmo != 0 && unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && unit.maxPrimaryAmmo < 99)
+            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.GetType().Name))
+                if (ApplySupplyPreview(unit.currentPrimaryAmmo, unit.maxPrimaryAmmo, crystalSupplyPrimaryAmmo, crystalSupplyPrimaryCanOverMax, crystalSupplyPrimaryMaxCap) != unit.currentPrimaryAmmo) return true;
+        if (crystalSupplyFuel != 0 && unit.consumeFuel)
+            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.GetType().Name))
+                if (ApplySupplyPreview(unit.fuel, unit.maxFuel, crystalSupplyFuel, crystalSupplyFuelCanOverMax, crystalSupplyFuelMaxCap) != unit.fuel) return true;
+        return false;
+    }
+
+    private bool WouldSupplyWeapon(Weapon weapon)
+    {
+        if (!CheckTeamFilter(weapon.team, crystalSupplyTeamMode)) return false;
+        if (!weapon.useAmmoSystem) return false;
+        if (crystalSupplyPrimaryAmmo != 0)
+            if (ApplySupplyPreview(weapon.currentAmmo, weapon.maxAmmo, crystalSupplyPrimaryAmmo, crystalSupplyPrimaryCanOverMax, crystalSupplyPrimaryMaxCap) != weapon.currentAmmo) return true;
+        return false;
+    }
+
+    private int ApplySupplyPreview(int current, int max, int delta, bool canOverMax, int maxCap)
+    {
+        if (delta == 0) return current;
+        if (delta > 0)
+        {
+            if (canOverMax) return Mathf.Min(current + delta, maxCap);
+            else return Mathf.Min(current + delta, max);
+        }
+        else return Mathf.Max(0, current + delta);
     }
 
     // ========== 治疗单位 ==========
@@ -279,12 +352,9 @@ public partial class Crystal : Weapon
         }
     }
 
-    // ========== 补给单位 ==========
-    private void TrySupplyUnit(Infantry unit)
+    // ========== 执行补给单位（弹药已预扣，直接执行） ==========
+    private void ExecuteSupplyUnit(Infantry unit)
     {
-        if (!CheckTeamFilter(unit.team, crystalSupplyTeamMode)) return;
-        if (!CheckTypeFilter(unit.GetType().Name, crystalSupplyUnitTypes)) return;
-
         bool anySupplied = false;
         var supplyParts = new List<string>();
         Color supplyColor = new Color(0.2f, 0.9f, 0.9f); // 青色，区别于设施回血的绿色
@@ -341,16 +411,15 @@ public partial class Crystal : Weapon
         }
     }
 
-    private void TrySupplyWeapon(Weapon weapon)
+    private void ExecuteSupplyWeapon(Weapon weapon)
     {
-        if (!CheckTeamFilter(weapon.team, crystalSupplyTeamMode)) return;
         if (!weapon.useAmmoSystem) return;
 
         bool anySupplied = false;
         var supplyParts = new List<string>();
         Color supplyColor = new Color(0.2f, 0.9f, 0.9f);
 
-        // 兵器只有弹药系统（通过 Weapon.useAmmoSystem）
+        // 兵器只有主弹药系统
         if (crystalSupplyPrimaryAmmo != 0)
         {
             int old = weapon.currentAmmo;
