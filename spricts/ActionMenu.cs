@@ -1203,17 +1203,8 @@ private void OnSupplyPressed()
         GetViewport().SetInputAsHandled();
         if (currentWeapon is Crystal crystal)
         {
-            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-            if (gm != null)
-            {
-                crystal.PerformCrystalEffect(gm);
-                crystal.hasActed = true;
-                crystal.remainingAttacks = 0;
-                crystal.SetVisualDark();
-            }
-            currentWeapon = null;
-            gm?.gridManager?.ClearWeaponRange();
-            if (gm != null) gm.selectedWeapon = null;
+            // 显示治疗范围，等待用户点击范围内格子确认
+            crystal.ShowAttackRange();
         }
         Hide();
     }
