@@ -241,7 +241,7 @@ public partial class GridManager : Node
             {
                 var grid = gridScene.Instantiate<Grids>();
                 grid.Name = $"Grid_{x}_{y}";
-                grid.Position = new Vector2(startPos.X + x * gridSize.X, startPos.Y + y * gridSize.Y);
+                grid.Position = new Godot.Vector2(startPos.X + x * gridSize.X, startPos.Y + y * gridSize.Y);
                 grid.gridType = GridType.GROUND;
                 grid.GridIndex = new Vector2I(x, y);
                 GridsNode.AddChild(grid);
