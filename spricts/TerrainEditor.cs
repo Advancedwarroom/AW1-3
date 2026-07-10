@@ -6463,8 +6463,8 @@ private void OpenWeaponTerrainMatrixEditor()
             if (header == "AWSMap001")
             {
                 if (fileData.Length < 13) { ShowImportHint("❌ AWS 文件过短"); return; }
-                width = fileData[10];   // 第1字节 = 宽度
-                height = fileData[11]; // 第2字节 = 高度
+                width = fileData[10];
+                height = fileData[11]; 
                 offset = 13;
             }
             else if (header == "AW2Map001" || header == "AWMap 001")
@@ -6510,11 +6510,12 @@ private void OpenWeaponTerrainMatrixEditor()
             var unknownWeaponIds = new HashSet<int>();
 
             // 读取地形数据（同时包含地形和建筑/设施）
-            for (int y = 0; y < height; y++)
+            // ✅ 列优先：文件按 x 优先、y 内层存储，与 AWS Map Editor 保存顺序一致
+            for (int x = 0; x < width; x++)
             {
-                for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
                 {
-                    int idx = offset + (y * width + x) * 2;
+                    int idx = offset + (x * height + y) * 2;
                     ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
 
                     if (x >= gridManager.map.GetLength(0) || y >= gridManager.map.GetLength(1))
@@ -6614,12 +6615,13 @@ private void OpenWeaponTerrainMatrixEditor()
             }
 
             // 读取单位数据（0xFFFF = 空）
+            // ✅ 列优先：与地形数据相同的 x 优先、y 内层顺序
             int unitOffset = offset + terrainDataSize;
-            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
             {
-                for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
                 {
-                    int idx = unitOffset + (y * width + x) * 2;
+                    int idx = unitOffset + (x * height + y) * 2;
                     ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
 
                     if (rawVal == 0xFFFF) continue;
