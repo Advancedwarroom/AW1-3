@@ -63,6 +63,8 @@ public partial class Crystal : Weapon
     public override void _Ready()
     {
         base._Ready();
+        // 按队伍绑定正确贴图动画
+        UpdateCrystalVisual();
         // 初始化默认准许类型（所有类型）
         if (crystalHealUnitTypes == null || crystalHealUnitTypes.Count == 0)
         {
@@ -489,5 +491,55 @@ public partial class Crystal : Weapon
     public override bool CanAttack()
     {
         return !hasActed && remainingAttacks > 0;
+    }
+
+    // ========== 贴图/动画绑定（按队伍） ==========
+    private void UpdateCrystalVisual()
+    {
+        if (animSprite == null) return;
+        // 按队伍选择动画：P1=橙, P2=蓝, P0=无色基础, P-1=橙(染浅紫)
+        string animName = team switch
+        {
+            TeamHelper.Player1 => "OrangeCrystal",
+            TeamHelper.Player2 => "BlueCrystal",
+            TeamHelper.Player0 => "Crystal",
+            TeamHelper.Player => "OrangeCrystal", // P-1 用 Orange，但染浅紫
+            _ => "Crystal"
+        };
+        if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation(animName))
+            animSprite.Animation = animName;
+        else if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation("Crystal"))
+            animSprite.Animation = "Crystal";
+
+        SetVisualNormal();
+    }
+
+    public override void SetVisualNormal()
+    {
+        if (animSprite == null) return;
+        // P1/P2 动画本身有颜色，保持 White；P0 染灰；P-1 染浅紫
+        Color tint = team switch
+        {
+            TeamHelper.Player1 => Colors.White,
+            TeamHelper.Player2 => Colors.White,
+            TeamHelper.Player0 => TeamHelper.GetTeamColor(TeamHelper.Player0),
+            TeamHelper.Player => TeamHelper.GetTeamColor(TeamHelper.Player),
+            _ => Colors.White
+        };
+        animSprite.Modulate = tint;
+    }
+
+    public override void SetVisualDark()
+    {
+        if (animSprite == null) return;
+        Color normal = team switch
+        {
+            TeamHelper.Player1 => Colors.White,
+            TeamHelper.Player2 => Colors.White,
+            TeamHelper.Player0 => TeamHelper.GetTeamColor(TeamHelper.Player0),
+            TeamHelper.Player => TeamHelper.GetTeamColor(TeamHelper.Player),
+            _ => Colors.White
+        };
+        animSprite.Modulate = new Color(normal.R * 0.5f, normal.G * 0.5f, normal.B * 0.5f, 1f);
     }
 }
