@@ -61,6 +61,16 @@ public partial class TerrainEditor : Control
     private CheckBox fuelCanReachZeroCheckBox;
     private VBoxContainer ammoFuelContainer;
 
+    // ========== ✅ 批量地形放置模式 ==========
+    private bool isBatchTerrainMode = false;
+    private GridType batchTerrainType = GridType.GROUND;
+    private Button batchTerrainBtn;
+    private Panel batchTerrainPanel;
+    private VBoxContainer batchTerrainButtonContainer;
+    private Label batchTerrainTitleLabel;
+    private Button batchTerrainCloseBtn;
+    private Label batchTerrainHint;
+
     // 状态
     public bool IsEditMode { get; private set; } = false;
     private Grids selectedGrid = null;
@@ -83,7 +93,8 @@ public bool IsAnyMenuOpen()
         || terrainMenuPanel?.Visible == true 
         || propertyEditorPanel?.Visible == true 
         || spawnMenuPanel?.Visible == true
-        || globalConfigPanel?.Visible == true;
+        || globalConfigPanel?.Visible == true
+        || batchTerrainPanel?.Visible == true;
 }
 private bool fogStateBeforeEdit = false;
 private readonly List<UnitTemplate> unitTemplates = new()
@@ -207,7 +218,11 @@ public override void _Ready()
     modeToggleButton.SetAnchorsPreset(LayoutPreset.TopLeft);
     modeToggleButton.Position = new Vector2(viewportSize.X - 160, viewportSize.Y - 70);
 
-    
+    // ✅ 创建批量地形按钮（编辑模式专用）
+    CreateBatchTerrainButton();
+    batchTerrainBtn.SetAnchorsPreset(LayoutPreset.TopLeft);
+    batchTerrainBtn.Position = new Vector2(viewportSize.X - 160, viewportSize.Y - 130);
+    batchTerrainBtn.Visible = false; // 初始隐藏，进入编辑模式时显示
 }
 
 // ========== 修改 _Input 添加 ESC 关闭生成菜单 ==========
@@ -240,6 +255,18 @@ public override void _Input(InputEvent @event)
         {
             CloseSelectionMenu();
             isMenuOpen = false;
+            return;
+        }
+
+        // ✅ ESC 退出批量地形模式
+        if (isBatchTerrainMode)
+        {
+            StopBatchTerrainMode();
+            return;
+        }
+        if (batchTerrainPanel?.Visible == true)
+        {
+            CloseBatchTerrainPanel();
             return;
         }
 
@@ -982,6 +1009,15 @@ public void OnGridClickedForEdit(Grids grid)
     if (!IsEditMode || grid == null) return;
 
     selectedGrid = grid;
+
+    // ✅ 批量地形放置模式：直接改地形，不经过选择菜单
+    if (isBatchTerrainMode)
+    {
+        grid.gridType = batchTerrainType;
+        UpdateGridVisual(grid);
+        GD.Print($"[BatchTerrain] 放置 {batchTerrainType} @ {grid.GridIndex}");
+        return;
+    }
 
     // 优先处理生成模式
     if (currentSpawnMode != SpawnMode.None && !string.IsNullOrEmpty(selectedTemplatePath))
@@ -3136,6 +3172,10 @@ public void SetEditMode(bool editMode)
         // ✅ 关闭迷雾
         gameManager?.SetFogOfWarEnabled(false);
         
+        // ✅ 显示批量地形按钮
+        if (batchTerrainBtn != null)
+            batchTerrainBtn.Visible = true;
+        
         // ✅ 同步全局配置面板中的复选框
         if (fogOfWarCheckBox != null)
         {
@@ -3154,6 +3194,11 @@ public void SetEditMode(bool editMode)
         modeToggleButton.AddThemeStyleboxOverride("hover", hoverStyle);
 
         CloseAllMenus();
+
+        // ✅ 隐藏批量地形按钮，退出批量模式
+        if (batchTerrainBtn != null)
+            batchTerrainBtn.Visible = false;
+        StopBatchTerrainMode();
 
         GD.Print($"[TerrainEditor] 退出编辑模式，恢复迷雾状态: {fogStateBeforeEdit}");
         
@@ -3193,6 +3238,7 @@ private void DeferredRefreshFog()
         propertyEditorPanel.Visible = false;
         spawnMenuPanel.Visible = false;
         globalConfigPanel.Visible = false;
+        if (batchTerrainPanel != null) batchTerrainPanel.Visible = false;
         isMenuOpen = false;
         selectedGrid = null;
         currentEditingTarget = null;
@@ -5929,6 +5975,234 @@ private void OpenWeaponTerrainMatrixEditor()
         finally
         {
             if (gameManager != null) gameManager.blockVictoryCheck = false;
+        }
+    }
+
+    // ========== ✅ 批量地形放置系统 ==========
+    private void CreateBatchTerrainButton()
+    {
+        batchTerrainBtn = new Button();
+        batchTerrainBtn.Name = "BatchTerrainBtn";
+        batchTerrainBtn.Text = "🗺️ 批量地形";
+        batchTerrainBtn.CustomMinimumSize = new Vector2(140, 50);
+
+        var style = new StyleBoxFlat();
+        style.BgColor = new Color(0.3f, 0.5f, 0.5f, 0.9f);
+        style.SetCornerRadiusAll(8);
+        batchTerrainBtn.AddThemeStyleboxOverride("normal", style);
+
+        var hoverStyle = new StyleBoxFlat();
+        hoverStyle.BgColor = new Color(0.4f, 0.6f, 0.6f, 0.95f);
+        hoverStyle.SetCornerRadiusAll(8);
+        batchTerrainBtn.AddThemeStyleboxOverride("hover", hoverStyle);
+
+        batchTerrainBtn.AddThemeFontSizeOverride("font_size", 14);
+        batchTerrainBtn.AddThemeColorOverride("font_color", Colors.White);
+        batchTerrainBtn.Pressed += OnBatchTerrainBtnPressed;
+
+        AddChild(batchTerrainBtn);
+    }
+
+    private void OnBatchTerrainBtnPressed()
+    {
+        if (isBatchTerrainMode)
+        {
+            StopBatchTerrainMode();
+        }
+        else
+        {
+            OpenBatchTerrainPanel();
+        }
+    }
+
+    private void CreateBatchTerrainPanel()
+    {
+        batchTerrainPanel = new Panel();
+        batchTerrainPanel.Name = "BatchTerrainPanel";
+        batchTerrainPanel.CustomMinimumSize = new Vector2(340, 600);
+        batchTerrainPanel.SetAnchorsPreset(LayoutPreset.Center);
+        batchTerrainPanel.Visible = false;
+        batchTerrainPanel.ZIndex = 1000;
+
+        var panelStyle = new StyleBoxFlat();
+        panelStyle.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.97f);
+        panelStyle.SetCornerRadiusAll(16);
+        panelStyle.SetBorderWidthAll(3);
+        panelStyle.BorderColor = new Color(0.5f, 0.8f, 0.6f);
+        batchTerrainPanel.AddThemeStyleboxOverride("panel", panelStyle);
+
+        // 标题
+        batchTerrainTitleLabel = new Label();
+        batchTerrainTitleLabel.Text = "🗺️ 批量地形放置";
+        batchTerrainTitleLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        batchTerrainTitleLabel.AddThemeFontSizeOverride("font_size", 20);
+        batchTerrainTitleLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 0.7f));
+        batchTerrainTitleLabel.CustomMinimumSize = new Vector2(0, 40);
+        batchTerrainTitleLabel.Position = new Vector2(0, 15);
+        batchTerrainTitleLabel.Size = new Vector2(340, 40);
+        batchTerrainPanel.AddChild(batchTerrainTitleLabel);
+
+        // 关闭按钮
+        batchTerrainCloseBtn = new Button();
+        batchTerrainCloseBtn.Text = "✕";
+        batchTerrainCloseBtn.CustomMinimumSize = new Vector2(32, 32);
+        batchTerrainCloseBtn.Position = new Vector2(300, 12);
+        batchTerrainCloseBtn.Pressed += CloseBatchTerrainPanel;
+        batchTerrainPanel.AddChild(batchTerrainCloseBtn);
+
+        // 提示
+        var hint = new Label();
+        hint.Text = "点击地形开始批量放置\n点击地图格子直接铺设";
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.AddThemeFontSizeOverride("font_size", 11);
+        hint.AddThemeColorOverride("font_color", new Color(0.7f, 0.8f, 0.6f));
+        hint.Position = new Vector2(10, 55);
+        hint.Size = new Vector2(320, 40);
+        batchTerrainPanel.AddChild(hint);
+
+        // 滚动区域
+        var scroll = new ScrollContainer();
+        scroll.Position = new Vector2(10, 100);
+        scroll.Size = new Vector2(320, 420);
+        scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+
+        batchTerrainButtonContainer = new VBoxContainer();
+        batchTerrainButtonContainer.AddThemeConstantOverride("separation", 6);
+        batchTerrainButtonContainer.Size = new Vector2(320, 0);
+
+        foreach (var terrainType in availableTerrainTypes)
+        {
+            var btn = CreateBatchTerrainSelectButton(terrainType);
+            batchTerrainButtonContainer.AddChild(btn);
+        }
+
+        scroll.AddChild(batchTerrainButtonContainer);
+        batchTerrainPanel.AddChild(scroll);
+
+        // 结束放置按钮
+        var endBtn = new Button();
+        endBtn.Text = "❌ 结束放置";
+        endBtn.CustomMinimumSize = new Vector2(300, 40);
+        endBtn.Position = new Vector2(20, 530);
+        endBtn.AddThemeFontSizeOverride("font_size", 14);
+        endBtn.AddThemeColorOverride("font_color", new Color(1f, 0.6f, 0.6f));
+        var endStyle = new StyleBoxFlat();
+        endStyle.BgColor = new Color(0.4f, 0.2f, 0.2f, 0.9f);
+        endStyle.SetCornerRadiusAll(8);
+        endBtn.AddThemeStyleboxOverride("normal", endStyle);
+        endBtn.Pressed += StopBatchTerrainMode;
+        batchTerrainPanel.AddChild(endBtn);
+
+        AddChild(batchTerrainPanel);
+        MakeMenuDraggable(batchTerrainPanel);
+    }
+
+    private Button CreateBatchTerrainSelectButton(GridType terrainType)
+    {
+        var btn = new Button();
+        btn.CustomMinimumSize = new Vector2(300, 42);
+        btn.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+
+        // 获取地形颜色和防御信息
+        Color terrainColor = terrainColors.GetValueOrDefault(terrainType, Colors.White);
+        string defenseText = GetTerrainDefenseText(terrainType);
+
+        btn.Text = $"  {GetTerrainDisplayName(terrainType)}  {defenseText}";
+        btn.AddThemeFontSizeOverride("font_size", 13);
+        btn.AddThemeColorOverride("font_color", Colors.White);
+        btn.Alignment = HorizontalAlignment.Left;
+
+        // 使用地形颜色作为按钮背景
+        var normalStyle = new StyleBoxFlat();
+        normalStyle.BgColor = new Color(terrainColor.R * 0.3f, terrainColor.G * 0.3f, terrainColor.B * 0.3f, 0.85f);
+        normalStyle.SetCornerRadiusAll(6);
+        btn.AddThemeStyleboxOverride("normal", normalStyle);
+
+        var hoverStyle = new StyleBoxFlat();
+        hoverStyle.BgColor = new Color(terrainColor.R * 0.5f, terrainColor.G * 0.5f, terrainColor.B * 0.5f, 0.95f);
+        hoverStyle.SetCornerRadiusAll(6);
+        btn.AddThemeStyleboxOverride("hover", hoverStyle);
+
+        var pressedStyle = new StyleBoxFlat();
+        pressedStyle.BgColor = new Color(terrainColor.R * 0.7f, terrainColor.G * 0.7f, terrainColor.B * 0.7f, 1.0f);
+        pressedStyle.SetCornerRadiusAll(6);
+        pressedStyle.SetBorderWidthAll(2);
+        pressedStyle.BorderColor = Colors.Yellow;
+        btn.AddThemeStyleboxOverride("pressed", pressedStyle);
+
+        GridType capturedType = terrainType;
+        btn.Pressed += () => StartBatchTerrainMode(capturedType);
+
+        return btn;
+    }
+
+    private void OpenBatchTerrainPanel()
+    {
+        if (batchTerrainPanel == null)
+            CreateBatchTerrainPanel();
+
+        CloseAllMenus();
+        batchTerrainPanel.Visible = true;
+        isMenuOpen = true;
+
+        // 更新标题显示当前状态
+        if (isBatchTerrainMode)
+        {
+            batchTerrainTitleLabel.Text = $"🗺️ 批量地形 - 当前: {GetTerrainDisplayName(batchTerrainType)}";
+        }
+        else
+        {
+            batchTerrainTitleLabel.Text = "🗺️ 批量地形放置";
+        }
+    }
+
+    private void CloseBatchTerrainPanel()
+    {
+        if (batchTerrainPanel != null)
+            batchTerrainPanel.Visible = false;
+        if (!isBatchTerrainMode)
+            isMenuOpen = false;
+    }
+
+    private void StartBatchTerrainMode(GridType type)
+    {
+        batchTerrainType = type;
+        isBatchTerrainMode = true;
+        CloseBatchTerrainPanel();
+        UpdateBatchTerrainButtonVisual();
+        GD.Print($"[BatchTerrain] 开始批量放置: {type}");
+    }
+
+    private void StopBatchTerrainMode()
+    {
+        isBatchTerrainMode = false;
+        batchTerrainType = GridType.GROUND;
+        CloseBatchTerrainPanel();
+        UpdateBatchTerrainButtonVisual();
+        GD.Print("[BatchTerrain] 停止批量放置");
+    }
+
+    private void UpdateBatchTerrainButtonVisual()
+    {
+        if (batchTerrainBtn == null) return;
+
+        if (isBatchTerrainMode)
+        {
+            batchTerrainBtn.Text = $"🗺️ {GetTerrainDisplayName(batchTerrainType)}";
+            var activeStyle = new StyleBoxFlat();
+            activeStyle.BgColor = new Color(0.5f, 0.8f, 0.5f, 0.95f);
+            activeStyle.SetCornerRadiusAll(8);
+            activeStyle.SetBorderWidthAll(2);
+            activeStyle.BorderColor = Colors.Yellow;
+            batchTerrainBtn.AddThemeStyleboxOverride("normal", activeStyle);
+        }
+        else
+        {
+            batchTerrainBtn.Text = "🗺️ 批量地形";
+            var style = new StyleBoxFlat();
+            style.BgColor = new Color(0.3f, 0.5f, 0.5f, 0.9f);
+            style.SetCornerRadiusAll(8);
+            batchTerrainBtn.AddThemeStyleboxOverride("normal", style);
         }
     }
 }

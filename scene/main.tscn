@@ -27,12 +27,12 @@
 [ext_resource type="Script" uid="uid://74y35y84urko" path="res://spricts/TerrainEditor.cs" id="21_gtqqq"]
 [ext_resource type="PackedScene" uid="uid://crx806yfxmm2q" path="res://Prefabs/Recon.tscn" id="22_io27d"]
 [ext_resource type="PackedScene" uid="uid://cehhs3q3wtiud" path="res://Prefabs/Laser.tscn" id="23_gtqqq"]
-[ext_resource type="PackedScene" uid="uid://bav1wcjvwgxh8" path="res://Prefabs/Flare.tscn" id="23_rg6nf"]
 [ext_resource type="PackedScene" uid="uid://bnxa6cihdpkhx" path="res://Prefabs/City.tscn" id="25_mjuaj"]
 [ext_resource type="PackedScene" uid="uid://sfbmwapwn124" path="res://Prefabs/AntiAir.tscn" id="25_p8adh"]
 [ext_resource type="Script" uid="uid://b45e5l1rdl2f6" path="res://spricts/FogOfWarManager.cs" id="26_oldxj"]
+[ext_resource type="Script" uid="uid://hgs51mm8710x" path="res://spricts/Bike.cs" id="27_7ty4q"]
 [ext_resource type="Script" uid="uid://cu0kmm7m1n6tk" path="res://spricts/CameraTouchController.cs" id="27_camtouch"]
-[ext_resource type="PackedScene" uid="uid://bav1wcjvwgxh8" path="res://Prefabs/Bike.tscn" id="28_7ty4q"]
+[ext_resource type="PackedScene" uid="uid://bav1wcjvwgxh8" path="res://Prefabs/Flare.tscn" id="28_7ty4q"]
 [ext_resource type="PackedScene" uid="uid://dt34620naxdc3" path="res://Prefabs/FlyBomb.tscn" id="28_vneqc"]
 [ext_resource type="PackedScene" uid="uid://b2721lm0rscie" path="res://Prefabs/Anti_Tank.tscn" id="29_antitan"]
 
@@ -2630,13 +2630,14 @@ flareDurationTurns = 3
 canIlluminateAfterMove = true
 team = "Player1"
 
-[node name="Flare" parent="UnitManager/Units" unique_id=771793553 node_paths=PackedStringArray("gridManager") instance=ExtResource("23_rg6nf")]
+[node name="Flare" parent="UnitManager/Units" unique_id=771793553 node_paths=PackedStringArray("gridManager") instance=ExtResource("28_7ty4q")]
 position = Vector2(352, 512)
 gridManager = NodePath("../../GridManager")
 team = "Player1"
 
 [node name="Bike" parent="UnitManager/Units" unique_id=939063714 instance=ExtResource("28_7ty4q")]
 position = Vector2(480, 128)
+script = ExtResource("27_7ty4q")
 useDefaultConfig = false
 cost = 2500
 moveType = 12
