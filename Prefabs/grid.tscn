@@ -14,6 +14,7 @@
 [ext_resource type="Texture2D" uid="uid://6t1w7tjxivn6" path="res://art/Grids/地形/TP.png" id="12_fhrta"]
 [ext_resource type="Texture2D" uid="uid://ctr2dwifwlwrt" path="res://art/Grids/地形/Reef.png" id="13_fqpsr"]
 [ext_resource type="Texture2D" uid="uid://5cwwbc0qnlwk" path="res://art/Grids/地形/PipeSeam.png" id="14_00fs3"]
+[ext_resource type="Texture2D" uid="uid://dloef8jixlpda" path="res://art/Grids/地形/Road.png" id="14_b73tk"]
 [ext_resource type="Texture2D" uid="uid://bb734ha8bqmgr" path="res://art/Grids/地形/Pipe.png" id="14_tvkgv"]
 [ext_resource type="Texture2D" uid="uid://bf1qqlsrtj86o" path="res://art/Grids/地形/LAVASide.png" id="15_x3au7"]
 [ext_resource type="Texture2D" uid="uid://0hq17p5572l4" path="res://art/Grids/地形/BrokenPipeSeam.png" id="16_p0itk"]
@@ -26,6 +27,7 @@ script = ExtResource("1_1d0qn")
 terrainIconTextures = Dictionary[int, Texture2D]({
 0: ExtResource("2_t285k"),
 1: ExtResource("5_nquop"),
+2: ExtResource("14_b73tk"),
 3: ExtResource("7_xkamf"),
 4: ExtResource("6_ax3ny"),
 5: ExtResource("4_1ln5d"),
