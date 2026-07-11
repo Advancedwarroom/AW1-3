@@ -56,11 +56,9 @@ public partial class UnloadUnitButton : Control
         targetUnit = unit;
         if (unit == null || !IsInstanceValid(unit))
         {
-            GD.PrintErr("[UnloadUnitButton] 单位无效");
             return;
         }
         
-        GD.Print($"[UnloadUnitButton] 设置单位: {unit.Name}, 类型: {unit.GetType().Name}");
         
         if (isInitialized)
             InitializeAnimation();
@@ -73,11 +71,9 @@ public partial class UnloadUnitButton : Control
         
         if (sourceAnim == null)
         {
-            GD.PrintErr($"[UnloadUnitButton] 找不到 {targetUnit.Name} 的动画");
             return;
         }
         
-        GD.Print($"[UnloadUnitButton] 找到动画: {sourceAnim.Name}, 动画: {sourceAnim.Animation}");
         
         // 复制 SpriteFrames
         if (unitAnim != null)
@@ -120,27 +116,22 @@ public partial class UnloadUnitButton : Control
         // 1. 直接检查已知的动画字段
         if (u is Mech m && m.animSprite != null) 
         {
-            GD.Print($"[GetSourceAnim] {u.Name} 是 Mech，使用 animSprite");
             return m.animSprite;
         }
         if (u is LightTank t && t.animSprite != null) 
         {
-            GD.Print($"[GetSourceAnim] {u.Name} 是 LightTank，使用 animSprite");
             return t.animSprite;
         }
         if (u is APC a && a.animSprite != null) 
         {
-            GD.Print($"[GetSourceAnim] {u.Name} 是 APC，使用 animSprite");
             return a.animSprite;
         }
         if (u is Oozium o && o.animSprite != null) 
         {
-            GD.Print($"[GetSourceAnim] {u.Name} 是 Oozium，使用 animSprite");
             return o.animSprite;
         }
         if (u is Artillery ar && ar.animSprite != null) 
         {
-            GD.Print($"[GetSourceAnim] {u.Name} 是 Artillery，使用 animSprite");
             return ar.animSprite;
         }
         
@@ -148,11 +139,9 @@ public partial class UnloadUnitButton : Control
         var foundAnim = FindAnimRecursive(u);
         if (foundAnim != null)
         {
-            GD.Print($"[GetSourceAnim] {u.Name} 通过递归找到动画: {foundAnim.Name}");
             return foundAnim;
         }
         
-        GD.PrintErr($"[GetSourceAnim] 完全找不到 {u.Name} 的动画组件");
         return null;
     }
     

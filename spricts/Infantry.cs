@@ -396,7 +396,6 @@ public virtual int CalculateFinalDamage(Infantry target, WeaponType weaponType, 
     
     if (rawDamage <= 0)
     {
-        GD.Print($"[Threshold] {Name}→{target.Name}: 攻击{afterTerrain:F1} 无法突破防御 {effectiveDefense}！");
         return 0;
     }
     
@@ -472,7 +471,6 @@ public virtual int GetBaseDamageFromMatrix(Infantry target)
         return value;
     
     // 默认回退：50（避免崩溃）
-    GD.PrintErr($"[AttackMatrix] 未找到 {key}，使用默认值50");
     return 50;
 }
 
@@ -608,7 +606,6 @@ public virtual bool ResupplyWeapon(Weapon weapon)
     
     if (success)
     {
-        GD.Print($"[Transport] {Name} 成功补给 {weapon.Name} 弹药");
     }
     
     return success;
@@ -686,11 +683,9 @@ public virtual bool ConsumePrimaryAmmo()
     {
         if (!consumeFuel || dailyFuelConsumption <= 0) return;
         fuel -= dailyFuelConsumption;
-        GD.Print($"[Fuel] {Name} 每日消耗 {dailyFuelConsumption} 燃料，剩余 {fuel}/{maxFuel}");
 
         if (fuel <= 0 && destroyOnOutOfFuel)
         {
-            GD.Print($"[Fuel] {Name} 燃料耗尽，自毁！");
             // 延迟一帧销毁，避免在迭代中修改集合
             CallDeferred(nameof(DestroySelf));
         }
@@ -705,7 +700,6 @@ public virtual bool ConsumePrimaryAmmo()
     // ✅ 自爆接口（GameManager 调用执行）
     public virtual void OnExplode()
     {
-        GD.Print($"[Explode] {Name} 触发自爆");
     }
 
     public Grids originalGrid;
@@ -845,11 +839,9 @@ public override void _Ready()
         if (visionRange < 0 && useConfigVision)
         {
             visionRange = VisionConfig.GetUnitVisionRange(this.GetType().Name);
-            GD.Print($"[Vision] {Name} 使用配置表视野: {visionRange}");
         }
         else if (visionRange >= 0)
         {
-            GD.Print($"[Vision] {Name} 使用自定义视野: {visionRange}");
         }
 
         // ✅ 初始化单位专属地形加成矩阵（如果为空则填充默认值）
@@ -859,7 +851,6 @@ public override void _Ready()
             unitTerrainVisionBonus = new Godot.Collections.Dictionary<GridType, int>();
             foreach (var kvp in defaultTable)
                 unitTerrainVisionBonus[kvp.Key] = kvp.Value;
-            GD.Print($"[Vision] {Name} 初始化专属地形加成矩阵（{unitTerrainVisionBonus.Count}项）");
         }
 
 }
@@ -941,7 +932,6 @@ public override void _Process(double delta)
 }
     public virtual void OnDestroyed()
     {
-        GD.Print($"[{Name}] 被摧毁，清理占领状态");
         
         // 如果正在占领中，清理占领状态
         if (currentCaptureProgress > 0 && capturingGrid != null)
@@ -1852,7 +1842,6 @@ public virtual void SetWaitVisual(bool waiting)
     // ✅ 关键修复：实际改变城市归属！
     if (grid.city != null)
         grid.city.facilityTeam = team;
-    GD.Print($"[CompleteCapture] {Name} 占领成功！{oldOwner} -> {team}");
     
     // 显示占领完成特效
     ShowCaptureCompleteEffect();
@@ -1975,12 +1964,10 @@ public virtual void OnMoveSelected()
         // ✅ 修复：检查弹药和移动后攻击权限
         if (hasPrimaryWeapon && !CanUsePrimaryWeapon() && !hasSecondaryWeapon)
         {
-            GD.Print($"[{Name}] 弹药耗尽，无法攻击");
             return;
         }
         if (!canAttackAfterMoving && state == UnitState.Moved)
         {
-            GD.Print($"[{Name}] 移动后不能攻击");
             return;
         }
 
@@ -2097,7 +2084,6 @@ public virtual void InputClick(Node viewport, InputEvent inputs, int shape_index
                 gm.gridManager != null &&
                 gm.gridManager.moveRange.Count > 0)
             {
-                GD.Print($"[InputClick] {this.Name} 忽略：当前 {gm.selectedInfantry.Name} 正在移动范围模式");
                 return;
             }
 
@@ -2113,14 +2099,12 @@ public virtual void InputClick(Node viewport, InputEvent inputs, int shape_index
                     var otherUnit = grid.infantries.FirstOrDefault(u => u != this && u != null && IsInstanceValid(u) && !u.isMoved);
                     if (otherUnit != null)
                     {
-                        GD.Print($"[InputClick] Overlapping单位 {this.Name} 点击了 {otherUnit.Name}，显示选择弹窗");
                         var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
                         actionMenu?.ShowMoveChoiceDialog(this, otherUnit, grid);
                         return;
                     }
                 }
                 
-                GD.Print($"[InputClick] {this.Name} 已移动，点击触发回退");
                 // gm?.RollbackMove(); // 不自动回退，让用户选择
                 return;
             }
@@ -2291,7 +2275,6 @@ public virtual void Attack(Infantry target)
     // ✅ 禁止隔空伤害：必须确认目标在攻击范围内
     if (!IsTargetInAttackRange(target))
     {
-        GD.PrintErr($"[Attack] {Name} 尝试攻击不在范围内的 {target.Name}，已阻止！");
         return;
     }
     
@@ -2333,7 +2316,6 @@ public virtual void Attack(Infantry target)
     // 日志
     string weaponName = weapon == WeaponType.Primary ? "主" : "副";
     int baseVal = weapon == WeaponType.Primary ? GetPrimaryDamageFromMatrix(target) : GetSecondaryDamageFromMatrix(target);
-    GD.Print($"{Name}({weaponName})→{target.Name}: 基础{baseVal} = {attackDamage} | 反击{counterDamage}");
 
     // ========== 死亡处理 ==========
     if (target.health <= 0)
@@ -2489,7 +2471,6 @@ public virtual void ReloadAmmo()
                 unit.grid.infantry = unit.grid.infantries.Count > 0 ? unit.grid.infantries[0] : null;
         }
 
-        GD.Print($"[Transport] {Name} 搭载了 {unit.Name}，当前={transportedUnits.Count}/{maxTransportCapacity}");
         return true;
     }
 
@@ -2530,7 +2511,6 @@ public virtual void ReloadAmmo()
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.unitManager?.BindUnitToGrid(unit, true);
 
-        GD.Print($"[Transport] {Name} 卸下了 {unit.Name}");
         return true;
     }
 
@@ -2557,7 +2537,6 @@ public virtual bool LoadUnit(Infantry unit)
     
     UpdateLoadedIcon();
     
-    GD.Print($"[Transport] {Name} 装载了 {unit.Name}，当前={transportedUnits.Count}/{maxTransportCapacity}");
     return true;
 }
 
@@ -2652,7 +2631,6 @@ public virtual bool UnloadUnit(Infantry unit, Grids targetGrid)
     
     UpdateLoadedIcon();
     
-    GD.Print($"[Transport] {Name} 卸下了 {unit.Name}");
     return true;
 }
 
@@ -2809,7 +2787,6 @@ public virtual void PerformSupply()
             anySupplied = true;
             unit.UpdateHpLabel();
             ShowSupplyEffect(unit, supplyText, supplyColor);
-            GD.Print($"[Transport] {Name} 补给 {unit.Name}: {supplyText}");
         }
     }
 
@@ -2873,14 +2850,12 @@ private void SetupLoadedIcon()
 {
     if (loadedIcon == null)
     {
-        GD.PrintErr($"[SetupLoadedIcon] {Name} loadedIcon 未设置！");
         return;
     }
     
     var spriteFrames = GD.Load<SpriteFrames>("res://asscets/AnimatedSprite/loaded.tres");
     if (spriteFrames == null)
     {
-        GD.PrintErr($"[SetupLoadedIcon] 无法加载 loaded.tres！");
         return;
     }
     
@@ -2889,7 +2864,6 @@ private void SetupLoadedIcon()
     string[] animNames = loadedIcon.SpriteFrames.GetAnimationNames();
     int count = animNames.Length;
     
-    GD.Print($"[SetupLoadedIcon] 找到 {count} 个动画");
     
     if (count > 0)
     {
@@ -2913,7 +2887,6 @@ private void SetupLoadedIcon()
         loadedIcon.Animation = targetAnim;
         loadedIcon.Play();
         
-        GD.Print($"[SetupLoadedIcon] 播放: {targetAnim}");
     }
     
     loadedIcon.Hide();
@@ -2984,7 +2957,6 @@ private void StopLoadedIconBlink()
 
 public void UpdateLoadedIcon()
 {
-    GD.Print($"[UpdateLoadedIcon] {Name}: transportedUnits.Count={transportedUnits.Count}");
     
     if (transportedUnits.Count > 0)
     {
@@ -3047,7 +3019,6 @@ public static void UpdateUnitsCannotMove()
         if (turnsLeft <= 0)
         {
             unitsToRemove.Add(unit);
-            GD.Print($"[Transport] {unit.Name} 恢复移动能力");
         }
         else
         {

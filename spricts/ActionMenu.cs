@@ -83,7 +83,6 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
 {
         if (transport.hasActed || transport.state == UnitState.Acted)
     {
-        GD.Print($"[ShowTransportUnloadMenu] {transport.Name} 已行动，拒绝显示卸载菜单");
         return; // ← 已行动的运输单位不能操作
     }
     currentUnit = transport;
@@ -108,7 +107,6 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
     var container = GetNodeOrNull<VBoxContainer>("unloadContainer");
     if (container == null)
     {
-        GD.PrintErr("[ShowTransportUnloadMenu] 找不到 unloadContainer");
         return;
     }
     container.Visible = true;
@@ -333,7 +331,6 @@ public void ShowTransportUnitMenu(Infantry transport, bool afterMove = false)
         }
         else
         {
-            GD.PrintErr($"[ShowTransportMenu] {transport.Name} 为空载且没有可装载目标");
         }
     }
 }
@@ -944,7 +941,6 @@ public void ShowTransportMenu(Infantry transport, bool afterMove)
         if (transport.hasActed || transport.state == UnitState.Acted || 
         (transport.isMoved && transport.isAttacked))
     {
-        GD.Print($"[ShowTransportMenu] {transport.Name} 已行动，拒绝显示菜单");
         return;
     }
     currentUnit = transport;
@@ -1822,7 +1818,6 @@ else if (weapon is Laser laser)
 
         GetTree().CurrentScene.AddChild(dialog);
 
-        GD.Print($"[ShowMoveChoiceDialog] 显示选择弹窗：{movingUnit.Name} -> {targetUnit.Name}");
     }
 
     // ========== ✅ 瞭望塔旋转菜单 ==========
@@ -1832,7 +1827,6 @@ else if (weapon is Laser laser)
 
         if (rotateButton == null)
         {
-            GD.PrintErr("[ShowGridRotateMenu] rotateButton 未绑定！请在 ActionMenu 场景中绑定 rotateButton 按钮。");
             return;
         }
 
@@ -1899,7 +1893,6 @@ else if (weapon is Laser laser)
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.fogOfWarManager?.RefreshFog();
 
-        GD.Print($"[RotateTower] 格子 {grid.GridIndex} 旋转至 {grid.towerDirection}");
     }
 
     // ========== ✅ 自爆按钮处理 ==========
@@ -2052,7 +2045,6 @@ else if (weapon is Laser laser)
 
         // 消耗照明弹
         unit.currentFlareAmmo--;
-        GD.Print($"[Illumination] {unit.Name} 在 {pendingIlluminationTarget.GridIndex} 发射照明弹，剩余 {unit.currentFlareAmmo}/{unit.maxFlareAmmo}");
 
         // 添加照明效果
         gm.fogOfWarManager?.AddIllumination(

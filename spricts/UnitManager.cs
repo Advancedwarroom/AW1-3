@@ -21,7 +21,6 @@ public partial class UnitManager : Node
         units = GetNodeOrNull("Units");
         if (units == null)
         {
-            GD.PrintErr("Units node not found in UnitManager!");
             return;
         }
 
@@ -50,7 +49,6 @@ public void RefreshUnitList()
             // 如果是 Oozium，输出日志确认
             if (unit is Oozium oozium && IsInstanceValid(oozium))
             {
-                GD.Print($"[UnitManager] 发现 Oozium: {oozium.Name}");
             }
         }
     }
@@ -73,14 +71,12 @@ public bool BindUnitToGrid(Infantry unit, bool forceRebind = false)
     // 检查是否在地图范围内
     if (!IsValidGrid(gridPos))
     {
-        GD.PrintErr($"[BindUnitToGrid] {unit.Name} 的网格坐标 {gridPos} 超出范围");
         return false;
     }
 
     var targetGrid = gridManager.map[gridPos.X, gridPos.Y];
     if (targetGrid == null)
     {
-        GD.PrintErr($"[BindUnitToGrid] {unit.Name} 的目标网格 {gridPos} 为 null");
         return false;
     }
 
@@ -95,7 +91,6 @@ public bool BindUnitToGrid(Infantry unit, bool forceRebind = false)
         
         if (blockingUnit != null)
         {
-            GD.PrintErr($"[BindUnitToGrid] {unit.Name} 无法绑定到 {gridPos}，已被 {blockingUnit.Name} 占据");
             return false;
         }
     }

@@ -124,16 +124,74 @@ public partial class GridManager : Node
         return grid.infantry != null && grid.infantry != requesting;
     }
 
-    public List<Grids> BuildPath(Grids from, Grids to)
+    public List<Grids> BuildPath(Grids from, Grids to, Infantry infantry = null)
     {
         if (from == null || to == null) return new List<Grids>();
+        if (from == to) return new List<Grids>();
+
+        if (infantry != null)
+        {
+            var open = new PriorityQueue<Grids, int>();
+            var parent = new Dictionary<Grids, Grids>();
+            var best = new Dictionary<Grids, int>();
+            open.Enqueue(from, 0);
+            parent[from] = null;
+            best[from] = 0;
+
+            while (open.Count > 0)
+            {
+                var cur = open.Dequeue();
+                int accCost = best[cur];
+
+                if (cur == to) break;
+
+                for (int i = 0; i < 4; i++)
+                {
+                    var nIdx = cur.GridIndex + offset[i];
+                    if (nIdx.X < 0 || nIdx.X >= searchRange.X ||
+                        nIdx.Y < 0 || nIdx.Y >= searchRange.Y) continue;
+
+                    var neighbor = map[nIdx.X, nIdx.Y];
+                    if (neighbor == null) continue;
+
+                    int moveCost = infantry.GetMoveCost(neighbor.gridType);
+                    if (moveCost >= 999 || moveCost == int.MaxValue) continue;
+
+                    if (infantry is not Oozium && neighbor.weapon != null)
+                        continue;
+
+                    int newCost = accCost + moveCost;
+                    if (best.TryGetValue(neighbor, out int old) && newCost >= old) continue;
+                    if (newCost > infantry.movePoints) continue;
+
+                    best[neighbor] = newCost;
+                    parent[neighbor] = cur;
+                    open.Enqueue(neighbor, newCost);
+                }
+            }
+
+            var path = new List<Grids>();
+            var walk = to;
+            while (walk != null)
+            {
+                path.Add(walk);
+                if (walk == from) break;
+                walk = parent.GetValueOrDefault(walk, null);
+            }
+            if (walk == from)
+            {
+                path.Reverse();
+                return path;
+            }
+            return new List<Grids>();
+        }
 
         var queue = new Queue<Vector2I>();
-        var parent = new Dictionary<Vector2I, Vector2I>();
+        var parent2 = new Dictionary<Vector2I, Vector2I>();
         var fromIdx = from.GridIndex;
         var toIdx = to.GridIndex;
         queue.Enqueue(fromIdx);
-        parent[fromIdx] = new Vector2I(-1, -1);
+        parent2[fromIdx] = new Vector2I(-1, -1);
 
         while (queue.Count > 0)
         {
@@ -147,25 +205,25 @@ public partial class GridManager : Node
             {
                 if (n == null) continue;
                 var nIdx = n.GridIndex;
-                if (parent.ContainsKey(nIdx)) continue;
-                parent[nIdx] = curIdx;
+                if (parent2.ContainsKey(nIdx)) continue;
+                parent2[nIdx] = curIdx;
                 queue.Enqueue(nIdx);
             }
         }
 
-        var path = new List<Grids>();
+        var path2 = new List<Grids>();
         var walkIdx = toIdx;
         while (walkIdx != new Vector2I(-1, -1))
         {
             if (walkIdx.X >= 0 && walkIdx.X < searchRange.X && walkIdx.Y >= 0 && walkIdx.Y < searchRange.Y)
             {
                 var grid = map[walkIdx.X, walkIdx.Y];
-                if (grid != null) path.Add(grid);
+                if (grid != null) path2.Add(grid);
             }
-            walkIdx = parent.GetValueOrDefault(walkIdx, new Vector2I(-1, -1));
+            walkIdx = parent2.GetValueOrDefault(walkIdx, new Vector2I(-1, -1));
         }
-        path.Reverse();
-        return path.Count > 1 ? path : new List<Grids>();
+        path2.Reverse();
+        return path2.Count > 1 ? path2 : new List<Grids>();
     }
 
     public void Init()
@@ -243,7 +301,6 @@ public partial class GridManager : Node
         var gridScene = GD.Load<PackedScene>("res://Prefabs/grid.tscn");
         if (gridScene == null)
         {
-            GD.PrintErr("[GridManager] 无法加载 grid.tscn 场景");
             return;
         }
 
@@ -262,7 +319,6 @@ public partial class GridManager : Node
 
         // 4. 重新初始化
         Init();
-        GD.Print($"[GridManager] 地图已调整为 {newWidth}×{newHeight}");
     }
 
     public Vector2I[] offset =
@@ -300,7 +356,7 @@ public partial class GridManager : Node
                 g.pathIcon.Modulate = Colors.White;
         }
 
-        previewPath = BuildPath(selectedUnit.grid, grid);
+        previewPath = BuildPath(selectedUnit.grid, grid, selectedUnit);
 
         // ✅ 将路径上在移动范围内的格子标记为紫色
         foreach (var g in previewPath)
@@ -763,7 +819,6 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         GetTree().CurrentScene.AddChild(dialog);
 
-        GD.Print($"[ShowOverlappingMoveChoiceDialog] 显示选择弹窗：{movingUnit.Name} -> {targetUnit.Name}");
     }
 
     // ✅ 究极自由：非Overlapping单位显示通用装载菜单
@@ -778,7 +833,6 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
         CloseRange();
 
-        GD.Print($"[HandleNonOverlappingTransportMount] {infantry.Name} 显示 {transport.Name} 装载菜单");
     }
 
     // ========== ✅ 核心修改：HandleGridClick ==========
@@ -845,7 +899,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             // ✅ NonOverlapping单位检查路径上的不可移动格子，有则截断待机
             if (infantry.overlapType == UnitOverlapType.NonOverlapping)
             {
-                var path = BuildPath(infantry.grid, to);
+                var path = BuildPath(infantry.grid, to, infantry);
                 Grids lastValidGrid = infantry.grid;
                 
                 for (int i = 1; i < path.Count; i++)
@@ -918,7 +972,6 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.ClearSelectedInfantry();
         
-        GD.Print($"[ForceOoziumActed] {oozium.Name} 吞噬完成，强制结束行动！");
     }
 
     private bool CanMoveToGrid(Grids grid, Infantry requestingUnit, bool checkPassThrough = false)
@@ -1005,7 +1058,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             to.infantry = null;
         }
 
-        var path = BuildPath(infantry.grid, to);
+        var path = BuildPath(infantry.grid, to, infantry);
         if (path.Count == 0) return;
 
         int totalMoveCost = 0;
@@ -1125,19 +1178,18 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
     // ========== ✅ 新增：移动截断（正序路径检查，遇到不可移动格子截断后待机） ==========
     public void HandleTruncatedMove(Infantry infantry, Grids target)
-    {
-        var path = BuildPath(infantry.grid, target);
+    {        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        var path = BuildPath(infantry.grid, target, infantry);
         if (path.Count <= 1)
         {
             CloseRange();
             var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
             actionMenu?.Hide();
-            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.ClearSelectedInfantry();
             return;
         }
 
-        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+
 
         // 从起点正序检查路径，找最后一个可停留的格子
         Grids truncatedTarget = infantry.grid;

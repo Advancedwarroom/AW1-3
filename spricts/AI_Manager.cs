@@ -49,7 +49,6 @@ public partial class AI_Manager : Node
         string phaseTeam = TeamHelper.GetPhaseTeamName(gameManager.turnPhase);
         if (!IsAITeam(phaseTeam)) return;
 
-        GD.Print($"[AI] {phaseTeam} AI 回合开始");
 
         // 先执行生产（在单位行动之前）
         AIProduction(phaseTeam);
@@ -96,7 +95,6 @@ public partial class AI_Manager : Node
         {
             if (weapon.CanAttack())
             {
-                GD.Print($"[AI] 兵器行动: {weapon.Name}");
                 weapon.ExecuteAI();
             }
         }
@@ -104,7 +102,6 @@ public partial class AI_Manager : Node
         {
             if (unit.state != UnitState.Acted)
             {
-                GD.Print($"[AI] 单位行动: {unit.Name}");
                 ExecuteUnitAI(unit);
             }
         }
@@ -131,7 +128,6 @@ public partial class AI_Manager : Node
         {
             if (!HasPendingActions(phaseTeam))
             {
-                GD.Print($"[AI] {phaseTeam} 无剩余行动，自动切换回合");
                 gameManager.NextPhase();
             }
         };
@@ -469,7 +465,7 @@ public partial class AI_Manager : Node
         if (gridMgr == null) return;
 
         // 计算路径和消耗
-        var path = gridMgr.BuildPath(unit.grid, to);
+        var path = gridMgr.BuildPath(unit.grid, to, unit);
         if (path.Count == 0) { AIEndTurn(unit); return; }
 
         int totalMoveCost = 0;
@@ -507,7 +503,6 @@ public partial class AI_Manager : Node
         unit.originalGrid = null;
 
         gameManager?.fogOfWarManager?.OnUnitMoved();
-        GD.Print($"[AI] {unit.Name} 移动到 {to.GridIndex}");
     }
 
     private void AIAttack(Infantry unit, Infantry target)
@@ -515,7 +510,6 @@ public partial class AI_Manager : Node
         if (unit == null || target == null || !IsInstanceValid(target)) return;
         if (!IsInAttackRange(unit, target)) { AIEndTurn(unit); return; }
 
-        GD.Print($"[AI] {unit.Name} 攻击 {target.Name}");
 
         // ✅ 攻击前动画闪烁：让玩家看到攻击过程
         if (unit.sprite != null)
@@ -543,7 +537,6 @@ public partial class AI_Manager : Node
             unit.SetWaitVisual(true);
         }
         unit.originalGrid = null;
-        GD.Print($"[AI] {unit.Name} 结束行动");
     }
 
     // ========== AI 智能生产系统 ==========
@@ -602,7 +595,6 @@ public partial class AI_Manager : Node
                 if (success)
                 {
                     currentFunds -= cost;
-                    GD.Print($"[AI-Production] {team} 在 {grid.GridIndex} 生产了 {candidate.Name}，花费 {cost}，剩余资金 {currentFunds}");
                     break; // 每个设施每回合只生产一个单位
                 }
             }
@@ -679,7 +671,6 @@ public partial class AI_Manager : Node
         // 补给价值阈值：至少有一个单位需要补给
         if (supplyValue > 0)
         {
-            GD.Print($"[AI-Supply] {unit.Name} 执行补给，价值:{supplyValue}");
             unit.PerformSupply();
             unit.isAttacked = true;
             unit.state = UnitState.Acted;
@@ -746,7 +737,6 @@ public partial class AI_Manager : Node
         // 照明价值阈值：至少照亮一个敌人或照亮大片未知区域
         if (bestTarget != null && bestValue >= 25)
         {
-            GD.Print($"[AI-Illuminate] {unit.Name} 在 {bestTarget.GridIndex} 发射照明弹，价值:{bestValue}");
             unit.currentFlareAmmo--;
             fog.AddIllumination(bestTarget, unit.minIlluminationRange, unit.maxIlluminationRange, unit.flareDurationTurns);
             unit.isMoved = true;
@@ -800,7 +790,6 @@ public partial class AI_Manager : Node
         int selfValue = unit.health * unit.baseAttack / 100;
         if (totalEnemyDamage > selfValue * 1.5f && enemyCount >= 2 && totalEnemyDamage > totalAllyDamage * 2)
         {
-            GD.Print($"[AI-Explode] {unit.Name} 决定自爆！敌方伤害:{totalEnemyDamage}, 自身价值:{selfValue}, 敌人数量:{enemyCount}");
             gm.ExecuteExplosion(unit);
             return true;
         }

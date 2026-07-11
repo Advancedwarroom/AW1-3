@@ -58,6 +58,5 @@ public partial class Base : City
             : Colors.White;
         animSprite.Modulate = tint;
 
-        GD.Print($"[Base] {ParentGrid?.GridIndex} 视觉切换为 {facilityTeam} -> 动画 {animName}");
     }
 }

@@ -213,14 +213,12 @@ public override void _Input(InputEvent @event)
                 {
                     // 向右滑：顺时针转
                     RotateDirection();
-                    GD.Print($"[BlackCannon] 右滑转向 → {direction}");
                 }
                 else
                 {
                     // 向左滑：逆时针转
                     direction = (CannonDirection)(((int)direction + 3) % 4); // +3 = -1 (mod 4)
                     UpdateDirectionVisual();
-                    GD.Print($"[BlackCannon] 左滑转向 → {direction}");
                 }
                 GetViewport().SetInputAsHandled();
             }
@@ -358,7 +356,6 @@ private void InitializeCooldownState()
         // 1. 检查弹药
         if (useAmmoSystem && currentAmmo <= 0)
         {
-            GD.Print($"[BlackCannon] {Name} 弹药耗尽！无法攻击");
             return false;
         }
 
@@ -367,13 +364,11 @@ private void InitializeCooldownState()
         {
             if (!cooldownReady)
             {
-                GD.Print($"[BlackCannon] {Name} 冷却中... 还需 {cooldownTurns - turnsSinceLastAttack} 回合");
                 return false;
             }
 
             if (attacksRemainingInCycle <= 0)
             {
-                GD.Print($"[BlackCannon] {Name} 本周期攻击次数已用完 ({attacksPerCooldown}次)");
                 return false;
             }
         }
@@ -388,12 +383,10 @@ private void InitializeCooldownState()
 
         if (currentAmmo <= 0)
         {
-            GD.Print($"[BlackCannon] {Name} 弹药不足！当前:{currentAmmo}");
             return false;
         }
 
         currentAmmo--;
-        GD.Print($"[BlackCannon] {Name} 消耗1发弹药，剩余:{currentAmmo}");
         UpdateAmmoVisual();
         return true;
     }
@@ -403,14 +396,12 @@ private void InitializeCooldownState()
     {
         if (!useAmmoSystem)
         {
-            GD.Print($"[BlackCannon] {Name} 使用无限弹药，无需补给");
             return false;
         }
 
         // 检查是否需要补给（现有弹药 < 最大弹药）
         if (currentAmmo >= maxAmmo)
         {
-            GD.Print($"[BlackCannon] {Name} 弹药已满 ({currentAmmo}/{maxAmmo})，无需补给");
             return false;
         }
 
@@ -418,7 +409,6 @@ private void InitializeCooldownState()
         int oldAmmo = currentAmmo;
         currentAmmo = maxAmmo;
 
-        GD.Print($"[BlackCannon] {Name} 补给完成：{oldAmmo} → {currentAmmo} (上限{maxAmmo})");
         UpdateAmmoVisual();
 
         // 播放补给特效
@@ -492,7 +482,6 @@ private void InitializeCooldownState()
         // 顺时针旋转90度
         direction = (CannonDirection)(((int)direction + 1) % 4);
         UpdateDirectionVisual();
-        GD.Print($"[BlackCannon] {Name} 转向 → {direction}");
     }
 
     public void UpdateDirectionVisual()
@@ -502,7 +491,6 @@ private void InitializeCooldownState()
         if (animSprite.SpriteFrames.HasAnimation(anim))
             animSprite.Play(anim);
         else
-            GD.PrintErr($"[BlackCannon] 找不到动画：{anim}");
     }
 
     // 计算三角形攻击范围内的所有格子
@@ -597,7 +585,6 @@ public override void TakeDamage(int damage)
         if (destroyedGrid != null && (destroyedGrid.gridType == GridType.PIPESEAM || destroyedGrid.gridType == GridType.METEORITE))
         {
             string terrainName = destroyedGrid.gridType == GridType.PIPESEAM ? "PIPESEAM" : "METEORITE";
-            GD.Print($"[BlackCannon] {Name} 被消灭，所在 {terrainName} 将切换为 BROKENPIPE");
 
             // 切换地形
             destroyedGrid.gridType = GridType.BROKENPIPE;
@@ -612,7 +599,6 @@ public override void TakeDamage(int damage)
                      .SetEase(Tween.EaseType.InOut);
             }
 
-            GD.Print($"[BlackCannon] {destroyedGrid.GridIndex} 已从 {terrainName} 切换为 BROKENPIPE");
         }
 
         // 现在可以安全清空 grid
@@ -685,7 +671,6 @@ public override void TakeDamage(int damage)
         // ✅ 再次检查弹药和冷却
         if (!HasAmmoAndCooldown())
         {
-            GD.Print($"[BlackCannon] {Name} 攻击失败：弹药或冷却不足");
             return;
         }
 
@@ -704,7 +689,6 @@ public override void TakeDamage(int damage)
         if (useCooldownSystem)
         {
             attacksRemainingInCycle--;
-            GD.Print($"[BlackCannon] {Name} 周期剩余次数:{attacksRemainingInCycle}/{attacksPerCooldown}");
         }
 
         if (target is Infantry infantry)
@@ -776,7 +760,6 @@ public override void TakeDamage(int damage)
         // 严格有效性检查
         if (targetWeapon == null || !IsInstanceValid(targetWeapon)) 
         {
-            GD.Print("[PerformAttackOnWeapon] 目标无效，取消攻击");
             return;
         }
 
@@ -785,7 +768,6 @@ public override void TakeDamage(int damage)
         string targetName = targetWeapon.Name;
         int targetHealth = targetWeapon.health;
 
-        GD.Print($"[PerformAttackOnWeapon] {Name} 攻击 {targetName}，当前血量:{targetHealth}");
 
         // 计算伤害
         int damage;
@@ -1025,7 +1007,6 @@ public override void TakeDamage(int damage)
         }
         catch (System.Exception e)
         {
-            GD.PrintErr($"[SafeQueueFree] 销毁失败: {e.Message}");
         }
     }
 
@@ -1051,7 +1032,6 @@ public override void TakeDamage(int damage)
         // 严格有效性检查
         if (target == null || !IsInstanceValid(target)) 
         {
-            GD.Print("[PerformAttack] 目标无效，取消攻击");
             return;
         }
 
@@ -1059,7 +1039,6 @@ public override void TakeDamage(int damage)
         Vector2 targetPos = target.GlobalPosition;
         string targetName = target.Name;
 
-        GD.Print($"[PerformAttack] {Name} 攻击 {targetName}");
 
         // 根据模式应用伤害
         if (useModifiedDamage)
@@ -1105,17 +1084,14 @@ public override void OnTurnStart()
                 if (storeAttacks)
                 {
                     attacksRemainingInCycle = Mathf.Min(attacksPerCooldown + attacksRemainingInCycle, attacksPerCooldown * 2);
-                    GD.Print($"[BlackCannon] {Name} 冷却完成！存次数模式：剩余{attacksRemainingInCycle}次");
                 }
                 else
                 {
                     attacksRemainingInCycle = attacksPerCooldown;
-                    GD.Print($"[BlackCannon] {Name} 冷却完成！次数重置为{attacksPerCooldown}次");
                 }
             }
             else
             {
-                GD.Print($"[BlackCannon] {Name} 冷却中... {turnsSinceLastAttack}/{cooldownTurns}回合");
             }
         }
         else
@@ -1126,11 +1102,9 @@ public override void OnTurnStart()
                 // 次数用完且不留存，需要重新冷却
                 cooldownReady = false;
                 turnsSinceLastAttack = 0; // 从0开始计数，下次调用时变成1
-                GD.Print($"[BlackCannon] {Name} 次数用完，开始新的冷却周期");
             }
             else
             {
-                GD.Print($"[BlackCannon] {Name} 冷却就绪，剩余次数:{attacksRemainingInCycle}");
             }
         }
     }
@@ -1161,14 +1135,12 @@ public override void OnTurnStart()
                 // 不存次数：回合结束清空剩余次数
                 if (attacksRemainingInCycle > 0)
                 {
-                    GD.Print($"[BlackCannon] {Name} 回合结束，未使用次数清零（{attacksRemainingInCycle}次浪费）");
                     attacksRemainingInCycle = 0;
                 }
             }
             else
             {
                 // 存次数：保留到下一周期（已在OnTurnStart中处理累加）
-                GD.Print($"[BlackCannon] {Name} 回合结束，保留{attacksRemainingInCycle}次到下一周期");
             }
         }
     }
@@ -1221,7 +1193,6 @@ public override void OnTurnStart()
         if (weapon.grid != null && (weapon.grid.gridType == GridType.PIPESEAM || weapon.grid.gridType == GridType.METEORITE))
         {
             string terrainName = weapon.grid.gridType == GridType.PIPESEAM ? "PIPESEAM" : "METEORITE";
-            GD.Print($"[BlackCannon] 被消灭兵器位于 {terrainName}，准备切换为 GROUND");
             var targetGrid = weapon.grid;
 
             // 清理兵器引用
@@ -1240,7 +1211,6 @@ public override void OnTurnStart()
                 tween.TweenProperty(sprite, "modulate", new Color(0.3f, 0.3f, 0.3f), 0.5f);
             }
 
-            GD.Print($"[BlackCannon] {targetGrid.GridIndex} 已从 {terrainName} 切换为 GROUND");
         }
 
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -1297,7 +1267,6 @@ public override void OnTurnStart()
         }
 
         target.UpdateHpLabel();
-        GD.Print($"[BlackCannon] {Name} 轰击 {target.Name}，" +
                  (CanDestroy ? "造成" : "锁血造成") + $" {damage} 点伤害");
 
         if (target.health <= 0)
@@ -1325,7 +1294,6 @@ public override void OnTurnStart()
             {
                 target.health -= healthChange;
             }
-            GD.Print($"[BlackCannon] {Name} 对 {target.Name} 造成 {healthChange} 点伤害（改良模式）");
         }
         else if (modifiedHealthPercent < 0)
         {
@@ -1337,14 +1305,12 @@ public override void OnTurnStart()
             {
                 // 允许超出血量上限
                 target.health += healthChange;
-                GD.Print($"[BlackCannon] {Name} 为 {target.Name} 回复 {healthChange} 点生命（突破上限！当前:{target.health}）");
             }
             else
             {
                 // 默认：不能超过maxHealth
                 target.health = Mathf.Min(target.maxHealth, target.health + healthChange);
                 int actualHeal = target.health - oldHealth;
-                GD.Print($"[BlackCannon] {Name} 为 {target.Name} 回复 {actualHeal} 点生命（改良模式）");
             }
 
             ShowHealEffect(target);
@@ -1360,7 +1326,6 @@ public override void OnTurnStart()
             if (modifiedAmmoPercent > 0)
             {
                 target.currentPrimaryAmmo = Mathf.Max(0, target.currentPrimaryAmmo - ammoChange);
-                GD.Print($"[BlackCannon] {Name} 对 {target.Name} 消耗 {ammoChange} 发弹药");
             }
             else
             {
@@ -1368,14 +1333,12 @@ public override void OnTurnStart()
                 if (canOverMaxHp)
                 {
                     target.currentPrimaryAmmo += ammoChange;
-                    GD.Print($"[BlackCannon] {Name} 为 {target.Name} 补充 {ammoChange} 发弹药（突破上限！当前:{target.currentPrimaryAmmo}）");
                 }
                 else
                 {
                     int oldAmmo = target.currentPrimaryAmmo;
                     target.currentPrimaryAmmo = Mathf.Min(target.maxPrimaryAmmo, target.currentPrimaryAmmo + ammoChange);
                     int actualReload = target.currentPrimaryAmmo - oldAmmo;
-                    GD.Print($"[BlackCannon] {Name} 为 {target.Name} 补充 {actualReload} 发弹药");
                 }
             }
         }
@@ -1388,7 +1351,6 @@ public override void OnTurnStart()
             if (modifiedFuelPercent > 0)
             {
                 target.fuel = Mathf.Max(0, target.fuel - fuelChange);
-                GD.Print($"[BlackCannon] {Name} 对 {target.Name} 消耗 {fuelChange} 点燃料");
             }
             else
             {
@@ -1396,14 +1358,12 @@ public override void OnTurnStart()
                 if (canOverMaxHp)
                 {
                     target.fuel += fuelChange;
-                    GD.Print($"[BlackCannon] {Name} 为 {target.Name} 补充 {fuelChange} 点燃料（突破上限！当前:{target.fuel}）");
                 }
                 else
                 {
                     int oldFuel = target.fuel;
                     target.fuel = Mathf.Min(target.maxFuel, target.fuel + fuelChange);
                     int actualRefuel = target.fuel - oldFuel;
-                    GD.Print($"[BlackCannon] {Name} 为 {target.Name} 补充 {actualRefuel} 点燃料");
                 }
             }
         }
@@ -1442,7 +1402,6 @@ public override void OnTurnStart()
                     targetWeapon.health = 0;
                 }
             }
-            GD.Print($"[BlackCannon] {Name} 对 {targetWeapon.Name} 造成 {healthChange} 点伤害（改良模式）");
         }
         else if (modifiedHealthPercent < 0)
         {
@@ -1452,13 +1411,11 @@ public override void OnTurnStart()
             if (canOverMaxHp)
             {
                 targetWeapon.health += healthChange;
-                GD.Print($"[BlackCannon] {Name} 为 {targetWeapon.Name} 修复 {healthChange} 点耐久（突破上限！当前:{targetWeapon.health}）");
             }
             else
             {
                 targetWeapon.health = Mathf.Min(targetWeapon.maxHealth, targetWeapon.health + healthChange);
                 int actualHeal = targetWeapon.health - oldHealth;
-                GD.Print($"[BlackCannon] {Name} 为 {targetWeapon.Name} 修复 {actualHeal} 点耐久（改良模式）");
             }
 
             ShowHealEffect(targetWeapon);
@@ -1469,7 +1426,6 @@ public override void OnTurnStart()
         // ✅ 关键修复：如果需要销毁，先清理引用再延迟销毁
         if (willBeDestroyed)
         {
-            GD.Print($"[BlackCannon] {targetWeapon.Name} 被改良攻击摧毁！");
 
             // 立即从格子移除引用
             if (targetWeapon.grid != null)
@@ -1688,7 +1644,6 @@ public override void OnTurnStart()
 
         if (bestTarget != null)
         {
-            GD.Print($"[BlackCannon AI] {Name} 自动攻击 {bestTarget.Name}");
             if (bestTarget is Infantry inf)
                 PerformAttack(inf);
             else if (bestTarget is Weapon wp)
@@ -1715,7 +1670,6 @@ public override void OnTurnStart()
         target.TakeDamage(damage);
         hasActed = true;
         remainingAttacks = 0;
-        GD.Print($"[BlackCannon AI] {Name} 对 {target.Name} 造成 {damage} 伤害");
     }
 }
 

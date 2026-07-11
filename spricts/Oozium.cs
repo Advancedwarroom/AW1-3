@@ -85,7 +85,6 @@ public override void _Ready()
         {
             if (mouseEvent.ButtonIndex == MouseButton.Left)
             {
-                GD.Print($"[Oozium] {Name} 被点击！");
                 
                 var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
                 if (gm == null) return;
@@ -129,12 +128,10 @@ public override void _Ready()
                         if (prevUnit.state == UnitState.Moved && 
                             prevUnit.overlapType == UnitOverlapType.NonOverlapping)
                         {
-                            GD.Print($"[Oozium] {prevUnit.Name} 执行回退");
                             gm.Call("RollbackMove");
                         }
                         else if (prevUnit.state == UnitState.Moved)
                         {
-                            GD.Print($"[Oozium] {prevUnit.Name} 不回退，直接清理选中");
                             gm.ClearSelectedInfantry();
                         }
                     }
@@ -144,7 +141,6 @@ public override void _Ready()
                 }
                 else
                 {
-                    GD.Print($"[Oozium] 当前回合阶段不允许 {team} 操作");
                 }
             }
         }

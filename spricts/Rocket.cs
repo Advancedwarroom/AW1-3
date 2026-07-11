@@ -199,12 +199,10 @@ public partial class Rocket : Infantry
         if (attackType == AttackType.NoAttack) return;
         if (!CanUsePrimaryWeapon())
         {
-            GD.Print($"[Rocket] {Name} 弹药耗尽，无法攻击");
             return;
         }
         if (!canAttackAfterMoving && state == UnitState.Moved)
         {
-            GD.Print($"[Rocket] {Name} 移动后不能攻击");
             return;
         }
         if (animSprite != null) animSprite.Modulate = dim;

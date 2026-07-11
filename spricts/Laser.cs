@@ -154,7 +154,6 @@ public partial class Laser : Weapon
             enabledAngles.Add(normalized);
             enabledAngles.Sort();
             angleConfig[normalized] = true;
-            GD.Print($"[Laser] {Name} 启用角度: {normalized}°");
         }
     }
 
@@ -172,7 +171,6 @@ public partial class Laser : Weapon
             }
             angleConfig[normalized] = false;
             rayCache.Clear();
-            GD.Print($"[Laser] {Name} 禁用角度: {normalized}°");
         }
     }
 
@@ -193,7 +191,6 @@ public partial class Laser : Weapon
             initialFireAngles[angle] = true;
         rayCache.Clear();
         UpdateLaserVisual();
-        GD.Print($"[Laser] {Name} 设置发射角度: {string.Join(", ", currentFireAngles.Select(a => $"{a}°"))}");
     }
 
     public void AddFireAngle(float angle)
@@ -206,7 +203,6 @@ public partial class Laser : Weapon
             initialFireAngles[normalized] = true;
             rayCache.Clear();
             UpdateLaserVisual();
-            GD.Print($"[Laser] {Name} 添加发射角度: {normalized}°");
         }
     }
 
@@ -219,7 +215,6 @@ public partial class Laser : Weapon
             initialFireAngles[normalized] = false;
             rayCache.Clear();
             UpdateLaserVisual();
-            GD.Print($"[Laser] {Name} 移除发射角度: {normalized}°");
         }
     }
 
@@ -296,7 +291,6 @@ public partial class Laser : Weapon
         currentFireAngles = newFireAngles;
         rayCache.Clear();
         UpdateLaserVisual();
-        GD.Print($"[Laser] {Name} 旋转至: {string.Join(", ", currentFireAngles.Select(a => $"{a}°"))}");
     }
 
     // ========== 射线计算 ==========

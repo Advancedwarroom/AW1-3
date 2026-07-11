@@ -264,7 +264,6 @@ public partial class APC : Infantry
 
     public override void OnAttackSelected()
     {
-        GD.Print($"[APC] {Name} 显示补给范围");
     }
 
     public override void InputClick(Node viewport, InputEvent inputs, int shape_index)

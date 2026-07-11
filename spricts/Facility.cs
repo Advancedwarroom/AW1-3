@@ -82,7 +82,6 @@ public partial class Facility : Node2D
         {
             if (capturingUnits.Select(u => u.team).Distinct().Count() > 1)
             {
-                GD.Print($"[Facility] 争夺状态！不同阵营在同时占领 {ParentGrid?.GridIndex}");
                 foreach (var u in capturingUnits) u.currentCaptureProgress = 0;
                 ShowCaptureContestVisual();
             }
@@ -131,7 +130,6 @@ public partial class Facility : Node2D
         var tween = CreateTween();
         tween.TweenProperty(sprite, "modulate", teamColor, 0.5f);
 
-        GD.Print($"[UpdateCityVisual] 城市 {ParentGrid.GridIndex} 变为 {facilityTeam} 颜色");
     }
 
     public void ShowCaptureContestVisual()

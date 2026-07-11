@@ -93,9 +93,9 @@ public partial class Weapon : Node2D
     public virtual void ExecuteAI() { }
 
     public virtual void OnTurnEnd() { }
-    public virtual void ShowAttackRange() { GD.PrintErr($"[Weapon] {Name} 未实现 ShowAttackRange!"); }
-    public virtual void PerformAttack(Infantry target) { GD.PrintErr($"[Weapon] {Name} 未实现 PerformAttack!"); }
-    public virtual void RotateDirection() { if (!canRotate) return; GD.Print($"[Weapon] {Name} 旋转方向"); }
+    public virtual void ShowAttackRange() { }
+    public virtual void PerformAttack(Infantry target) { }
+    public virtual void RotateDirection() { if (!canRotate) return; }
 
     [ExportGroup("AI控制")]
     [Export] public bool isAIControlled = false;
@@ -152,7 +152,6 @@ public partial class Weapon : Node2D
 
     protected virtual void OnDestroyed()
     {
-        GD.Print($"[Weapon] 被销毁：{Name}");
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.gridManager?.ClearWeaponRange();
         Grids.IsForceActionMode = false;

@@ -66,6 +66,5 @@ public partial class AirPort : City
             : Colors.White;
         animSprite.Modulate = tint;
 
-        GD.Print($"[AirPort] {ParentGrid?.GridIndex} 视觉切换为 {facilityTeam} -> 动画 {animName}");
     }
 }

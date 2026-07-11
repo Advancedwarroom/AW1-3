@@ -19,7 +19,6 @@ public partial class WeaponManager : Node
         weaponsNode = GetNodeOrNull("Weapons");
         if (weaponsNode == null)
         {
-            GD.PrintErr("Weapons node not found in WeaponManager!");
             return;
         }
 
@@ -157,7 +156,6 @@ public void RemoveWeapon(Weapon weapon)
     if (weapon.grid != null && (weapon.grid.gridType == GridType.PIPESEAM || weapon.grid.gridType == GridType.METEORITE))
     {
         string terrainName = weapon.grid.gridType == GridType.PIPESEAM ? "PIPESEAM" : "METEORITE";
-        GD.Print($"[WeaponManager] 兵器 {weapon.Name} 被消灭，{terrainName} -> BROKENPIPE");
         var targetGrid = weapon.grid;
 
         targetGrid.weapons.Remove(weapon);

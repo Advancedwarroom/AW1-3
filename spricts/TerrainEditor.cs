@@ -680,7 +680,6 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
     var scene = GD.Load<PackedScene>(scenePath);
     if (scene == null)
     {
-        GD.PrintErr($"[Spawn] 无法加载场景: {scenePath}");
         spawnHintLabel.Text = $"❌ 错误：无法加载场景\n{scenePath}";
         spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
         return;
@@ -736,11 +735,9 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
         spawnHintLabel.Text = $"✅ 生成成功: {unit.Name}";
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
 
-        GD.Print($"[Spawn] 生成单位: {unit.Name} at {grid.GridIndex}, team={team}");
     }
     catch (Exception e)
     {
-        GD.PrintErr($"[Spawn] 生成失败: {e.Message}");
         spawnHintLabel.Text = $"❌ 生成失败: {e.Message}";
         spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
     }
@@ -756,7 +753,6 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
     var scene = GD.Load<PackedScene>(scenePath);
     if (scene == null)
     {
-        GD.PrintErr($"[Spawn] 无法加载场景: {scenePath}");
         return;
     }
 
@@ -817,11 +813,9 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
         spawnHintLabel.Text = $"✅ 生成兵器: {weapon.Name}";
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
 
-        GD.Print($"[Spawn] 生成兵器: {weapon.Name} at {grid.GridIndex}, team={team}");
     }
     catch (Exception e)
     {
-        GD.PrintErr($"[Spawn] 兵器生成失败: {e.Message}");
         spawnHintLabel.Text = $"❌ 生成失败: {e.Message}";
         spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
     }
@@ -899,7 +893,6 @@ private void ExecuteDestroy(object target)
     }
     catch (Exception e)
     {
-        GD.PrintErr($"[Destroy] 销毁失败: {e.Message}");
         spawnHintLabel.Text = $"❌ 销毁失败: {e.Message}";
     }
 }
@@ -1020,7 +1013,6 @@ public void OnGridClickedForEdit(Grids grid)
     {
         grid.gridType = batchTerrainType;
         UpdateGridVisual(grid);
-        GD.Print($"[BatchTerrain] 放置 {batchTerrainType} @ {grid.GridIndex}");
         return;
     }
 
@@ -1638,7 +1630,6 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
                 if (currentEditingTarget is Laser laser)
                 {
                     laser.ApplyAngleConfigChanges();
-                    GD.Print($"[TerrainEditor] Laser {laser.Name} 角度配置已应用");
                 }
             };
             mainVbox.AddChild(applyBtn);
@@ -2059,7 +2050,6 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         selectionButtonContainer.AddChild(facilityBtn);
         optionCount++;
 
-        GD.Print($"[TerrainEditor] 显示选择菜单，共 {optionCount} 个选项");
 
         var viewportSize = GetViewport().GetVisibleRect().Size;
         selectionMenuPanel.Position = new Vector2(
@@ -2505,7 +2495,6 @@ private void BuildGridPropertyEditor(Grids grid)
 
 private void OnPropertyChanged(object target, string propertyName)
 {
-    GD.Print($"[PropertyEditor] {target.GetType().Name}.{propertyName} 已修改");
 
     if (target is Grids grid)
     {
@@ -2662,7 +2651,6 @@ private void OnSaveProperties()
 {
     if (currentEditingTarget == null) return;
 
-    GD.Print($"[PropertyEditor] 保存 {currentEditingTarget.GetType().Name} 的修改");
 
     if (currentEditingTarget is Infantry unit)
     {
@@ -2689,7 +2677,6 @@ private void OnSaveProperties()
         // 刷新战争迷雾（因为视野属性可能变了）
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.fogOfWarManager?.ForceRefresh();
-        GD.Print($"[PropertyEditor] 格子 {grid.GridIndex} 属性已保存");
     }
 
     ClosePropertyEditor();
@@ -2863,7 +2850,6 @@ private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
         facility.UpdateCityVisual();
     }
     
-    GD.Print($"[TerrainEditor] 在 {grid.GridIndex} 生成 {facility.GetType().Name} 设施，势力={team}");
     
     spawnHintLabel.Text = $"✅ 生成设施: {facility.GetType().Name} ({team})";
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
@@ -2879,7 +2865,6 @@ private void DestroyFacilityAtGrid(Grids grid)
     grid.city.QueueFree();
     grid.city = null;
     
-    GD.Print($"[TerrainEditor] 在 {grid.GridIndex} 摧毁设施");
     
     // 刷新菜单
     OpenFacilityMenu(grid);
@@ -3172,7 +3157,6 @@ public void SetEditMode(bool editMode)
         }
         
         fogStateBeforeEdit = fowManager?.isFogOfWarEnabled ?? true;
-        GD.Print($"[TerrainEditor] 进入编辑模式，记录迷雾状态: {fogStateBeforeEdit}");
 
         // ✅ 关闭迷雾
         gameManager?.SetFogOfWarEnabled(false);
@@ -3205,7 +3189,6 @@ public void SetEditMode(bool editMode)
             batchTerrainBtn.Visible = false;
         StopBatchTerrainMode();
 
-        GD.Print($"[TerrainEditor] 退出编辑模式，恢复迷雾状态: {fogStateBeforeEdit}");
         
         // ✅ 关键修复：先恢复迷雾状态，再解锁UI
         gameManager?.SetFogOfWarEnabled(fogStateBeforeEdit);
@@ -3233,7 +3216,6 @@ private void DeferredRefreshFog()
     if (fowManager != null)
     {
         fowManager.ForceRefresh();
-        GD.Print("[TerrainEditor] 延迟刷新迷雾完成");
     }
 }
    private void CloseAllMenus()
@@ -3272,7 +3254,6 @@ private void OnTerrainSelected(GridType newTerrain)
         propertyEditorTitle.Text = $"编辑格子: {selectedGrid.GridIndex} ({selectedGrid.gridType})";
     }
     
-    GD.Print($"[TerrainEditor] 地形修改: {oldTerrain} -> {newTerrain} @ {selectedGrid.GridIndex}");
 
 }    private void UpdateGridVisual(Grids grid)
     {
@@ -3394,7 +3375,6 @@ private void OnTerrainSelected(GridType newTerrain)
                         lastBatchGrid = grid;
                         grid.gridType = batchTerrainType;
                         UpdateGridVisual(grid);
-                        GD.Print($"[BatchTerrain] 滑动铺设 {batchTerrainType} @ ({x},{y})");
                     }
                 }
             }
@@ -3649,7 +3629,6 @@ private void RefreshAllUnitVision()
         }
 
         gameManager?.fogOfWarManager?.RefreshFog();
-        GD.Print("[GlobalConfig] 所有单位视野已刷新");
     }
 
 
@@ -3772,7 +3751,6 @@ private void RefreshAllUnitVision()
         p1FundsSpin.AddThemeFontSizeOverride("font_size", 12);
         p1FundsSpin.ValueChanged += (newVal) => {
             if (gm != null) gm.p1Funds = (int)newVal;
-            GD.Print($"[全局配置] P1 现有资金 = {newVal}");
         };
         p1FundsHBox.AddChild(p1FundsSpin);
         globalConfigContainer.AddChild(p1FundsHBox);
@@ -3793,7 +3771,6 @@ private void RefreshAllUnitVision()
         p1MaxSpin.AddThemeFontSizeOverride("font_size", 12);
         p1MaxSpin.ValueChanged += (newVal) => {
             if (gm != null) gm.p1FundsMax = (int)newVal;
-            GD.Print($"[全局配置] P1 资金上限 = {newVal}");
         };
         p1MaxHBox.AddChild(p1MaxSpin);
         globalConfigContainer.AddChild(p1MaxHBox);
@@ -3814,7 +3791,6 @@ private void RefreshAllUnitVision()
         p2FundsSpin.AddThemeFontSizeOverride("font_size", 12);
         p2FundsSpin.ValueChanged += (newVal) => {
             if (gm != null) gm.p2Funds = (int)newVal;
-            GD.Print($"[全局配置] P2 现有资金 = {newVal}");
         };
         p2FundsHBox.AddChild(p2FundsSpin);
         globalConfigContainer.AddChild(p2FundsHBox);
@@ -3835,7 +3811,6 @@ private void RefreshAllUnitVision()
         p2MaxSpin.AddThemeFontSizeOverride("font_size", 12);
         p2MaxSpin.ValueChanged += (newVal) => {
             if (gm != null) gm.p2FundsMax = (int)newVal;
-            GD.Print($"[全局配置] P2 资金上限 = {newVal}");
         };
         p2MaxHBox.AddChild(p2MaxSpin);
         globalConfigContainer.AddChild(p2MaxHBox);
@@ -3858,7 +3833,6 @@ private void RefreshAllUnitVision()
         p1AiCheck.CustomMinimumSize = new Vector2(28, 28);
         p1AiCheck.Toggled += (pressed) => {
             if (aiMgr != null) aiMgr.p1AIEnabled = pressed;
-            GD.Print($"[全局配置] P1 AI = {pressed}");
         };
         p1AiHBox.AddChild(p1AiCheck);
         globalConfigContainer.AddChild(p1AiHBox);
@@ -3875,7 +3849,6 @@ private void RefreshAllUnitVision()
         p2AiCheck.CustomMinimumSize = new Vector2(28, 28);
         p2AiCheck.Toggled += (pressed) => {
             if (aiMgr != null) aiMgr.p2AIEnabled = pressed;
-            GD.Print($"[全局配置] P2 AI = {pressed}");
         };
         p2AiHBox.AddChild(p2AiCheck);
         globalConfigContainer.AddChild(p2AiHBox);
@@ -3892,7 +3865,6 @@ private void RefreshAllUnitVision()
         autoEndCheck.CustomMinimumSize = new Vector2(28, 28);
         autoEndCheck.Toggled += (pressed) => {
             if (aiMgr != null) aiMgr.autoEndTurn = pressed;
-            GD.Print($"[全局配置] 自动切换回合 = {pressed}");
         };
         autoEndHBox.AddChild(autoEndCheck);
         globalConfigContainer.AddChild(autoEndHBox);
@@ -3964,7 +3936,6 @@ private void RefreshAllUnitVision()
         exportBtn.AddThemeFontSizeOverride("font_size", 13);
         exportBtn.Pressed += () => {
             var info = VisionConfig.ExportConfig();
-            GD.Print(info);
         };
         btnHBox.AddChild(exportBtn);
 
@@ -4307,7 +4278,6 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         if (gridManager?.map == null)
         {
-            GD.PrintErr("[ExportMap] GridManager 未初始化");
             return;
         }
 
@@ -4468,12 +4438,10 @@ private void OpenWeaponTerrainMatrixEditor()
                 File.WriteAllText(downloadPath, content);
                 savedPath = downloadPath;
                 savedToDownloads = true;
-                GD.Print($"[ExportMap] 已保存到下载目录: {downloadPath}");
             }
         }
         catch (Exception ex)
         {
-            GD.Print($"[ExportMap] 下载目录保存失败: {ex.Message}，将回退到用户目录");
         }
 
         if (!savedToDownloads)
@@ -4484,22 +4452,18 @@ private void OpenWeaponTerrainMatrixEditor()
                 string userPath = Path.Combine(userDir, fileName);
                 File.WriteAllText(userPath, content);
                 savedPath = userPath;
-                GD.Print($"[ExportMap] 已保存到用户目录: {userPath}");
             }
             catch (Exception ex)
             {
-                GD.PrintErr($"[ExportMap] 用户目录保存也失败: {ex.Message}");
             }
         }
 
         try
         {
             DisplayServer.ClipboardSet(content);
-            GD.Print("[ExportMap] 内容已复制到剪贴板");
         }
         catch (Exception ex)
         {
-            GD.PrintErr($"[ExportMap] 剪贴板复制失败: {ex.Message}");
         }
 
         string hintText;
@@ -4661,14 +4625,12 @@ private void OpenWeaponTerrainMatrixEditor()
         };
         if (awmeNameMap.TryGetValue(typeName, out string explicitPath))
         {
-            GD.Print($"[GetScenePathForWeaponType] 显式映射: {typeName} -> {explicitPath}");
             return explicitPath;
         }
 
         var tmpl = weaponTemplates.FirstOrDefault(t => System.IO.Path.GetFileNameWithoutExtension(t.ScenePath).Replace("_", "").Equals(typeName, StringComparison.OrdinalIgnoreCase));
         if (tmpl != null) return tmpl.ScenePath;
         tmpl = weaponTemplates.FirstOrDefault(t => t.ScenePath.IndexOf(typeName, StringComparison.OrdinalIgnoreCase) >= 0);
-        GD.Print($"[GetScenePathForWeaponType] typeName={typeName}, fallback scenePath={tmpl?.ScenePath ?? "NULL"}");
         return tmpl?.ScenePath ?? "";
     }
 
@@ -4766,7 +4728,6 @@ private void OpenWeaponTerrainMatrixEditor()
             }
             catch (Exception ex)
             {
-                GD.PrintErr($"[Import] 读取文件失败: {ex.Message}");
                 ShowImportHint($"❌ 读取文件失败:\n{ex.Message}");
             }
             fd.QueueFree();
@@ -4906,7 +4867,6 @@ private void OpenWeaponTerrainMatrixEditor()
             gameManager.selectedWeapon = null;
         }
 
-        GD.Print("[Import] 已清空所有单位、兵器和设施");
     }
 
     private void ParseAndImportMap(string content)
@@ -5002,7 +4962,6 @@ private void OpenWeaponTerrainMatrixEditor()
                                     else
                                     {
                                         // ✅ 无法解析的地形类型默认 GROUND，并记录日志
-                                        GD.Print($"[Import] 地形类型 '{tType}' 无法解析，默认设为 GROUND at [{tx},{ty}]");
                                         g.gridType = GridType.GROUND;
                                     }
                                 }
@@ -5104,12 +5063,10 @@ private void OpenWeaponTerrainMatrixEditor()
             gameManager?.fogOfWarManager?.RefreshFog();
             gameManager?.ResetGameState(); // ✅ 重置游戏状态，防止胜利面板残留
             ShowImportHint("✅ 地图导入成功！");
-            GD.Print("[Import] 地图导入完成");
         }
         catch (Exception ex)
         {
             if (gameManager != null) gameManager.blockVictoryCheck = false; // ✅ 异常时也要恢复
-            GD.PrintErr($"[Import] 导入失败: {ex.Message}\n{ex.StackTrace}");
             ShowImportHint($"❌ 导入失败:\n{ex.Message}");
         }
     }
@@ -5186,7 +5143,6 @@ private void OpenWeaponTerrainMatrixEditor()
 
         // 只打印一次总结，不打印每个字段
         if (successCount > 0 || skipCount > 0)
-            GD.Print($"[ApplyDiffString] {target.GetType().Name}: 成功 {successCount} 个, 跳过 {skipCount} 个");
     }
 
     // ✅ 值层面：跳过节点引用/贴图/空集合等不需要导入的值
@@ -5494,7 +5450,6 @@ private void OpenWeaponTerrainMatrixEditor()
                 File.WriteAllText(path, content);
                 DisplayServer.ClipboardSet(content);
                 ShowImportHint($"✅ 极简导出成功！\n📁 {path}\n📋 已复制到剪贴板");
-                GD.Print("[CompactExport] 已导出到下载目录");
                 return;
             }
         }
@@ -5721,12 +5676,10 @@ private void OpenWeaponTerrainMatrixEditor()
             gameManager?.fogOfWarManager?.RefreshFog();
             gameManager?.ResetGameState();
             ShowImportHint("✅ 极简导入成功！");
-            GD.Print("[CompactImport] 极简导入完成");
         }
         catch (Exception ex)
         {
             if (gameManager != null) gameManager.blockVictoryCheck = false;
-            GD.PrintErr($"[CompactImport] 导入失败: {ex.Message}\n{ex.StackTrace}");
             ShowImportHint($"❌ 导入失败:\n{ex.Message}");
         }
         finally
@@ -6143,12 +6096,10 @@ private void OpenWeaponTerrainMatrixEditor()
                 ? $"\n未映射ID: {string.Join(", ", unknownIds.OrderBy(i => i))}"
                 : "";
             ShowImportHint($"✅ AWBW 导入成功！\n导入: {importedTiles} 格 | 设施: {facilityCount} 个 | 跳过: {skippedTiles} 格{unknownInfo}");
-            GD.Print($"[AWBWImport] 完成: 导入 {importedTiles} 格, 设施 {facilityCount} 个, 跳过 {skippedTiles} 格, 未知ID: {unknownIds.Count} 个");
         }
         catch (Exception ex)
         {
             if (gameManager != null) gameManager.blockVictoryCheck = false;
-            GD.PrintErr($"[AWBWImport] 导入失败: {ex.Message}\n{ex.StackTrace}");
             ShowImportHint($"❌ AWBW 导入失败:\n{ex.Message}");
         }
         finally
@@ -6368,7 +6319,6 @@ private void OpenWeaponTerrainMatrixEditor()
         lastBatchGrid = null;
         CloseBatchTerrainPanel();
         UpdateBatchTerrainButtonVisual();
-        GD.Print($"[BatchTerrain] 开始批量放置: {type}");
     }
 
     private void StopBatchTerrainMode()
@@ -6378,7 +6328,6 @@ private void OpenWeaponTerrainMatrixEditor()
         lastBatchGrid = null;
         CloseBatchTerrainPanel();
         UpdateBatchTerrainButtonVisual();
-        GD.Print("[BatchTerrain] 停止批量放置");
     }
 
     private void UpdateBatchTerrainButtonVisual()
@@ -6635,14 +6584,12 @@ private void OpenWeaponTerrainMatrixEditor()
                                 {
                                     cannon.direction = (variant == 0) ? BlackCannon.CannonDirection.Down : BlackCannon.CannonDirection.Up;
                                     cannon.UpdateDirectionVisual();
-                                    GD.Print($"[AWMEImport] BlackCannon at {grid.GridIndex} direction={(variant == 0 ? "Down" : "Up")} (variant={variant})");
                                 }
                                 else if (spawned is Laser laser)
                                 {
                                     float targetAngle = (variant == 0) ? 180f : 0f;
                                     laser.SetFireAngles(new List<float> { targetAngle });
                                     laser.UpdateLaserVisual();
-                                    GD.Print($"[AWMEImport] Laser at {grid.GridIndex} angle={targetAngle}° (variant={variant})");
                                 }
                                 weaponCount++;
                             }
@@ -6719,14 +6666,12 @@ private void OpenWeaponTerrainMatrixEditor()
                                 {
                                     cannon.direction = (variant == 0) ? BlackCannon.CannonDirection.Down : BlackCannon.CannonDirection.Up;
                                     cannon.UpdateDirectionVisual();
-                                    GD.Print($"[AWMEImport] BlackCannon at {grid.GridIndex} direction={(variant == 0 ? "Down" : "Up")} (variant={variant})");
                                 }
                                 else if (spawned is Laser laser)
                                 {
                                     float targetAngle = (variant == 0) ? 180f : 0f;
                                     laser.SetFireAngles(new List<float> { targetAngle });
                                     laser.UpdateLaserVisual();
-                                    GD.Print($"[AWMEImport] Laser at {grid.GridIndex} angle={targetAngle}° (variant={variant})");
                                 }
                                 weaponCount++;
                             }
@@ -6798,12 +6743,10 @@ private void OpenWeaponTerrainMatrixEditor()
                 unknownInfo += $"\n未知兵器: {string.Join(", ", unknownWeaponIds.OrderBy(i => i).Take(20))}";
 
             ShowImportHint(summary + unknownInfo);
-            GD.Print($"[AWMEImport] 完成: {width}x{height}, 地形 {importedTiles}, 设施 {facilityCount}, 单位 {unitCount}, 兵器 {weaponCount}, 跳过 {skippedTiles}");
         }
         catch (Exception ex)
         {
             if (gameManager != null) gameManager.blockVictoryCheck = false;
-            GD.PrintErr($"[AWMEImport] 导入失败: {ex.Message}\n{ex.StackTrace}");
             ShowImportHint($"❌ AW 地图导入失败:\n{ex.Message}");
         }
         finally

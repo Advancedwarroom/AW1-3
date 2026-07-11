@@ -29,7 +29,6 @@ public partial class FlyBomb : Infantry
         StartBreath();
         EnsureGridBound();
 
-        GD.Print($"[FlyBomb._Ready] {Name} 初始化完成，moveType=Missile，燃料={fuel}/{maxFuel}, 移动力={defaultMovePoints}");
     }
 
     private void EnsureGridBound()

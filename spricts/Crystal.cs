@@ -222,13 +222,11 @@ public partial class Crystal : Weapon
         {
             if (currentAmmo < totalCost)
             {
-                GD.Print($"[Crystal] 弹药不足！需要 {totalCost}，当前 {currentAmmo}，跳过补给");
                 ShowCrystalPulseEffect();
                 return; // 弹药不够，全部跳过（避免部分执行导致卡死）
             }
             // 先扣弹药，再执行补给
             currentAmmo -= totalCost;
-            GD.Print($"[Crystal] 消耗 {totalCost} 弹药执行补给，剩余 {currentAmmo}");
             UpdateHpLabel(); // 刷新弹药显示
         }
 
@@ -324,7 +322,6 @@ public partial class Crystal : Weapon
         {
             unit.UpdateHpLabel();
             ShowCrystalHealEffect(unit.GlobalPosition, delta, crystalHealPercent > 0);
-            GD.Print($"[Crystal] {unit.Name} {((delta > 0) ? "+" : "")}{delta}HP ({crystalHealPercent * 100:F0}%)");
         }
     }
 
@@ -359,7 +356,6 @@ public partial class Crystal : Weapon
         {
             weapon.UpdateHpLabel();
             ShowCrystalHealEffect(weapon.GlobalPosition, delta, crystalHealPercent > 0);
-            GD.Print($"[Crystal] {weapon.Name} {((delta > 0) ? "+" : "")}{delta}HP");
         }
     }
 
@@ -551,7 +547,6 @@ public partial class Crystal : Weapon
         hasActed = true;
         remainingAttacks = 0;
         SetVisualDark();
-        GD.Print($"[Crystal-AI] {Name} 执行了范围治疗+补给");
     }
 
     public override void PerformAttack(Infantry target)
@@ -565,7 +560,6 @@ public partial class Crystal : Weapon
     public override void RotateDirection()
     {
         // 黑水晶不需要旋转方向
-        GD.Print("[Crystal] 黑水晶无需旋转方向");
     }
 
     public override bool CanAttack()

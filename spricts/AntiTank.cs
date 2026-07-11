@@ -205,7 +205,6 @@ public partial class AntiTank : Infantry
         if (attackType == AttackType.NoAttack) return;
         if (!CanUsePrimaryWeapon())
         {
-            GD.Print($"[AntiTank] {Name} 弹药耗尽，无法攻击");
             return;
         }
         if (animSprite != null) animSprite.Modulate = dim;

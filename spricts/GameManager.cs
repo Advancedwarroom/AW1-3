@@ -156,7 +156,6 @@ public partial class GameManager : Node
         aiManager.Name = "AI_Manager";
         aiManager.gameManager = this;
         AddChild(aiManager);
-        GD.Print("[GameManager] 动态创建 AI_Manager");
     }
     
     gameEnded = false;
@@ -166,7 +165,6 @@ public partial class GameManager : Node
 private void DeferredFogRefresh()
 {
     fogOfWarManager?.RefreshFog();
-    GD.Print($"[GameManager] 延迟刷新战争迷雾完成");
 }
     // GameManager.cs - 在类顶部添加
 // 已移除：三连击/右键切换回合逻辑，改用独立 UI 按钮
@@ -398,85 +396,70 @@ private void AutoCategorizeUnit(Infantry unit)
         case APC _:         // ✅ 添加 APC 检查（必须在 Infantry 之前）
             category = UnitCategory.APC;
             apcUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 APC");
             break;
 
         case Recon _:
             category = UnitCategory.Recon;
             reconUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Recon");
             break;
 
         case Mech _:
             category = UnitCategory.Mech;
             mechUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Mech");
             break;
 
         case Oozium _:
             category = UnitCategory.Oozium;
             ooziumUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Oozium");
             break;
 
         case MdTank _:
             category = UnitCategory.MdTank;
             mdTankUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 MdTank");
             break;
 
         case LightTank _:
             category = UnitCategory.Tank;
             tankUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Tank");
             break;
 
         case Rocket _:
             category = UnitCategory.Rocket;  // 归入火炮类，或新建 Rocket 分类
             artilleryUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Rocket");
             break;
         case FlyBomb _:
             category = UnitCategory.FlyBomb;
             flyBombUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 FlyBomb");
             break;
         case Flare _:
             category = UnitCategory.Vehicle;
             flareUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Flare");
             break;
         case Bike _:
             category = UnitCategory.Infantry;
             bikeUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Bike");
             break;
         case Artillery _:
             category = UnitCategory.Artillery;
             artilleryUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Artillery");
             break;
         case AntiAir _:         // ✅ 添加 APC 检查（必须在 Infantry 之前）
             category = UnitCategory.AntiAir;
             antiairUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 AntiAir");
             break;
 
         case AntiTank _:
             category = UnitCategory.AntiTank;
             antiTankUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 AntiTank");
             break;
 
         case Infantry _:
             category = UnitCategory.Infantry;
             infantryUnits.Add(unit);
-            GD.Print($"[AutoCategorizeUnit] {unit.Name} 识别为 Infantry");
             break;
 
         default:
             category = UnitCategory.Other;
-            GD.PrintErr($"[AutoCategorizeUnit] {unit.Name} 无法识别类型！");
             break;
     }
 
@@ -608,7 +591,7 @@ private void AutoCategorizeUnit(Infantry unit)
         npStyleHover.SetCornerRadiusAll(8);
         nextPhaseButton.AddThemeStyleboxOverride("hover", npStyleHover);
         nextPhaseButton.ZIndex = 200;
-        nextPhaseButton.Pressed += () => { GD.Print("🔄 点击切换回合按钮"); NextPhase(); };
+        nextPhaseButton.Pressed += () => { NextPhase(); };
         canvasLayer.AddChild(nextPhaseButton);
     }
     public void UpdateUnitLists()
@@ -1198,7 +1181,6 @@ private void AutoCategorizeUnit(Infantry unit)
     var p0Units = allUnits.Where(u => u.team == TeamHelper.Player0).ToList();
     var pN1Units = allUnits.Where(u => u.team == TeamHelper.Player).ToList();
 
-    GD.Print($"[VictoryCheck] P1单位:{p1Units.Count} P2单位:{p2Units.Count}");
 
     // 判定胜利条件：某一方单位全灭
     if (p1Units.Count == 0 && p2Units.Count > 0)
@@ -1329,7 +1311,6 @@ private void CreateFallbackLabel(Control parent, string name, string text, int f
     parent.AddChild(label);
     label.Owner = parent;
 
-    GD.Print($"[Victory] 动态创建了标签: {name}");
 }
 private void SetupVictoryLayout()
 {
@@ -1423,7 +1404,6 @@ private void CreateVictoryUI()
     victoryPanel.AddChild(restartButton);
 
     victoryPanel.Hide(); // 初始隐藏
-    GD.Print("[CreateVictoryUI] 自动创建胜利UI完成");
 }
 
 
@@ -1477,7 +1457,6 @@ public void RestartGame()
         {
             turns++;
             turnPhase = 1;
-            GD.Print($"=== 第 {turns} 回合开始 ===");
             gridManager?.PerformTurnSupply();
 
         weaponManager?.OnTurnStartForNewTurn(); // 使用新方法
@@ -1488,7 +1467,6 @@ public void RestartGame()
         }
 
         string currentTeam = TeamHelper.GetPhaseTeamName(turnPhase);
-        GD.Print($"阶段 {turnPhase}/{totalPhases} - {currentTeam} 的回合");
 
         // ✅ 资金系统：每回合开始时给对应势力增加资金
         if (turnPhase == 1)
@@ -1654,12 +1632,10 @@ public void RestartGame()
         if (team == "Player1")
         {
             p1Funds = Mathf.Min(p1Funds + income, p1FundsMax);
-            GD.Print($"[Funds] P1 获得资金 {income}，当前资金: {p1Funds}/{p1FundsMax}");
         }
         else if (team == "Player2")
         {
             p2Funds = Mathf.Min(p2Funds + income, p2FundsMax);
-            GD.Print($"[Funds] P2 获得资金 {income}，当前资金: {p2Funds}/{p2FundsMax}");
         }
 
         UpdateUnitLists();
@@ -1670,7 +1646,6 @@ public void RestartGame()
     {
         if (unitManager?.AllUnits == null) return;
 
-        GD.Print($"[ApplyTerrainDamage] ===== 第 {turns} 回合地形伤害结算 =====");
 
         foreach (var unit in unitManager.AllUnits.ToList())
         {
@@ -1709,7 +1684,6 @@ public void RestartGame()
         UpdateUnitLists();
         CheckVictoryCondition();
 
-        GD.Print($"[ApplyTerrainDamage] ===== 地形伤害结算完成 =====");
     }
 
 
@@ -1750,13 +1724,11 @@ public void RestartGame()
         // ✅ 编辑模式下禁止操作单位
         if (terrainEditor != null && terrainEditor.ShouldBlockUnitOperations())
         {
-            GD.Print("[GameManager] 编辑模式下禁止操作单位");
             return;
         }
 
         if (infantry == null)
         {
-            GD.Print("取消选择单位");
             gridManager.CloseRange();
             gridManager.HideAttackRange();
             gridManager.ClearWeaponRange();
@@ -1776,7 +1748,6 @@ public void RestartGame()
 
         if (infantry is Oozium oozium)
         {
-            GD.Print($"[OnSelectPiece] 选中 Oozium: {oozium.Name}, 吞噬模式已激活");
         }
 
 
@@ -1792,7 +1763,6 @@ public void RestartGame()
         }
         else
         {
-            GD.Print("该单位已行动或当前阶段不允许移动");
         }
     }
 
@@ -1835,7 +1805,6 @@ public void RollbackMove()
 
     if (fromGrid == null || toGrid == null)
     {
-        GD.Print("[RollbackMove] 无法回退：单位未绑定到有效格子");
         selectedInfantry = null;
         return;
     }
@@ -1955,7 +1924,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
     unitCategories[unit] = category;
     AddToCategoryList(unit, category);
 
-    GD.Print($"[GameManager] 注册单位: {unit.Name} -> {category}");
 
     // 立即更新统计面板
     UpdateUnitLists();
@@ -2087,11 +2055,9 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         {
             if (unit.currentExplodeAmmo <= 0)
             {
-                GD.Print($"[Explode] {unit.Name} 自爆弹不足，无法自爆");
                 return;
             }
             unit.currentExplodeAmmo--;
-            GD.Print($"[Explode] {unit.Name} 消耗1发自爆弹，剩余 {unit.currentExplodeAmmo}/{unit.maxExplodeAmmo}");
         }
 
         var gridPos = unit.grid?.GridIndex ?? unitManager.WorldToGrid(unit.Position);
@@ -2526,7 +2492,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
             int currentFunds = GetTeamFunds(currentTeam);
             if (currentFunds < info.Cost)
             {
-                GD.Print($"[Production] 资金不足: {currentFunds} < {info.Cost}");
                 return;
             }
             SetTeamFunds(currentTeam, currentFunds - info.Cost);
@@ -2536,7 +2501,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         var scene = GD.Load<PackedScene>(info.ScenePath);
         if (scene == null)
         {
-            GD.PrintErr($"[Production] 无法加载场景: {info.ScenePath}");
             return;
         }
 
@@ -2553,7 +2517,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         if (!bound)
         {
             unit.QueueFree();
-            GD.PrintErr("[Production] 绑定格子失败");
             return;
         }
 
@@ -2569,7 +2532,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         UpdateUnitLists();
         RefreshSpecializedUnitLists();
 
-        GD.Print($"[Production] 生产成功: {unit.Name} at {productionTargetGrid.GridIndex}, cost={info.Cost}");
 
         // 刷新菜单（资金已变化，可能有些按钮要变灰）
         ShowProductionMenu(productionTargetFacility, productionTargetGrid);
@@ -2596,7 +2558,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         var scene = GD.Load<PackedScene>(info.ScenePath);
         if (scene == null)
         {
-            GD.PrintErr($"[AI-Production] 无法加载场景: {info.ScenePath}");
             return false;
         }
 
@@ -2613,7 +2574,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         if (!bound)
         {
             unit.QueueFree();
-            GD.PrintErr("[AI-Production] 绑定格子失败");
             return false;
         }
 
@@ -2628,7 +2588,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         UpdateUnitLists();
         RefreshSpecializedUnitLists();
 
-        GD.Print($"[AI-Production] {team} 在 {grid.GridIndex} 生产了 {unitName}，花费 {info.Cost}，剩余资金 {GetTeamFunds(team)}");
         return true;
     }
 
@@ -2658,7 +2617,6 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
             victoryPanel.Hide();
             victoryPanel.Modulate = new Color(1, 1, 1, 1);
         }
-        GD.Print("[GameManager] 游戏状态已重置");
     }
 
     // ========== ✅ 生产菜单拖拽处理 ==========

@@ -56,7 +56,6 @@ public partial class FogOfWarManager : Node
         {
             initRetryCount++;
             if (initRetryCount < MAX_INIT_RETRIES) { CallDeferred(nameof(DeferredInit)); return; }
-            GD.PrintErr("[FogOfWar] GameManager 未就绪"); return;
         }
 
         gridManager = gameManager.gridManager;
@@ -67,7 +66,6 @@ public partial class FogOfWarManager : Node
         {
             initRetryCount++;
             if (initRetryCount < MAX_INIT_RETRIES) { CallDeferred(nameof(DeferredInit)); return; }
-            GD.PrintErr("[FogOfWar] GridManager 未初始化"); return;
         }
 
         CreateFogOverlay();
@@ -75,7 +73,6 @@ public partial class FogOfWarManager : Node
         if (isFogOfWarEnabled) CallDeferred(nameof(DelayedRefresh));
         else ClearAllFog();
 
-        GD.Print($"[FogOfWar] 初始化完成，格子:{fogSprites.Count}, 迷雾:{(isFogOfWarEnabled ? "开" : "关")}");
     }
 
     private void DelayedRefresh() { RefreshFog(); }
@@ -117,7 +114,6 @@ public partial class FogOfWarManager : Node
         ApplyFogToGrids();
         UpdateUnitVisibility();
 
-        GD.Print($"[FogOfWar] {currentTeam} 可见:{visibleGridsThisTurn.Count}/{fogSprites.Count}");
     }
 
     // ✅ 核心新增：计算全局视野池（所有单位+格子视野合并）
@@ -402,7 +398,6 @@ public partial class FogOfWarManager : Node
         isFogOfWarEnabled = enabled;
         if (!isInitialized || fogSprites == null || fogSprites.Count == 0)
         {
-            GD.Print($"[FogOfWar] 延迟设置: isFogOfWarEnabled = {enabled} (等待初始化)");
             if (gridManager?.grids != null && gridManager.grids.Count > 0)
             {
                 CreateFogOverlay();
@@ -412,7 +407,6 @@ public partial class FogOfWarManager : Node
         }
         if (enabled) RefreshFog();
         else { ClearAllFog(); ShowAllUnits(); }
-        GD.Print($"[FogOfWar] 迷雾开关: {(enabled ? "开启" : "关闭")}");
     }
 
     private void ShowAllUnits()
@@ -423,7 +417,6 @@ public partial class FogOfWarManager : Node
         if (weaponManager?.AllWeapons != null)
             foreach (var weapon in weaponManager.AllWeapons)
                 if (weapon != null && IsInstanceValid(weapon)) weapon.Visible = true;
-        GD.Print("[FogOfWar] 已显示所有单位和兵器");
     }
 
     public void ForceRefresh()
@@ -542,7 +535,6 @@ public partial class FogOfWarManager : Node
         foreach (var e in expired)
         {
             activeIlluminations.Remove(e);
-            GD.Print($"[Illumination] 照明效果在 {e.centerGrid.GridIndex} 已过期");
         }
 
         if (expired.Count > 0 && isFogOfWarEnabled)
@@ -556,7 +548,6 @@ public partial class FogOfWarManager : Node
     {
         if (center == null || duration <= 0) return;
         activeIlluminations.Add(new IlluminationEffect(center, minR, maxR, duration));
-        GD.Print($"[Illumination] 在 {center.GridIndex} 添加照明效果，持续 {duration} 大回合");
         if (isFogOfWarEnabled) RefreshFog();
     }
 

@@ -214,12 +214,10 @@ public partial class LightTank : Infantry
         if (attackType == AttackType.NoAttack) return;
         if (!CanUsePrimaryWeapon() && !CanUseSecondaryWeapon())
         {
-            GD.Print($"[LightTank] {Name} 所有武器弹药耗尽，无法攻击");
             return;
         }
         if (!canAttackAfterMoving && state == UnitState.Moved)
         {
-            GD.Print($"[LightTank] {Name} 移动后不能攻击");
             return;
         }
         if (animSprite != null) animSprite.Modulate = dim;
