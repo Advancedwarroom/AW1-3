@@ -5058,6 +5058,7 @@ private void OpenWeaponTerrainMatrixEditor()
             }
 
             if (gameManager != null) gameManager.blockVictoryCheck = false; // ✅ 恢复胜利检查
+            gameManager?.unitManager?.RefreshUnitList();
             gameManager?.UpdateUnitLists();
             gameManager?.RefreshSpecializedUnitLists();
             gameManager?.fogOfWarManager?.RefreshFog();
@@ -5671,6 +5672,7 @@ private void OpenWeaponTerrainMatrixEditor()
                 gameManager.UpdateTurnLabel();
             }
 
+            gameManager?.unitManager?.RefreshUnitList();
             gameManager?.UpdateUnitLists();
             gameManager?.RefreshSpecializedUnitLists();
             gameManager?.fogOfWarManager?.RefreshFog();
@@ -6087,6 +6089,7 @@ private void OpenWeaponTerrainMatrixEditor()
             }
 
             // 刷新游戏状态
+            gameManager?.unitManager?.RefreshUnitList();
             gameManager?.UpdateUnitLists();
             gameManager?.RefreshSpecializedUnitLists();
             gameManager?.fogOfWarManager?.RefreshFog();
@@ -6735,6 +6738,7 @@ private void OpenWeaponTerrainMatrixEditor()
                 }
             }
 
+            gameManager?.unitManager?.RefreshUnitList();
             gameManager?.UpdateUnitLists();
             gameManager?.RefreshSpecializedUnitLists();
             gameManager?.fogOfWarManager?.RefreshFog();
