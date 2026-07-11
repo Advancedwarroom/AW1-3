@@ -1817,7 +1817,7 @@ public void RollbackMove()
     else
     {
         // 计算实际消耗
-        var path = BuildPath(fromGrid, toGrid);
+        var path = BuildPath(fromGrid, toGrid, unit);
         bool isFirst = true;
         foreach (var g in path)
         {
@@ -1906,10 +1906,10 @@ public void RollbackMove()
 
     selectedInfantry = null;
 }
-private List<Grids> BuildPath(Grids from, Grids to)
+private List<Grids> BuildPath(Grids from, Grids to, Infantry infantry = null)
 {
     if (gridManager == null) return new List<Grids>();
-    return gridManager.BuildPath(from, to);
+    return gridManager.BuildPath(from, to, infantry);
 }
 
 public void RegisterUnit(Infantry unit, UnitCategory category)
