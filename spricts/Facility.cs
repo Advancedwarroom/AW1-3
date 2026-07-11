@@ -10,6 +10,7 @@ public partial class Facility : Node2D
     [ExportGroup("生产模块")]
     [Export] public bool canProduce = false;
     [Export] public Godot.Collections.Array<string> producibleUnitNames = new();
+    [Export] public bool instantMoveAfterProduction = false; // 生产后是否可立即移动（默认false=生产后待机）
 
     [ExportGroup("设施基础")]
     [Export] public string facilityTeam = "";

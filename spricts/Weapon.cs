@@ -7,6 +7,17 @@ public partial class Weapon : Node2D
 {
     [Export] public bool CanAttackWeapon = false;
 
+    [ExportGroup("多格占据")]
+    [Export] public Vector2I size = new Vector2I(1, 1);
+    [Export] public bool isMultiTile = false;
+    public List<Grids> occupiedGrids = new List<Grids>();
+    public bool isDestroyed = false;
+
+    [ExportGroup("胜利判定介入")]
+    [Export] public bool contributesToVictory = false;
+    [Export] public int victoryCountRequired = 1;
+    [Export] public string victoryTargetTeam = "Player2";
+
     [ExportGroup("基础属性")]
     [Export] public string team = "Player1";
     [Export] public int maxHealth = 999;
@@ -59,6 +70,55 @@ public partial class Weapon : Node2D
     public Action<Weapon> OnClickWeapon;
 
     public virtual List<Grids> CalculateAttackRange() { return new List<Grids>(); }
+
+    public virtual List<Vector2I> GetOccupiedIndices(Vector2I anchorIndex)
+    {
+        var result = new List<Vector2I>();
+        for (int x = 0; x < size.X; x++)
+            for (int y = 0; y < size.Y; y++)
+                result.Add(anchorIndex + new Vector2I(x, y));
+        return result;
+    }
+
+    public virtual bool IsWeakPointGrid(Grids checkGrid)
+    {
+        if (!isMultiTile || occupiedGrids.Count == 0) return true;
+        return checkGrid == GetWeakPointGrid();
+    }
+
+    public virtual Grids GetWeakPointGrid()
+    {
+        if (!isMultiTile || occupiedGrids.Count == 0) return grid;
+        return grid;
+    }
+
+    public virtual bool IsOccupiedGrid(Grids checkGrid)
+    {
+        if (!isMultiTile) return checkGrid == grid;
+        return occupiedGrids.Contains(checkGrid);
+    }
+
+    public virtual void OnMultiTileDestroyed()
+    {
+        isDestroyed = true;
+        hasActed = true;
+        remainingAttacks = 0;
+        if (animSprite != null)
+        {
+            string brokenAnim = GetBrokenAnimName();
+            if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation(brokenAnim))
+                animSprite.Play(brokenAnim);
+            else
+                animSprite.Modulate = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+        }
+    }
+
+    public virtual string GetBrokenAnimName() { return ""; }
+
+    public virtual void UpdateMultiTileVisual()
+    {
+        // 子类可覆盖，用于旋转时更新大贴图位置
+    }
 
     public override void _Ready()
     {

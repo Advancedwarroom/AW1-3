@@ -72,6 +72,14 @@ public partial class TerrainEditor : Control
     private Button batchTerrainCloseBtn;
     private Label batchTerrainHint;
 
+    // ========== ✅ 多格兵器放置预览模式 ==========
+    private bool isMultiTilePreviewMode = false;
+    private Weapon pendingMultiTileWeapon = null;
+    private List<Grids> previewMultiTileGrids = new();
+    private Vector2I pendingMultiTileAnchorPos = new Vector2I(-1, -1);
+    private string pendingMultiTileScenePath = "";
+    private string pendingMultiTileTeam = "";
+
     // 状态
     public bool IsEditMode { get; private set; } = false;
     private Grids selectedGrid = null;
@@ -177,6 +185,9 @@ private readonly List<UnitTemplate> weaponTemplates = new()
     new UnitTemplate { DisplayName = "💎 黑水晶", ScenePath = "res://Prefabs/crystal.tscn", 
         Category = "兵器", Team = "Player1", DisplayColor = new Color(0.6f, 0.2f, 0.9f), 
         Description = "环形范围治疗+补给兵器，还原原版AW黑水晶机制" },
+    new UnitTemplate { DisplayName = "🖤 大型黑炮", ScenePath = "res://Prefabs/large_cannon.tscn", 
+        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.2f, 0.2f, 0.2f), 
+        Description = "3×3多格占据兵器，仅弱点可攻击，摧毁后仍不可通行" },
 };
 
 private readonly List<UnitTemplate> facilityTemplates = new()
@@ -266,6 +277,13 @@ public override void _Input(InputEvent @event)
         if (isBatchTerrainMode)
         {
             StopBatchTerrainMode();
+            return;
+        }
+        if (isMultiTilePreviewMode)
+        {
+            ClearMultiTilePreview();
+            spawnHintLabel.Text = "取消多格兵器放置";
+            spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
         if (batchTerrainPanel?.Visible == true)
@@ -825,6 +843,15 @@ private void DestroyTargetAtGrid(Grids grid)
 {
     if (grid == null) return;
 
+    // 检查是否点击了多格兵器
+    var multiTileWeapon = grid.weapons.FirstOrDefault(w => w != null && IsInstanceValid(w) && w.isMultiTile);
+    if (multiTileWeapon != null)
+    {
+        // 多格兵器：弹出整体确认销毁对话框
+        ShowMultiTileDestroyConfirm(multiTileWeapon);
+        return;
+    }
+
     var allTargets = new List<object>();
 
     foreach (var unit in grid.infantries.ToList())
@@ -859,6 +886,72 @@ private void DestroyTargetAtGrid(Grids grid)
         ShowDestroySelectionMenu(grid, allTargets);
     }
 }
+
+    // 多格兵器整体确认销毁对话框
+    private void ShowMultiTileDestroyConfirm(Weapon weapon)
+    {
+        var dialog = new Control();
+        dialog.Name = "MultiTileDestroyDialog";
+        dialog.ZIndex = 600;
+        dialog.SetAnchorsPreset(Control.LayoutPreset.Center);
+
+        var bg = new ColorRect();
+        bg.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        bg.Color = new Color(0, 0, 0, 0.6f);
+        dialog.AddChild(bg);
+
+        var panel = new Panel();
+        panel.CustomMinimumSize = new Vector2(360, 200);
+        panel.SetAnchorsPreset(Control.LayoutPreset.Center);
+        var style = new StyleBoxFlat();
+        style.BgColor = new Color(0.15f, 0.15f, 0.2f, 0.98f);
+        style.SetCornerRadiusAll(12);
+        style.SetBorderWidthAll(2);
+        style.BorderColor = new Color(0.8f, 0.2f, 0.2f);
+        panel.AddThemeStyleboxOverride("panel", style);
+        dialog.AddChild(panel);
+
+        var title = new Label();
+        title.Text = $"💀 确认销毁多格兵器?";
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 18);
+        title.AddThemeColorOverride("font_color", new Color(1, 0.3f, 0.3f));
+        title.Position = new Vector2(0, 20);
+        title.Size = new Vector2(360, 35);
+        panel.AddChild(title);
+
+        var info = new Label();
+        info.Text = $"{weapon.Name}\n占据 {weapon.size.X}×{weapon.size.Y} 格\n摧毁后不可通行";
+        info.HorizontalAlignment = HorizontalAlignment.Center;
+        info.AddThemeFontSizeOverride("font_size", 12);
+        info.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.8f));
+        info.Position = new Vector2(0, 60);
+        info.Size = new Vector2(360, 50);
+        panel.AddChild(info);
+
+        var hbox = new HBoxContainer();
+        hbox.Position = new Vector2(60, 130);
+        hbox.Size = new Vector2(240, 40);
+        hbox.AddThemeConstantOverride("separation", 20);
+
+        var confirmBtn = new Button();
+        confirmBtn.Text = "💀 确认销毁";
+        confirmBtn.CustomMinimumSize = new Vector2(100, 36);
+        confirmBtn.Pressed += () => {
+            dialog.QueueFree();
+            ExecuteDestroy(weapon);
+        };
+        hbox.AddChild(confirmBtn);
+
+        var cancelBtn = new Button();
+        cancelBtn.Text = "❌ 取消";
+        cancelBtn.CustomMinimumSize = new Vector2(100, 36);
+        cancelBtn.Pressed += () => dialog.QueueFree();
+        hbox.AddChild(cancelBtn);
+
+        panel.AddChild(hbox);
+        GetTree().CurrentScene.AddChild(dialog);
+    }
 
 private void ExecuteDestroy(object target)
 {
@@ -1022,7 +1115,19 @@ public void OnGridClickedForEdit(Grids grid)
         if (currentSpawnMode == SpawnMode.Unit)
             SpawnUnitAtGrid(grid, selectedTemplatePath, unitTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
         else if (currentSpawnMode == SpawnMode.Weapon)
-            SpawnWeaponAtGrid(grid, selectedTemplatePath, weaponTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
+        {
+            // 检查是否多格兵器预览模式
+            if (isMultiTilePreviewMode && pendingMultiTileWeapon != null)
+            {
+                // 二次点击：确认放置
+                ConfirmMultiTilePlacement();
+            }
+            else
+            {
+                // 首次点击：尝试预览
+                TryPreviewMultiTileWeapon(grid, selectedTemplatePath, weaponTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
+            }
+        }
         else if (currentSpawnMode == SpawnMode.Facility)
             SpawnFacilityAtGrid(grid, selectedTemplatePath, facilityTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
         return;
@@ -6913,5 +7018,187 @@ private void OpenWeaponTerrainMatrixEditor()
         };
 
         return (typeName, team, variant);
+    }
+
+
+    // ========== ✅ 多格兵器放置预览系统 ==========
+    private void TryPreviewMultiTileWeapon(Grids grid, string scenePath, string team)
+    {
+        if (string.IsNullOrEmpty(scenePath) || grid == null) return;
+
+        var scene = GD.Load<PackedScene>(scenePath);
+        if (scene == null) return;
+
+        var tempWeapon = scene.Instantiate<Weapon>();
+        if (tempWeapon == null) return;
+
+        // 如果不是多格兵器，直接生成（不走预览流程）
+        if (!tempWeapon.isMultiTile)
+        {
+            tempWeapon.QueueFree();
+            SpawnWeaponAtGrid(grid, scenePath, team);
+            return;
+        }
+
+        // 计算预览范围
+        var anchorPos = grid.GridIndex;
+        var occupiedIndices = tempWeapon.GetOccupiedIndices(anchorPos);
+        tempWeapon.QueueFree();
+
+        // 检查是否超出地图限制
+        var gm = gameManager;
+        if (gm?.gridManager == null) return;
+        foreach (var idx in occupiedIndices)
+        {
+            if (idx.X < 0 || idx.X >= gm.gridManager.searchRange.X ||
+                idx.Y < 0 || idx.Y >= gm.gridManager.searchRange.Y)
+            {
+                spawnHintLabel.Text = "❌ 超出地图范围，无法放置";
+                spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+                return;
+            }
+        }
+
+        // 清除之前的预览
+        ClearMultiTilePreview();
+
+        // 显示预览范围（蓝色攻击范围图标）
+        previewMultiTileGrids.Clear();
+        foreach (var idx in occupiedIndices)
+        {
+            var g = gm.gridManager.map[idx.X, idx.Y];
+            if (g != null)
+            {
+                previewMultiTileGrids.Add(g);
+                g.attackRangeIcon?.Show();
+                if (g.attackRangeIcon != null)
+                    g.attackRangeIcon.Modulate = new Color(0.3f, 0.6f, 1.0f, 0.8f); // 蓝色预览
+            }
+        }
+
+        // 保存预览状态
+        isMultiTilePreviewMode = true;
+        pendingMultiTileAnchorPos = anchorPos;
+        pendingMultiTileScenePath = scenePath;
+        pendingMultiTileTeam = team;
+
+        spawnHintLabel.Text = $"🔵 预览 {tempWeapon.GetType().Name} {occupiedIndices.Count}格范围\n再次点击确认放置，按ESC取消";
+        spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 0.7f, 1f));
+    }
+
+    private void ConfirmMultiTilePlacement()
+    {
+        if (!isMultiTilePreviewMode || string.IsNullOrEmpty(pendingMultiTileScenePath)) return;
+
+        var gm = gameManager;
+        if (gm?.gridManager == null) return;
+
+        var anchorGrid = gm.gridManager.map[pendingMultiTileAnchorPos.X, pendingMultiTileAnchorPos.Y];
+        if (anchorGrid == null)
+        {
+            ClearMultiTilePreview();
+            return;
+        }
+
+        var scene = GD.Load<PackedScene>(pendingMultiTileScenePath);
+        if (scene == null)
+        {
+            ClearMultiTilePreview();
+            return;
+        }
+
+        var weapon = scene.Instantiate<Weapon>();
+        if (weapon == null)
+        {
+            ClearMultiTilePreview();
+            return;
+        }
+
+        // 摧毁预览范围内的所有单位、兵器、设施
+        foreach (var g in previewMultiTileGrids)
+        {
+            if (g == null || !IsInstanceValid(g)) continue;
+            // 摧毁单位
+            foreach (var unit in g.infantries.ToList())
+            {
+                if (unit != null && IsInstanceValid(unit))
+                {
+                    gameManager.RemoveUnit(unit);
+                }
+            }
+            // 摧毁兵器（排除即将放置的）
+            foreach (var w in g.weapons.ToList())
+            {
+                if (w != null && IsInstanceValid(w) && w != weapon)
+                {
+                    gameManager.RemoveWeapon(w);
+                }
+            }
+            // 摧毁设施
+            if (g.city != null && IsInstanceValid(g.city))
+            {
+                g.city.QueueFree();
+                g.city = null;
+            }
+        }
+
+        weapon.Position = anchorGrid.Position;
+        weapon.team = pendingMultiTileTeam;
+        weapon.Name = $"{pendingMultiTileTeam}_{weapon.GetType().Name}_{gameManager.weaponManager.AllWeapons.Count}";
+
+        gameManager.weaponManager.weaponsNode.AddChild(weapon);
+
+        bool bound = gameManager.weaponManager.BindWeaponToGrid(weapon, true);
+        if (!bound)
+        {
+            weapon.QueueFree();
+            if (weapon.GetParent() == gameManager.weaponManager.weaponsNode)
+                gameManager.weaponManager.weaponsNode.RemoveChild(weapon);
+            spawnHintLabel.Text = "❌ 多格兵器绑定失败";
+            spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+            ClearMultiTilePreview();
+            return;
+        }
+
+        gameManager.weaponManager.AllWeapons.Add(weapon);
+        weapon.OnClickWeapon = gameManager.OnSelectWeapon;
+        weapon.UpdateHpLabel();
+        if (weapon is BlackCannon cannon)
+        {
+            cannon.UpdateDirectionVisual();
+            cannon.UpdateAmmoVisual();
+        }
+        if (weapon is LargeCannon lc)
+        {
+            lc.UpdateDirectionVisual();
+            lc.UpdateAmmoVisual();
+            lc.UpdateMultiTileVisual();
+        }
+
+        gameManager.UpdateUnitLists();
+
+        spawnHintLabel.Text = $"✅ 生成多格兵器: {weapon.Name} ({weapon.size.X}×{weapon.size.Y})";
+        spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+
+        ClearMultiTilePreview();
+    }
+
+    private void ClearMultiTilePreview()
+    {
+        foreach (var g in previewMultiTileGrids)
+        {
+            if (g != null && IsInstanceValid(g))
+            {
+                g.attackRangeIcon?.Hide();
+                if (g.attackRangeIcon != null)
+                    g.attackRangeIcon.Modulate = new Color(1, 0.2f, 0.2f, 0.9f);
+            }
+        }
+        previewMultiTileGrids.Clear();
+        isMultiTilePreviewMode = false;
+        pendingMultiTileWeapon = null;
+        pendingMultiTileAnchorPos = new Vector2I(-1, -1);
+        pendingMultiTileScenePath = "";
+        pendingMultiTileTeam = "";
     }
 }

@@ -37,6 +37,15 @@ public partial class GameManager : Node
     [Export] public Button restartButton;
     private bool gameEnded = false;
 
+    [ExportGroup("全灭胜利判定开关")]
+    [Export] public bool p1AnnihilationVictoryEnabled = true;
+    [Export] public bool p2AnnihilationVictoryEnabled = true;
+
+    [ExportGroup("兵器摧毁胜利判定")]
+    [Export] public bool weaponVictoryEnabled = false;
+    // 运行时统计：记录需要被摧毁的兵器列表（按团队）
+    public Dictionary<string, List<Weapon>> victoryRequiredWeapons = new();
+
     public List<Weapon> weapons = new List<Weapon>(); 
     // 各类单位列表
     public Godot.Collections.Array<Infantry> infantryUnits = new();
@@ -1181,24 +1190,61 @@ private void AutoCategorizeUnit(Infantry unit)
     var p0Units = allUnits.Where(u => u.team == TeamHelper.Player0).ToList();
     var pN1Units = allUnits.Where(u => u.team == TeamHelper.Player).ToList();
 
-
-    // 判定胜利条件：某一方单位全灭
-    if (p1Units.Count == 0 && p2Units.Count > 0)
+    // 兵器摧毁胜利判定
+    if (weaponVictoryEnabled && weaponManager != null)
     {
-        // P2 获胜
+        CheckWeaponVictoryCondition(p1Units.Count > 0, p2Units.Count > 0);
+        // 如果兵器胜利判定已触发，直接返回
+        if (gameEnded) return;
+    }
+
+    // 判定全灭胜利条件：某一方单位全灭（如果该方全灭判定开启）
+    bool p1Alive = p1Units.Count > 0;
+    bool p2Alive = p2Units.Count > 0;
+
+    if (!p1Alive && p2Alive && p1AnnihilationVictoryEnabled)
+    {
         ShowVictory("Player2", "Player1");
     }
-    else if (p2Units.Count == 0 && p1Units.Count > 0)
+    else if (!p2Alive && p1Alive && p2AnnihilationVictoryEnabled)
     {
-        // P1 获胜
         ShowVictory("Player1", "Player2");
     }
-    // 如果双方都全灭，可以视为平局或根据需求处理
-    else if (p1Units.Count == 0 && p2Units.Count == 0)
+    else if (!p1Alive && !p2Alive)
     {
-        ShowVictory("Draw", "Draw");  // 平局
+        ShowVictory("Draw", "Draw");
     }
 }
+
+    // 兵器摧毁胜利判定：检查是否满足所有介入胜利的兵器条件
+    private void CheckWeaponVictoryCondition(bool p1Alive, bool p2Alive)
+    {
+        if (weaponManager == null) return;
+
+        var allWeapons = weaponManager.AllWeapons.Where(w => IsInstanceValid(w)).ToList();
+        // 需要被摧毁的兵器：开启了contributesToVictory且未被摧毁的
+        var requiredWeapons = allWeapons.Where(w => w.contributesToVictory && !w.isDestroyed).ToList();
+
+        // 按敌方团队分组统计
+        var p1EnemyWeapons = requiredWeapons.Where(w => w.team != TeamHelper.Player1).ToList();
+        var p2EnemyWeapons = requiredWeapons.Where(w => w.team != TeamHelper.Player2).ToList();
+
+        bool p1WinsByWeapon = p1EnemyWeapons.Count == 0 && p1Alive;
+        bool p2WinsByWeapon = p2EnemyWeapons.Count == 0 && p2Alive;
+
+        if (p1WinsByWeapon && !p2WinsByWeapon)
+        {
+            ShowVictory("Player1", "Player2");
+        }
+        else if (p2WinsByWeapon && !p1WinsByWeapon)
+        {
+            ShowVictory("Player2", "Player1");
+        }
+        else if (p1WinsByWeapon && p2WinsByWeapon)
+        {
+            ShowVictory("Draw", "Draw");
+        }
+    }
 private void ShowVictory(string winner, string loser)
 {
     gameEnded = true;
@@ -2528,6 +2574,15 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         unit.UpdateHpLabel();
         if (unit.sprite != null)
             unit.StartBreath();
+
+        // 即时移动开关：默认关闭（instantMove=false）则生产后单位直接待机
+        if (productionTargetFacility != null && !productionTargetFacility.instantMoveAfterProduction)
+        {
+            unit.isMoved = true;
+            unit.isAttacked = true;
+            unit.state = UnitState.Acted;
+            unit.SetWaitVisual(true);
+        }
 
         UpdateUnitLists();
         RefreshSpecializedUnitLists();

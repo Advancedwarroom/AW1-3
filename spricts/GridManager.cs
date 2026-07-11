@@ -1549,6 +1549,9 @@ public void CloseRange()
             if (blindZoneGrids.Contains(grid)) continue;
             if (grid.weapon != null && grid.weapon.team != unit.team)
             {
+                // 多格兵器：只有弱点格子显示为可攻击
+                if (grid.weapon.isMultiTile && !grid.weapon.IsWeakPointGrid(grid))
+                    continue;
                 if (isFogEnabled && !fog.IsGridVisible(grid)) continue;
                 attackRange.Add(grid);
                 grid.attackRangeIcon?.Show();
@@ -1560,6 +1563,9 @@ public void CloseRange()
             }
             if (grid.weapon != null && grid.weapon.team != unit.team && !grid.weapon.hasActed)
             {
+                // 多格兵器：只有弱点格子显示为可攻击
+                if (grid.weapon.isMultiTile && !grid.weapon.IsWeakPointGrid(grid))
+                    continue;
                 if (isFogEnabled && !fog.IsGridVisible(grid)) continue;
                 attackRange.Add(grid);
                 grid.attackRangeIcon?.Show();
@@ -1575,6 +1581,9 @@ public void CloseRange()
             bool hasEnemyTarget = grid.HasEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team);
             if (hasEnemyTarget)
             {
+                // 多格兵器：只有弱点格子显示为可攻击
+                if (grid.weapon != null && grid.weapon.isMultiTile && !grid.weapon.IsWeakPointGrid(grid))
+                    continue;
                 if (isFogEnabled && !fog.IsGridVisible(grid)) continue;
                 attackRange.Add(grid);
                 grid.attackRangeIcon?.Show();
@@ -1827,6 +1836,9 @@ public void CloseRange()
             // 检查敌方兵器
             if (grid.weapon != null && grid.weapon.team != unit.team && !grid.weapon.hasActed)
             {
+                // 多格兵器：只有弱点格子显示为可攻击
+                if (grid.weapon.isMultiTile && !grid.weapon.IsWeakPointGrid(grid))
+                    continue;
                 if (isFogEnabled && fog != null && !fog.IsGridVisible(grid)) continue;
                 attackRange.Add(grid);
                 grid.attackRangeIcon?.Show();

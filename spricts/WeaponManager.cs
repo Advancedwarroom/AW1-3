@@ -50,15 +50,15 @@ public partial class WeaponManager : Node
 
     }
 
-    // 绑定兵器到格子
+    // 绑定兵器到格子（支持多格）
     public bool BindWeaponToGrid(Weapon weapon, bool forceRebind = false)
     {
         if (weapon == null || !IsInstanceValid(weapon)) return false;
 
         // 如果已有格子且不是强制重新绑定，跳过
-        if (weapon.grid != null && !forceRebind) return true;
+        if (weapon.grid != null && !forceRebind && !weapon.isMultiTile) return true;
 
-        // 计算格子坐标
+        // 计算锚点格子坐标
         Vector2I gridPos = WorldToGrid(weapon.Position);
 
         // 检查是否在地图范围内
@@ -73,29 +73,89 @@ public partial class WeaponManager : Node
             return false;
         }
 
-        // 检查格子是否已有兵器（一个格子只能有一个兵器）
-        if (targetGrid.weapon != null && targetGrid.weapon != weapon)
+        // 多格兵器：检查所有被占据格子是否在地图内且未被其他兵器占据
+        if (weapon.isMultiTile)
         {
-            return false;
+            var occupiedIndices = weapon.GetOccupiedIndices(gridPos);
+            foreach (var idx in occupiedIndices)
+            {
+                if (!IsValidGrid(idx)) return false;
+                var g = gridManager.map[idx.X, idx.Y];
+                if (g == null) return false;
+                // 检查是否已有其他兵器占据（排除自己已在的格子）
+                if (g.weapon != null && g.weapon != weapon)
+                {
+                    // 如果该格子的兵器是多格兵器且不是同一个，则阻挡
+                    if (g.weapon.isMultiTile && g.weapon != weapon) return false;
+                    // 如果是单格兵器，也阻挡
+                    if (!g.weapon.isMultiTile) return false;
+                }
+                // 检查是否被其他多格兵器占据（通过occupiedGrids检查）
+                foreach (var otherW in AllWeapons)
+                {
+                    if (otherW != weapon && otherW.isMultiTile && otherW.occupiedGrids.Contains(g))
+                        return false;
+                }
+            }
+        }
+        else
+        {
+            // 单格兵器原有检查
+            if (targetGrid.weapon != null && targetGrid.weapon != weapon)
+            {
+                return false;
+            }
         }
 
-        // 从旧格子移除
-        if (weapon.grid != null)
+        // 从旧格子移除（清除所有occupiedGrids）
+        if (weapon.isMultiTile)
         {
-            weapon.grid.weapons.Remove(weapon);
-            if (weapon.grid.weapon == weapon)
-                weapon.grid.weapon = null;
+            foreach (var og in weapon.occupiedGrids.ToList())
+            {
+                og.weapons.Remove(weapon);
+                if (og.weapon == weapon) og.weapon = null;
+            }
+            weapon.occupiedGrids.Clear();
+        }
+        else
+        {
+            if (weapon.grid != null)
+            {
+                weapon.grid.weapons.Remove(weapon);
+                if (weapon.grid.weapon == weapon)
+                    weapon.grid.weapon = null;
+            }
         }
 
         // 绑定到新格子
         weapon.grid = targetGrid;
         if (!targetGrid.weapons.Contains(weapon))
         {
-        targetGrid.weapons.Add(weapon);
+            targetGrid.weapons.Add(weapon);
         }
         targetGrid.weapon = weapon;
 
-        // 对齐位置到格子中心
+        // 多格兵器：绑定所有占据格子
+        if (weapon.isMultiTile)
+        {
+            var occupiedIndices = weapon.GetOccupiedIndices(gridPos);
+            foreach (var idx in occupiedIndices)
+            {
+                var g = gridManager.map[idx.X, idx.Y];
+                if (g != null && g != targetGrid)
+                {
+                    if (!g.weapons.Contains(weapon)) g.weapons.Add(weapon);
+                    // 被占据的格子如果没有自己的weapon，就设为这个多格兵器
+                    if (g.weapon == null) g.weapon = weapon;
+                    weapon.occupiedGrids.Add(g);
+                }
+            }
+            // 锚点也要加入occupiedGrids
+            if (!weapon.occupiedGrids.Contains(targetGrid))
+                weapon.occupiedGrids.Add(targetGrid);
+        }
+
+        // 对齐位置到格子中心（锚点）
         weapon.Position = targetGrid.Position;
 
         return true;
@@ -147,60 +207,75 @@ public partial class WeaponManager : Node
         }
     }
 
-    // 移除兵器
-public void RemoveWeapon(Weapon weapon)
-{
-    if (weapon == null) return;
-
-    // ✅ 特殊地形自动切换
-    if (weapon.grid != null && (weapon.grid.gridType == GridType.PIPESEAM || weapon.grid.gridType == GridType.METEORITE))
+    // 移除兵器（支持多格）
+    public void RemoveWeapon(Weapon weapon)
     {
-        string terrainName = weapon.grid.gridType == GridType.PIPESEAM ? "PIPESEAM" : "METEORITE";
-        var targetGrid = weapon.grid;
+        if (weapon == null) return;
 
-        targetGrid.weapons.Remove(weapon);
-        if (targetGrid.weapon == weapon)
-            targetGrid.weapon = null;
-
-        targetGrid.gridType = GridType.BROKENPIPE;
-
-        var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
-        if (sprite != null)
+        // 多格兵器：从所有占据格子清除
+        if (weapon.isMultiTile)
         {
-            var tween = CreateTween();
-            tween.TweenProperty(sprite, "modulate", new Color(0.3f, 0.3f, 0.3f), 0.5f)
-                 .SetTrans(Tween.TransitionType.Sine)
-                 .SetEase(Tween.EaseType.InOut);
-        }
-    }
-    else
-    {
-        // 普通地形：只清理引用
-        if (weapon.grid != null)
-        {
-            weapon.grid.weapons.Remove(weapon);
-            if (weapon.grid.weapon == weapon)
+            foreach (var og in weapon.occupiedGrids.ToList())
             {
-                weapon.grid.weapon = weapon.grid.weapons.Count > 0 ? weapon.grid.weapons[0] : null;
+                if (og != null && IsInstanceValid(og))
+                {
+                    og.weapons.Remove(weapon);
+                    if (og.weapon == weapon)
+                        og.weapon = og.weapons.Count > 0 ? og.weapons[0] : null;
+                }
+            }
+            weapon.occupiedGrids.Clear();
+        }
+        else
+        {
+            // ✅ 特殊地形自动切换
+            if (weapon.grid != null && (weapon.grid.gridType == GridType.PIPESEAM || weapon.grid.gridType == GridType.METEORITE))
+            {
+                string terrainName = weapon.grid.gridType == GridType.PIPESEAM ? "PIPESEAM" : "METEORITE";
+                var targetGrid = weapon.grid;
+
+                targetGrid.weapons.Remove(weapon);
+                if (targetGrid.weapon == weapon)
+                    targetGrid.weapon = null;
+
+                targetGrid.gridType = GridType.BROKENPIPE;
+
+                var sprite = targetGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
+                if (sprite != null)
+                {
+                    var tween = CreateTween();
+                    tween.TweenProperty(sprite, "modulate", new Color(0.3f, 0.3f, 0.3f), 0.5f)
+                         .SetTrans(Tween.TransitionType.Sine)
+                         .SetEase(Tween.EaseType.InOut);
+                }
+            }
+            else
+            {
+                // 普通地形：只清理引用
+                if (weapon.grid != null)
+                {
+                    weapon.grid.weapons.Remove(weapon);
+                    if (weapon.grid.weapon == weapon)
+                    {
+                        weapon.grid.weapon = weapon.grid.weapons.Count > 0 ? weapon.grid.weapons[0] : null;
+                    }
+                }
             }
         }
+
+        AllWeapons.Remove(weapon);
+
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm != null)
+        {
+            if (gm.selectedWeapon == weapon)
+                gm.selectedWeapon = null;
+            gm.weapons.Remove(weapon); 
+        }
+
+        // 节点销毁
+        weapon.QueueFree();
     }
-
-
-    AllWeapons.Remove(weapon);
-
-
-    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-    if (gm != null)
-    {
-        if (gm.selectedWeapon == weapon)
-            gm.selectedWeapon = null;
-        gm.weapons.Remove(weapon); 
-    }
-
-    // 节点销毁
-    weapon.QueueFree();
-}
     public Weapon GetWeaponAt(Vector2I gridPos)
     {
         if (!IsValidGrid(gridPos)) return null;
