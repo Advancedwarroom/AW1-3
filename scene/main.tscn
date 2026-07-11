@@ -34,7 +34,6 @@
 [ext_resource type="PackedScene" path="res://Prefabs/Flare.tscn" id="28_flareq"]
 [ext_resource type="PackedScene" uid="uid://dt34620naxdc3" path="res://Prefabs/FlyBomb.tscn" id="28_vneqc"]
 [ext_resource type="PackedScene" uid="uid://b2721lm0rscie" path="res://Prefabs/Anti_Tank.tscn" id="29_antitan"]
-[ext_resource type="PackedScene" uid="uid://crls6njimup6i" path="res://Prefabs/crystal.tscn" id="32_7ty4q"]
 [ext_resource type="PackedScene" uid="uid://kbpull7ec1pg" path="res://Prefabs/large_cannon.tscn" id="34_7xrs8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mswub"]
@@ -2741,10 +2740,6 @@ targetSelectionMode = 0
 
 [node name="AnimatedSprite2D" parent="WeaponManager/Weapons/BlackCannon1" index="0" unique_id=524686475]
 animation = &"cannon1_down"
-
-[node name="Crystal" parent="WeaponManager/Weapons" unique_id=1012151537 instance=ExtResource("32_7ty4q")]
-position = Vector2(352, 320)
-health = 888
 
 [node name="BlackCannon2" parent="WeaponManager/Weapons" unique_id=116915752 instance=ExtResource("20_gjnwh")]
 position = Vector2(96, 288)

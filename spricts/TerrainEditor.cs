@@ -189,6 +189,9 @@ private readonly List<UnitTemplate> weaponTemplates = new()
     new UnitTemplate { DisplayName = "🖤 大型黑炮", ScenePath = "res://Prefabs/large_cannon.tscn", 
         Category = "兵器", Team = "Player1", DisplayColor = new Color(0.2f, 0.2f, 0.2f), 
         Description = "3×3多格占据兵器，仅弱点可攻击，摧毁后仍不可通行" },
+    new UnitTemplate { DisplayName = "☠️ 死光炮", ScenePath = "res://Prefabs/death_ray.tscn", 
+        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.8f, 0.1f, 0.8f), 
+        Description = "3×3多格死光炮，四方向3格宽激光，摧毁后仍不可通行" },
 };
 
 private readonly List<UnitTemplate> facilityTemplates = new()
@@ -490,6 +493,7 @@ private string GetFriendlyWeaponName(Weapon weapon)
 {
     return weapon switch
     {
+        DeathRay => "死光炮",
         BlackCannon => "黑炮",
         Laser => "激光炮",
         Crystal => "黑水晶",
@@ -698,7 +702,7 @@ private Button CreateTemplateButton(UnitTemplate template)
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
 
         // ✅ 黑炮/大型黑炮：显示方向选择器
-        bool isCannon = template.ScenePath.Contains("black_cannon") || template.ScenePath.Contains("large_cannon");
+        bool isCannon = template.ScenePath.Contains("black_cannon") || template.ScenePath.Contains("large_cannon") || template.ScenePath.Contains("death_ray");
         if (directionSelector != null)
         {
             directionSelector.Visible = isCannon;
@@ -2394,7 +2398,14 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         else if (target is Weapon weapon)
         {
             AddWeaponVisionFields(weapon);
-            if (weapon is LargeCannon lc)
+            if (weapon is DeathRay dr)
+        {
+            dr.direction = pendingCannonDirection;
+            dr.UpdateDirectionVisual();
+            dr.UpdateAmmoVisual();
+            dr.UpdateMultiTileVisual();
+        }
+        if (weapon is LargeCannon lc)
             {
                 AddLargeCannonFields(lc);
             }
@@ -7339,6 +7350,11 @@ private void OpenWeaponTerrainMatrixEditor()
             tempWeapon.isMultiTile = true;
             tempWeapon.size = lc.multiTileSize;
         }
+        if (tempWeapon is DeathRay dr && !tempWeapon.isMultiTile)
+        {
+            tempWeapon.isMultiTile = true;
+            tempWeapon.size = dr.multiTileSize;
+        }
 
         // 如果不是多格兵器，直接生成（不走预览流程）
         if (!tempWeapon.isMultiTile)
@@ -7499,6 +7515,13 @@ private void OpenWeaponTerrainMatrixEditor()
             cannon.direction = pendingCannonDirection;
             cannon.UpdateDirectionVisual();
             cannon.UpdateAmmoVisual();
+        }
+        if (weapon is DeathRay dr)
+        {
+            dr.direction = pendingCannonDirection;
+            dr.UpdateDirectionVisual();
+            dr.UpdateAmmoVisual();
+            dr.UpdateMultiTileVisual();
         }
         if (weapon is LargeCannon lc)
         {

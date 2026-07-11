@@ -147,7 +147,7 @@ public override void ShowAttackRange()
     }
 }
 
-private void ShowAttackRangeAsDisabled(GameManager gm)
+protected void ShowAttackRangeAsDisabled(GameManager gm)
 {
     gm.gridManager.ClearWeaponRange();
     var rangeGrids = CalculateAttackRange();
