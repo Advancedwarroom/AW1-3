@@ -9,7 +9,7 @@ public partial class LargeCannon : BlackCannon
 {
     [ExportGroup("大型多格配置")]
     [Export] public Vector2I multiTileSize = new Vector2I(3, 3);
-    [Export] public bool canRotate = false; // 旋转开关：默认关闭（原版Black Cannon不可旋转）
+    [Export] public bool canRotate = true; // 旋转开关：默认开启（LargeCannon支持旋转）
 
     // 炮口（发射台）偏移：炮弹发射的起点
     private Vector2I firePointOffset = new Vector2I(1, 0);
@@ -217,6 +217,31 @@ public partial class LargeCannon : BlackCannon
         flash.Position = GlobalPosition;
         GetTree().CurrentScene?.AddChild(flash);
         
+        // ✅ 恢复所有占据格子的weapon引用，确保摧毁后仍不可通行
+        // base.TakeDamage可能在调用OnDestroyed前清除了锚点格子的引用
+        if (occupiedGrids.Count > 0)
+        {
+            foreach (var g in occupiedGrids)
+            {
+                if (g != null && IsInstanceValid(g))
+                {
+                    if (!g.weapons.Contains(this)) g.weapons.Add(this);
+                    if (g.weapon == null) g.weapon = this;
+                }
+            }
+            // 恢复自身锚点引用
+            grid = occupiedGrids[0];
+            
+            // ✅ 恢复视觉：从透明变回正常显示Broken动画
+            if (animSprite != null)
+            {
+                animSprite.Modulate = Colors.White;
+                string brokenAnim = GetBrokenAnimName();
+                if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation(brokenAnim))
+                    animSprite.Play(brokenAnim);
+            }
+        }
+        
         // 胜利判定检查
         gm?.CheckVictoryCondition();
     }
@@ -232,6 +257,20 @@ public partial class LargeCannon : BlackCannon
             _ => "Up"
         };
         return $"Broken{dirSuffix}";
+    }
+
+    // ✅ 覆盖动画名称：匹配 LargeCannon.tres 中的动画命名
+    protected override string GetAnimName()
+    {
+        string dirSuffix = direction switch
+        {
+            CannonDirection.Up    => "Up",
+            CannonDirection.Down  => "Down",
+            CannonDirection.Left  => "Left",
+            CannonDirection.Right => "Right",
+            _ => "Up"
+        };
+        return $"LargeCannon{dirSuffix}";
     }
 
     private void ShakeCamera(float amplitude, int times)

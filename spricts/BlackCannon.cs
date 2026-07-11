@@ -650,7 +650,7 @@ public override void TakeDamage(int damage)
         }
     }
 
-    private string GetAnimName()
+    protected virtual string GetAnimName()
     {
         string teamPrefix = team == "Player2" ? "cannon2" : "cannon1";
         string dirSuffix = direction switch
@@ -952,6 +952,16 @@ public override void TakeDamage(int damage)
         {
             if (weapon != null && IsInstanceValid(weapon) && weapon.Name == weaponName)
             {
+                // ✅ 多格兵器：走 OnDestroyed 路径（保留节点，保持不可通行）
+                if (weapon.isMultiTile)
+                {
+                    if (gm.selectedWeapon == weapon)
+                        gm.selectedWeapon = null;
+                    gm.weaponManager.AllWeapons.Remove(weapon);
+                    weapon.OnDestroyed();
+                    return;
+                }
+
                 // ✅ 特殊地形处理
                 if (weapon.grid != null && (weapon.grid.gridType == GridType.PIPESEAM || weapon.grid.gridType == GridType.METEORITE))
                 {
@@ -985,7 +995,15 @@ public override void TakeDamage(int damage)
             var node = root.FindChild(weaponName, true, false);
             if (node is Weapon w)
             {
-                SafeQueueFree(w);
+                // 多格兵器也走 OnDestroyed 路径
+                if (w.isMultiTile)
+                {
+                    w.OnDestroyed();
+                }
+                else
+                {
+                    SafeQueueFree(w);
+                }
             }
         }
 

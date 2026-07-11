@@ -1117,7 +1117,7 @@ public void OnGridClickedForEdit(Grids grid)
         else if (currentSpawnMode == SpawnMode.Weapon)
         {
             // 检查是否多格兵器预览模式
-            if (isMultiTilePreviewMode && pendingMultiTileWeapon != null)
+            if (isMultiTilePreviewMode && !string.IsNullOrEmpty(pendingMultiTileScenePath))
             {
                 // 二次点击：确认放置
                 ConfirmMultiTilePlacement();
@@ -4901,6 +4901,9 @@ private void OpenWeaponTerrainMatrixEditor()
             ["black_cannon"] = "res://Prefabs/black_cannon.tscn",
             ["blackcannon"] = "res://Prefabs/black_cannon.tscn",
             ["BlackCannon"] = "res://Prefabs/black_cannon.tscn",
+            ["large_cannon"] = "res://Prefabs/large_cannon.tscn",
+            ["largecannon"] = "res://Prefabs/large_cannon.tscn",
+            ["LargeCannon"] = "res://Prefabs/large_cannon.tscn",
             ["Laser"] = "res://Prefabs/Laser.tscn",
             ["Crystal"] = "res://Prefabs/crystal.tscn",
             ["crystal"] = "res://Prefabs/crystal.tscn",
@@ -7168,14 +7171,14 @@ private void OpenWeaponTerrainMatrixEditor()
             _ => "Player0"
         };
 
-        // ✅ 智能平替：MiniCannon → BlackCannon 四方向，L-Cannon → Laser
+        // ✅ 智能平替：MiniCannon → BlackCannon，BlackCannon → LargeCannon，L-Cannon → Laser
         string typeName = x switch
         {
-            0 => "black_cannon",   // MiniCannon N(0,0) / E(0,1) → BlackCannon
-            1 => "black_cannon",   // MiniCannon W(1,0) / S(1,1) → BlackCannon
+            0 => "black_cannon",   // MiniCannon N(0,0) / E(0,1) → BlackCannon（单格小炮）
+            1 => "black_cannon",   // MiniCannon W(1,0) / S(1,1) → BlackCannon（单格小炮）
             2 => "Laser",          // L-Cannon (2,0) → Laser 平替
             3 => "Crystal",        // BlackCrystal (3,1)
-            4 => "black_cannon",   // BlackCannon (4,0=S, 4,1=N)
+            4 => "large_cannon",   // ✅ BlackCannon (4,0=S, 4,1=N) → LargeCannon（3×3大型黑炮）
             5 => "Laser",          // DeathRay (5,1) → Laser
             6 => "Crystal",       // BlackObelisk (6,1)
             _ => null
