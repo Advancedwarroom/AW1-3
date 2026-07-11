@@ -6582,12 +6582,26 @@ private void OpenWeaponTerrainMatrixEditor()
                                 var spawned = grid.weapon;
                                 if (spawned is BlackCannon cannon)
                                 {
-                                    cannon.direction = (variant == 0) ? BlackCannon.CannonDirection.Down : BlackCannon.CannonDirection.Up;
+                                    cannon.direction = variant switch
+                                    {
+                                        0 => BlackCannon.CannonDirection.Down,
+                                        1 => BlackCannon.CannonDirection.Up,
+                                        2 => BlackCannon.CannonDirection.Right,
+                                        3 => BlackCannon.CannonDirection.Left,
+                                        _ => BlackCannon.CannonDirection.Down
+                                    };
                                     cannon.UpdateDirectionVisual();
                                 }
                                 else if (spawned is Laser laser)
                                 {
-                                    float targetAngle = (variant == 0) ? 180f : 0f;
+                                    float targetAngle = variant switch
+                                    {
+                                        0 => 180f,   // 左
+                                        1 => 0f,     // 右
+                                        2 => 90f,    // 下
+                                        3 => 270f,   // 上
+                                        _ => 180f
+                                    };
                                     laser.SetFireAngles(new List<float> { targetAngle });
                                     laser.UpdateLaserVisual();
                                 }
@@ -6664,12 +6678,26 @@ private void OpenWeaponTerrainMatrixEditor()
                                 var spawned = grid.weapon;
                                 if (spawned is BlackCannon cannon)
                                 {
-                                    cannon.direction = (variant == 0) ? BlackCannon.CannonDirection.Down : BlackCannon.CannonDirection.Up;
+                                    cannon.direction = variant switch
+                                    {
+                                        0 => BlackCannon.CannonDirection.Down,
+                                        1 => BlackCannon.CannonDirection.Up,
+                                        2 => BlackCannon.CannonDirection.Right,
+                                        3 => BlackCannon.CannonDirection.Left,
+                                        _ => BlackCannon.CannonDirection.Down
+                                    };
                                     cannon.UpdateDirectionVisual();
                                 }
                                 else if (spawned is Laser laser)
                                 {
-                                    float targetAngle = (variant == 0) ? 180f : 0f;
+                                    float targetAngle = variant switch
+                                    {
+                                        0 => 180f,   // 左
+                                        1 => 0f,     // 右
+                                        2 => 90f,    // 下
+                                        3 => 270f,   // 上
+                                        _ => 180f
+                                    };
                                     laser.SetFireAngles(new List<float> { targetAngle });
                                     laser.UpdateLaserVisual();
                                 }
@@ -6868,15 +6896,30 @@ private void OpenWeaponTerrainMatrixEditor()
             _ => "Player0"
         };
 
-        int variant = y % 2;
-
+        // ✅ 智能平替：MiniCannon → BlackCannon 四方向，L-Cannon → Laser
         string typeName = x switch
         {
-            3 => "Crystal",        // AWME Black Crystal (x=3, y=1) + Obelisk variants
-            4 => "black_cannon",  // AWME Black Cannon (x=4, any y=South/North)
-            5 => "Laser",         // AWME Death Ray (x=5, y=1)
-            6 => "Crystal",       // AWME Black Obelisk (x=6, y=1)
+            0 => "black_cannon",   // MiniCannon N(0,0) / E(0,1) → BlackCannon
+            1 => "black_cannon",   // MiniCannon W(1,0) / S(1,1) → BlackCannon
+            2 => "Laser",          // L-Cannon (2,0) → Laser 平替
+            3 => "Crystal",        // BlackCrystal (3,1)
+            4 => "black_cannon",   // BlackCannon (4,0=S, 4,1=N)
+            5 => "Laser",          // DeathRay (5,1) → Laser
+            6 => "Crystal",       // BlackObelisk (6,1)
             _ => null
+        };
+
+        // Variant: 0=Down, 1=Up, 2=Right, 3=Left
+        int variant = x switch
+        {
+            0 => y switch { 0 => 1, 1 => 2, _ => 0 },  // (0,0)N→Up(1), (0,1)E→Right(2)
+            1 => y switch { 0 => 3, 1 => 0, _ => 0 },  // (1,0)W→Left(3), (1,1)S→Down(0)
+            2 => 0,   // L-Cannon → Laser default
+            3 => 0,   // Crystal
+            4 => y,   // BlackCannon (4,0)=Down(0), (4,1)=Up(1)
+            5 => 1,   // DeathRay (5,1) → 0f
+            6 => 0,   // Obelisk
+            _ => 0
         };
 
         return (typeName, team, variant);
