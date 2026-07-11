@@ -6594,15 +6594,8 @@ private void OpenWeaponTerrainMatrixEditor()
                                 }
                                 else if (spawned is Laser laser)
                                 {
-                                    float targetAngle = variant switch
-                                    {
-                                        0 => 180f,   // 左
-                                        1 => 0f,     // 右
-                                        2 => 90f,    // 下
-                                        3 => 270f,   // 上
-                                        _ => 180f
-                                    };
-                                    laser.SetFireAngles(new List<float> { targetAngle });
+                                    // ✅ L-Cannon / DeathRay → Laser 四方向全开
+                                    laser.SetFireAngles(new List<float> { 0f, 90f, 180f, 270f });
                                     laser.UpdateLaserVisual();
                                 }
                                 weaponCount++;
@@ -6690,15 +6683,8 @@ private void OpenWeaponTerrainMatrixEditor()
                                 }
                                 else if (spawned is Laser laser)
                                 {
-                                    float targetAngle = variant switch
-                                    {
-                                        0 => 180f,   // 左
-                                        1 => 0f,     // 右
-                                        2 => 90f,    // 下
-                                        3 => 270f,   // 上
-                                        _ => 180f
-                                    };
-                                    laser.SetFireAngles(new List<float> { targetAngle });
+                                    // ✅ L-Cannon / DeathRay → Laser 四方向全开
+                                    laser.SetFireAngles(new List<float> { 0f, 90f, 180f, 270f });
                                     laser.UpdateLaserVisual();
                                 }
                                 weaponCount++;
