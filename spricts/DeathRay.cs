@@ -226,6 +226,7 @@ public partial class DeathRay : BlackCannon
     public override void PerformAttack(Infantry target)
     {
         if (isDestroyed) return;
+        if (!CanAttack()) return;
 
         var allTargets = GetAllTargetsInLaserBeam();
 

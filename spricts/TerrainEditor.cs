@@ -5036,6 +5036,8 @@ private void OpenWeaponTerrainMatrixEditor()
             ["largecannon"] = "res://Prefabs/large_cannon.tscn",
             ["LargeCannon"] = "res://Prefabs/large_cannon.tscn",
             ["Laser"] = "res://Prefabs/Laser.tscn",
+            ["death_ray"] = "res://Prefabs/death_ray.tscn",
+            ["DeathRay"] = "res://Prefabs/death_ray.tscn",
             ["Crystal"] = "res://Prefabs/crystal.tscn",
             ["crystal"] = "res://Prefabs/crystal.tscn",
         };
@@ -7310,7 +7312,7 @@ private void OpenWeaponTerrainMatrixEditor()
             2 => "Laser",          // L-Cannon (2,0) → Laser 平替
             3 => "Crystal",        // BlackCrystal (3,1)
             4 => "large_cannon",   // ✅ BlackCannon (4,0=S, 4,1=N) → LargeCannon（3×3大型黑炮）
-            5 => "Laser",          // DeathRay (5,1) → Laser
+            5 => "death_ray",     // DeathRay (5,1) → DeathRay
             6 => "Crystal",       // BlackObelisk (6,1)
             _ => null
         };
@@ -7323,7 +7325,7 @@ private void OpenWeaponTerrainMatrixEditor()
             2 => 0,   // L-Cannon → Laser default
             3 => 0,   // Crystal
             4 => y,   // BlackCannon (4,0)=Down(0), (4,1)=Up(1)
-            5 => 1,   // DeathRay (5,1) → 0f
+            5 => 1,   // DeathRay (5,1) → Up(1)
             6 => 0,   // Obelisk
             _ => 0
         };
