@@ -773,6 +773,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     // ========== ✅ 核心修改：HandleGridClick ==========
     public void HandleGridClick(Infantry infantry, Grids to)
     {
+        GD.Print($"[HandleGridClick] START {infantry?.Name} → {to?.GridIndex}, grid={infantry?.grid?.GridIndex}");
         // ✅ 编辑模式下禁止单位移动操作
         var terrainEditor = GetTree().GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
         if (terrainEditor != null && terrainEditor.ShouldBlockUnitOperations())
@@ -975,7 +976,8 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
     public void MoveTo(Infantry infantry, Grids to, bool showMenu = true)
     {
-        if (infantry == null || to == null) return;
+        GD.Print($"[MoveTo] START {infantry?.Name} from={infantry?.grid?.GridIndex} to={to?.GridIndex}");
+        if (infantry == null || to == null) { GD.Print("[MoveTo] ABORT: null param"); return; }
 
         bool isOozium = infantry is Oozium;
 
@@ -995,7 +997,8 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
 
         var path = BuildPath(infantry.grid, to);
-        if (path.Count == 0) return;
+        GD.Print($"[MoveTo] BuildPath result: {path.Count} grids");
+        if (path.Count == 0) { GD.Print("[MoveTo] ABORT: empty path"); return; }
 
         int totalMoveCost = 0;
         int totalFuelCost = 0;

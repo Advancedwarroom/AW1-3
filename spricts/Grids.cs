@@ -470,6 +470,7 @@ public partial class Grids : Node2D
                 { terrainEditor.OnGridClickedForEdit(this); GetViewport().SetInputAsHandled(); return; }
 
                 var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+                GD.Print($"[ClickGrid] {Name} OnClickGrid={OnClickGrid!=null}, IsForceActionMode={IsForceActionMode}, selected={gm?.selectedInfantry?.Name}");
                 if (IsForceActionMode && OnClickGrid != null) { OnClickGrid.Invoke(this); GetViewport().SetInputAsHandled(); return; }
 
                 if (gm?.selectedInfantry != null && gm.selectedInfantry.state != UnitState.Acted &&

@@ -5879,6 +5879,14 @@ private void OpenWeaponTerrainMatrixEditor()
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         vbox.AddChild(hint);
 
+        var closeBtn = new Button();
+        closeBtn.Text = "❌ 关闭";
+        closeBtn.CustomMinimumSize = new Vector2(360, 40);
+        closeBtn.AddThemeFontSizeOverride("font_size", 14);
+        closeBtn.AddThemeColorOverride("font_color", new Color(1, 0.5f, 0.5f));
+        closeBtn.Pressed += () => dialog.QueueFree();
+        vbox.AddChild(closeBtn);
+
         dialog.AddChild(vbox);
         AddChild(dialog);
     }
@@ -6540,12 +6548,12 @@ private void OpenWeaponTerrainMatrixEditor()
             var unknownWeaponIds = new HashSet<int>();
 
             // 读取地形数据（同时包含地形和建筑/设施）
-            // ✅ 列优先：文件按 x 优先、y 内层存储，与 AWS Map Editor 保存顺序一致
-            for (int x = 0; x < width; x++)
+            // ✅ 行优先：文件按 y 优先、x 内层存储，与 AWS Map Editor 保存顺序一致
+            for (int y = 0; y < height; y++)
             {
-                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
                 {
-                    int idx = offset + (x * height + y) * 2;
+                    int idx = offset + (y * width + x) * 2;
                     ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
 
                     if (x >= gridManager.map.GetLength(0) || y >= gridManager.map.GetLength(1))
@@ -6659,13 +6667,13 @@ private void OpenWeaponTerrainMatrixEditor()
             }
 
             // 读取单位数据（0xFFFF = 空）
-            // ✅ 列优先：与地形数据相同的 x 优先、y 内层顺序
+            // ✅ 行优先：与地形数据相同的 y 优先、x 内层顺序
             int unitOffset = offset + terrainDataSize;
-            for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
             {
-                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
                 {
-                    int idx = unitOffset + (x * height + y) * 2;
+                    int idx = unitOffset + (y * width + x) * 2;
                     ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
 
                     if (rawVal == 0xFFFF) continue;
