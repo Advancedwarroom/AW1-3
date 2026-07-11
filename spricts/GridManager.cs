@@ -124,7 +124,7 @@ public partial class GridManager : Node
         return grid.infantry != null && grid.infantry != requesting;
     }
 
-    public List<Grids> BuildPath(Grids from, Grids to, Infantry infantry = null)
+    public List<Grids> BuildPath(Grids from, Grids to, Infantry infantry = null, bool ignoreMovePoints = false)
     {
         if (from == null || to == null) return new List<Grids>();
         if (from == to) return new List<Grids>();
@@ -162,7 +162,7 @@ public partial class GridManager : Node
 
                     int newCost = accCost + moveCost;
                     if (best.TryGetValue(neighbor, out int old) && newCost >= old) continue;
-                    if (newCost > infantry.movePoints) continue;
+                    if (!ignoreMovePoints && newCost > infantry.movePoints) continue;
 
                     best[neighbor] = newCost;
                     parent[neighbor] = cur;
