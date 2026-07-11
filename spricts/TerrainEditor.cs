@@ -966,8 +966,39 @@ private void ExecuteDestroy(object target)
         else if (target is Weapon weapon)
         {
             string name = weapon.Name;
-            gameManager.RemoveWeapon(weapon);
-            spawnHintLabel.Text = $"💀 已销毁兵器: {name}";
+            if (weapon.isMultiTile)
+            {
+                // ✅ 多格兵器：彻底清理所有占据格子的引用
+                foreach (var og in weapon.occupiedGrids.ToList())
+                {
+                    if (og != null && IsInstanceValid(og))
+                    {
+                        og.weapons.Remove(weapon);
+                        if (og.weapon == weapon)
+                            og.weapon = og.weapons.Count > 0 ? og.weapons[0] : null;
+                    }
+                }
+                weapon.occupiedGrids.Clear();
+                
+                // 从 GameManager 清理引用
+                var gm = gameManager;
+                if (gm != null)
+                {
+                    gm.weapons.Remove(weapon);
+                    if (gm.selectedWeapon == weapon) gm.selectedWeapon = null;
+                    if (gm.weaponManager?.AllWeapons.Contains(weapon) == true)
+                        gm.weaponManager.AllWeapons.Remove(weapon);
+                }
+                
+                weapon.QueueFree();
+                spawnHintLabel.Text = $"💀 已销毁多格兵器: {name}";
+            }
+            else
+            {
+                // 单格兵器走原有路径
+                gameManager.RemoveWeapon(weapon);
+                spawnHintLabel.Text = $"💀 已销毁兵器: {name}";
+            }
         }
         else if (target is Facility facility)
         {
@@ -1119,13 +1150,25 @@ public void OnGridClickedForEdit(Grids grid)
             // 检查是否多格兵器预览模式
             if (isMultiTilePreviewMode && !string.IsNullOrEmpty(pendingMultiTileScenePath))
             {
-                // 二次点击：确认放置
-                ConfirmMultiTilePlacement();
+                // 二次点击：必须点击预览范围内才确认，范围外取消
+                if (previewMultiTileGrids.Contains(grid))
+                {
+                    ConfirmMultiTilePlacement();
+                }
+                else
+                {
+                    // 点击范围外：取消预览
+                    ClearMultiTilePreview();
+                    spawnHintLabel.Text = "❌ 已取消预览（点击范围外）";
+                    spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
+                }
+                return;
             }
             else
             {
                 // 首次点击：尝试预览
                 TryPreviewMultiTileWeapon(grid, selectedTemplatePath, weaponTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
+                return;
             }
         }
         else if (currentSpawnMode == SpawnMode.Facility)
