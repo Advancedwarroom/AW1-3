@@ -9,6 +9,13 @@ size = Vector2(33, 33)
 
 [node name="Crystal" type="Node2D" unique_id=1012151537]
 script = ExtResource("1_gegjs")
+crystalHealAffectsWeapons = false
+crystalSupplyAffectsWeapons = false
+crystalSupplyConsumesAmmo = false
+crystalSupplyFlareAmmo = 999
+crystalSupplyExplodeAmmo = 999
+crystalSupplyPrimaryAmmo = 999
+crystalSupplyFuel = 999
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=996334453]
 position = Vector2(15.999999, 9.777777)

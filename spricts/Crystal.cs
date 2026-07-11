@@ -68,10 +68,7 @@ public partial class Crystal : Weapon
     public override void _Ready()
     {
         base._Ready();
-        // Crystal 需要弹药系统（补给消耗自身弹药）
-        useAmmoSystem = true;
-        maxAmmo = 5;     // 默认 5 发弹药，每目标消耗 1 发
-        currentAmmo = 5;
+
 
         // 按队伍绑定正确贴图动画
         UpdateCrystalVisual();

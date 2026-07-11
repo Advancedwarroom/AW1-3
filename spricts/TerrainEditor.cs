@@ -4647,9 +4647,28 @@ private void OpenWeaponTerrainMatrixEditor()
 
     private string GetScenePathForWeaponType(string typeName)
     {
+        if (string.IsNullOrEmpty(typeName)) return "";
+
+        // ✅ 显式 AWME 类型名映射（避免 IndexOf 模糊匹配）
+        var awmeNameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["black_cannon"] = "res://Prefabs/black_cannon.tscn",
+            ["blackcannon"] = "res://Prefabs/black_cannon.tscn",
+            ["BlackCannon"] = "res://Prefabs/black_cannon.tscn",
+            ["Laser"] = "res://Prefabs/Laser.tscn",
+            ["Crystal"] = "res://Prefabs/crystal.tscn",
+            ["crystal"] = "res://Prefabs/crystal.tscn",
+        };
+        if (awmeNameMap.TryGetValue(typeName, out string explicitPath))
+        {
+            GD.Print($"[GetScenePathForWeaponType] 显式映射: {typeName} -> {explicitPath}");
+            return explicitPath;
+        }
+
         var tmpl = weaponTemplates.FirstOrDefault(t => System.IO.Path.GetFileNameWithoutExtension(t.ScenePath).Replace("_", "").Equals(typeName, StringComparison.OrdinalIgnoreCase));
         if (tmpl != null) return tmpl.ScenePath;
         tmpl = weaponTemplates.FirstOrDefault(t => t.ScenePath.IndexOf(typeName, StringComparison.OrdinalIgnoreCase) >= 0);
+        GD.Print($"[GetScenePathForWeaponType] typeName={typeName}, fallback scenePath={tmpl?.ScenePath ?? "NULL"}");
         return tmpl?.ScenePath ?? "";
     }
 
@@ -6596,13 +6615,27 @@ private void OpenWeaponTerrainMatrixEditor()
                     }
                     else if (rawVal >= 900 && rawVal <= 1299)
                     {
-                        var (wepType, wepTeam) = GetAWMEWeaponMapping((int)rawVal);
+                        var (wepType, wepTeam, variant) = GetAWMEWeaponMapping((int)rawVal);
                         if (!string.IsNullOrEmpty(wepType))
                         {
                             string scenePath = GetScenePathForWeaponType(wepType);
                             if (!string.IsNullOrEmpty(scenePath))
                             {
                                 SpawnWeaponAtGrid(grid, scenePath, wepTeam ?? "Player0");
+                                var spawned = grid.weapon;
+                                if (spawned is BlackCannon cannon)
+                                {
+                                    cannon.direction = (variant == 0) ? BlackCannon.CannonDirection.Down : BlackCannon.CannonDirection.Up;
+                                    cannon.UpdateDirectionVisual();
+                                    GD.Print($"[AWMEImport] BlackCannon at {grid.GridIndex} direction={(variant == 0 ? "Down" : "Up")} (variant={variant})");
+                                }
+                                else if (spawned is Laser laser)
+                                {
+                                    float targetAngle = (variant == 0) ? 180f : 0f;
+                                    laser.SetFireAngles(new List<float> { targetAngle });
+                                    laser.UpdateLaserVisual();
+                                    GD.Print($"[AWMEImport] Laser at {grid.GridIndex} angle={targetAngle}° (variant={variant})");
+                                }
                                 weaponCount++;
                             }
                             else
@@ -6666,13 +6699,27 @@ private void OpenWeaponTerrainMatrixEditor()
                     }
                     else if (rawVal >= 900 && rawVal <= 1299)
                     {
-                        var (wepType, wepTeam) = GetAWMEWeaponMapping((int)rawVal);
+                        var (wepType, wepTeam, variant) = GetAWMEWeaponMapping((int)rawVal);
                         if (!string.IsNullOrEmpty(wepType))
                         {
                             string scenePath = GetScenePathForWeaponType(wepType);
                             if (!string.IsNullOrEmpty(scenePath))
                             {
                                 SpawnWeaponAtGrid(grid, scenePath, wepTeam ?? "Player0");
+                                var spawned = grid.weapon;
+                                if (spawned is BlackCannon cannon)
+                                {
+                                    cannon.direction = (variant == 0) ? BlackCannon.CannonDirection.Down : BlackCannon.CannonDirection.Up;
+                                    cannon.UpdateDirectionVisual();
+                                    GD.Print($"[AWMEImport] BlackCannon at {grid.GridIndex} direction={(variant == 0 ? "Down" : "Up")} (variant={variant})");
+                                }
+                                else if (spawned is Laser laser)
+                                {
+                                    float targetAngle = (variant == 0) ? 180f : 0f;
+                                    laser.SetFireAngles(new List<float> { targetAngle });
+                                    laser.UpdateLaserVisual();
+                                    GD.Print($"[AWMEImport] Laser at {grid.GridIndex} angle={targetAngle}° (variant={variant})");
+                                }
                                 weaponCount++;
                             }
                             else
@@ -6855,9 +6902,9 @@ private void OpenWeaponTerrainMatrixEditor()
         return (typeName, team);
     }
 
-    private (string typeName, string team) GetAWMEWeaponMapping(int value)
+    private (string typeName, string team, int variant) GetAWMEWeaponMapping(int value)
     {
-        if (value < 900 || value > 1299) return (null, null);
+        if (value < 900 || value > 1299) return (null, null, -1);
 
         int baseVal = value - 900;
         int x = baseVal % 20;
@@ -6870,6 +6917,8 @@ private void OpenWeaponTerrainMatrixEditor()
             _ => "Player0"
         };
 
+        int variant = y % 2;
+
         string typeName = x switch
         {
             3 => "Crystal",        // AWME Black Crystal (x=3, y=1) + Obelisk variants
@@ -6879,6 +6928,6 @@ private void OpenWeaponTerrainMatrixEditor()
             _ => null
         };
 
-        return (typeName, team);
+        return (typeName, team, variant);
     }
 }
