@@ -984,7 +984,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         if (infantry.overlapType == UnitOverlapType.NonOverlapping)
         {
             var otherUnits = to.infantries.Where(i => i != infantry && IsInstanceValid(i)).ToList();
-            if (otherUnits.Count > 0) return;
+            if (otherUnits.Count > 0) { GD.Print($"[MoveTo] ABORT: target has {otherUnits.Count} other units"); return; }
         }
 
         if (infantry.overlapType == UnitOverlapType.Oozium)
@@ -1021,14 +1021,14 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         if (isOozium)
         {
-            if (infantry.movePoints < 0) return;
+            if (infantry.movePoints < 0) { GD.Print("[MoveTo] ABORT: Oozium no move points"); return; }
         }
         else
         {
-            if (infantry.movePoints < totalMoveCost) return;
+            if (infantry.movePoints < totalMoveCost) { GD.Print($"[MoveTo] ABORT: movePoints={infantry.movePoints} < cost={totalMoveCost}"); return; }
         }
 
-        if (infantry.consumeFuel && infantry.fuel < totalFuelCost) return;
+        if (infantry.consumeFuel && infantry.fuel < totalFuelCost) { GD.Print($"[MoveTo] ABORT: fuel={infantry.fuel} < cost={totalFuelCost}"); return; }
 
         if (infantry.originalGrid == null)
             infantry.originalGrid = infantry.grid;
@@ -1055,6 +1055,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         infantry.state = UnitState.Moved;
         infantry.isMoved = true;
+        GD.Print($"[MoveTo] SUCCESS {infantry.Name} moved to {to.GridIndex}, MP={infantry.movePoints}, fuel={infantry.fuel}");
 
         // ✅ 移动完成后立即刷新战争迷雾
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
