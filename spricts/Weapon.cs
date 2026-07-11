@@ -210,7 +210,7 @@ public partial class Weapon : Node2D
         }
     }
 
-    protected virtual void OnDestroyed()
+    public virtual void OnDestroyed()
     {
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.gridManager?.ClearWeaponRange();

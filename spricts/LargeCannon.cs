@@ -184,7 +184,7 @@ public partial class LargeCannon : BlackCannon
         base.TakeDamage(damage);
     }
 
-    protected override void OnDestroyed()
+    public override void OnDestroyed()
     {
         // 标记为多格摧毁状态
         OnMultiTileDestroyed();

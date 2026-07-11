@@ -19,6 +19,7 @@ loadedIcon = NodePath("loaded")
 noFuelIcon = NodePath("NoFuelIcno")
 baseAttack = 10
 noAmmoIcon = NodePath("NoAmmoIcon")
+captureAbility = 0
 spriteRed = NodePath("Osinfantry")
 spriteBlue = NodePath("Bminfantry")
 
