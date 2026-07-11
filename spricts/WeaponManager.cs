@@ -85,15 +85,27 @@ public partial class WeaponManager : Node
                 // 检查是否已有其他兵器占据（排除自己已在的格子）
                 if (g.weapon != null && g.weapon != weapon)
                 {
-                    // 如果该格子的兵器是多格兵器且不是同一个，则阻挡
-                    if (g.weapon.isMultiTile && g.weapon != weapon) return false;
-                    // 如果是单格兵器，也阻挡
-                    if (!g.weapon.isMultiTile) return false;
+                    // ✅ 清理无效引用，防止已销毁兵器残留导致无法放置
+                    if (!IsInstanceValid(g.weapon))
+                    {
+                        g.weapon = null;
+                        g.weapons.RemoveAll(w => w != null && !IsInstanceValid(w));
+                    }
+                    else if (g.weapon.isMultiTile && g.weapon != weapon)
+                    {
+                        return false;
+                    }
+                    else if (!g.weapon.isMultiTile)
+                    {
+                        return false;
+                    }
                 }
                 // 检查是否被其他多格兵器占据（通过occupiedGrids检查）
+                // ✅ 先清理 AllWeapons 中的无效引用
+                AllWeapons.RemoveAll(w => w == null || !IsInstanceValid(w));
                 foreach (var otherW in AllWeapons)
                 {
-                    if (otherW != weapon && otherW.isMultiTile && otherW.occupiedGrids.Contains(g))
+                    if (otherW != weapon && IsInstanceValid(otherW) && otherW.isMultiTile && otherW.occupiedGrids.Contains(g))
                         return false;
                 }
             }

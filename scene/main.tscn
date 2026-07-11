@@ -2771,7 +2771,7 @@ targetSelectionMode = 2
 maxAttacksPerTurn = 2
 
 [node name="LargeCannon" parent="WeaponManager/Weapons" unique_id=769636627 instance=ExtResource("34_7xrs8")]
-position = Vector2(480, 232)
+position = Vector2(480, 224)
 health = 1
 
 [node name="CameraController" type="Camera2D" parent="." unique_id=37389023]

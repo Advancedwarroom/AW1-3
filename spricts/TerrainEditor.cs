@@ -79,6 +79,7 @@ public partial class TerrainEditor : Control
     private Vector2I pendingMultiTileAnchorPos = new Vector2I(-1, -1);
     private string pendingMultiTileScenePath = "";
     private string pendingMultiTileTeam = "";
+    private CannonDirection pendingCannonDirection = CannonDirection.Up;
 
     // 状态
     public bool IsEditMode { get; private set; } = false;
@@ -213,6 +214,7 @@ private Button spawnModeFacilityBtn;
 private Button destroyModeBtn;
 private Label spawnHintLabel;
 private HBoxContainer spawnModeSelector;
+private HBoxContainer directionSelector; // ✅ 黑炮/大型黑炮 方向选择器
 public override void _Ready()
 {
     AddToGroup("terrain_editor");
@@ -361,20 +363,52 @@ private void CreateSpawnMenu()
 
     spawnMenuPanel.AddChild(spawnModeSelector);
 
+    // ✅ 方向选择器（黑炮/大型黑炮专用）
+    directionSelector = new HBoxContainer();
+    directionSelector.Position = new Vector2(60, 92);
+    directionSelector.Size = new Vector2(280, 30);
+    directionSelector.AddThemeConstantOverride("separation", 6);
+    directionSelector.Visible = false;
+
+    var dirLabel = new Label();
+    dirLabel.Text = "朝向:";
+    dirLabel.AddThemeFontSizeOverride("font_size", 12);
+    dirLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
+    dirLabel.CustomMinimumSize = new Vector2(40, 24);
+    directionSelector.AddChild(dirLabel);
+
+    string[] dirLabels = { "⬆️ 上", "➡️ 右", "⬇️ 下", "⬅️ 左" };
+    for (int i = 0; i < 4; i++)
+    {
+        int dirIndex = i; // 闭包捕获
+        var dirBtn = new Button();
+        dirBtn.Text = dirLabels[i];
+        dirBtn.CustomMinimumSize = new Vector2(50, 26);
+        dirBtn.AddThemeFontSizeOverride("font_size", 10);
+        dirBtn.Pressed += () => {
+            pendingCannonDirection = (CannonDirection)dirIndex;
+            UpdateDirectionButtonStyles();
+        };
+        dirBtn.Name = $"DirBtn_{dirIndex}";
+        directionSelector.AddChild(dirBtn);
+    }
+
+    spawnMenuPanel.AddChild(directionSelector);
+
     // 提示标签
     spawnHintLabel = new Label();
     spawnHintLabel.Text = "选择模式开始...";
     spawnHintLabel.HorizontalAlignment = HorizontalAlignment.Center;
     spawnHintLabel.AddThemeFontSizeOverride("font_size", 12);
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
-    spawnHintLabel.Position = new Vector2(10, 95);
+    spawnHintLabel.Position = new Vector2(10, 125);
     spawnHintLabel.Size = new Vector2(380, 25);
     spawnMenuPanel.AddChild(spawnHintLabel);
 
     // 滚动容器
     var scroll = new ScrollContainer();
-    scroll.Position = new Vector2(15, 125);
-    scroll.Size = new Vector2(370, 460);
+    scroll.Position = new Vector2(15, 155);
+    scroll.Size = new Vector2(370, 435);
     scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
 
     spawnButtonContainer = new VBoxContainer();
@@ -422,6 +456,7 @@ private void ToggleDestroyMode()
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(1f, 0.3f, 0.3f));
         currentSpawnMode = SpawnMode.None;
         selectedTemplatePath = "";
+        if (directionSelector != null) directionSelector.Visible = false;
         UpdateModeButtonStyles();
     }
     else
@@ -490,6 +525,33 @@ private void UpdateModeButtonStyles()
         HighlightButton(destroyModeBtn, new Color(0.6f, 0.2f, 0.2f));
 }
 
+// ✅ 更新方向按钮高亮状态
+private void UpdateDirectionButtonStyles()
+{
+    if (directionSelector == null) return;
+    for (int i = 0; i < 4; i++)
+    {
+        var btn = directionSelector.GetNodeOrNull<Button>($"DirBtn_{i}");
+        if (btn == null) continue;
+        if ((CannonDirection)i == pendingCannonDirection)
+        {
+            var style = new StyleBoxFlat();
+            style.BgColor = new Color(0.3f, 0.5f, 0.8f, 0.95f);
+            style.SetCornerRadiusAll(6);
+            style.SetBorderWidthAll(2);
+            style.BorderColor = Colors.Yellow;
+            btn.AddThemeStyleboxOverride("normal", style);
+        }
+        else
+        {
+            var style = new StyleBoxFlat();
+            style.BgColor = new Color(0.25f, 0.25f, 0.3f, 0.6f);
+            style.SetCornerRadiusAll(6);
+            btn.AddThemeStyleboxOverride("normal", style);
+        }
+    }
+}
+
 private void ResetButtonStyle(Button btn)
 {
     var style = new StyleBoxFlat();
@@ -513,6 +575,7 @@ private void RefreshSpawnButtons()
 
     selectedTemplatePath = "";
     selectedTemplateCategory = "";
+    if (directionSelector != null) directionSelector.Visible = false;
 
     if (currentSpawnMode == SpawnMode.None) return;
 
@@ -633,6 +696,18 @@ private Button CreateTemplateButton(UnitTemplate template)
         selectedTemplateCategory = template.Category;
         spawnHintLabel.Text = $"✅ 已选择: {template.DisplayName} ({template.Team})\n点击地图格子生成...";
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+
+        // ✅ 黑炮/大型黑炮：显示方向选择器
+        bool isCannon = template.ScenePath.Contains("black_cannon") || template.ScenePath.Contains("large_cannon");
+        if (directionSelector != null)
+        {
+            directionSelector.Visible = isCannon;
+            if (isCannon)
+            {
+                pendingCannonDirection = CannonDirection.Up; // 默认朝上
+                UpdateDirectionButtonStyles();
+            }
+        }
 
         foreach (var child in spawnButtonContainer.GetChildren())
         {
@@ -822,6 +897,7 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
         weapon.UpdateHpLabel();
         if (weapon is BlackCannon cannon)
         {
+            cannon.direction = pendingCannonDirection;
             cannon.UpdateDirectionVisual();
             cannon.UpdateAmmoVisual();
         }
@@ -1122,6 +1198,7 @@ private void CloseSpawnMenu()
     currentSpawnMode = SpawnMode.None;
     isDestroyMode = false;
     selectedTemplatePath = "";
+    if (directionSelector != null) directionSelector.Visible = false;
     isMenuOpen = false;
 }
 
@@ -7255,6 +7332,14 @@ private void OpenWeaponTerrainMatrixEditor()
         var tempWeapon = scene.Instantiate<Weapon>();
         if (tempWeapon == null) return;
 
+        // ✅ 关键修复：Instantiate 不会触发 _Ready，多格兵器的 isMultiTile 需要在 _Ready 中设置
+        // 但临时实例化时 _Ready 还没执行，所以这里手动检测并设置
+        if (tempWeapon is LargeCannon lc && !tempWeapon.isMultiTile)
+        {
+            tempWeapon.isMultiTile = true;
+            tempWeapon.size = lc.multiTileSize;
+        }
+
         // 如果不是多格兵器，直接生成（不走预览流程）
         if (!tempWeapon.isMultiTile)
         {
@@ -7277,6 +7362,29 @@ private void OpenWeaponTerrainMatrixEditor()
                 idx.Y < 0 || idx.Y >= gm.gridManager.searchRange.Y)
             {
                 spawnHintLabel.Text = "❌ 超出地图范围，无法放置";
+                spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+                return;
+            }
+        }
+
+        // ✅ 检查目标区域是否已被占据（兵器/非重叠单位）
+        foreach (var idx in occupiedIndices)
+        {
+            var g = gm.gridManager.map[idx.X, idx.Y];
+            if (g == null) continue;
+            // 已有兵器
+            if (g.weapon != null && IsInstanceValid(g.weapon))
+            {
+                spawnHintLabel.Text = "❌ 该区域已有兵器占据，无法放置";
+                spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
+                return;
+            }
+            // 非重叠单位
+            var blockingUnit = g.infantries.FirstOrDefault(u =>
+                u != null && IsInstanceValid(u) && u.overlapType == UnitOverlapType.NonOverlapping);
+            if (blockingUnit != null)
+            {
+                spawnHintLabel.Text = $"❌ 该区域被 {blockingUnit.Name} 占据";
                 spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
                 return;
             }
@@ -7354,7 +7462,7 @@ private void OpenWeaponTerrainMatrixEditor()
             {
                 if (w != null && IsInstanceValid(w) && w != weapon)
                 {
-                    gameManager.RemoveWeapon(w);
+                    gameManager.weaponManager.RemoveWeapon(w);
                 }
             }
             // 摧毁设施
@@ -7388,11 +7496,13 @@ private void OpenWeaponTerrainMatrixEditor()
         weapon.UpdateHpLabel();
         if (weapon is BlackCannon cannon)
         {
+            cannon.direction = pendingCannonDirection;
             cannon.UpdateDirectionVisual();
             cannon.UpdateAmmoVisual();
         }
         if (weapon is LargeCannon lc)
         {
+            lc.direction = pendingCannonDirection;
             lc.UpdateDirectionVisual();
             lc.UpdateAmmoVisual();
             lc.UpdateMultiTileVisual();

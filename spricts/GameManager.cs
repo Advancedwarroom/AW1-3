@@ -261,6 +261,34 @@ public void OnSelectWeapon(Weapon weapon)
 public void RemoveWeapon(Weapon weapon)
 {
     if (weapon == null) return;
+
+    // ✅ 多格兵器：必须彻底清理所有占据格子的引用，不能只做单格清理
+    if (weapon.isMultiTile)
+    {
+        if (weaponManager != null && weaponManager.AllWeapons.Contains(weapon))
+        {
+            weaponManager.RemoveWeapon(weapon);
+            UpdateUnitLists();
+            return;
+        }
+        // 备用：手动清理多格引用
+        foreach (var og in weapon.occupiedGrids.ToList())
+        {
+            if (og != null && IsInstanceValid(og))
+            {
+                og.weapons.Remove(weapon);
+                if (og.weapon == weapon)
+                    og.weapon = og.weapons.Count > 0 ? og.weapons[0] : null;
+            }
+        }
+        weapon.occupiedGrids.Clear();
+        weapons.Remove(weapon);
+        if (selectedWeapon == weapon) selectedWeapon = null;
+        if (weapon != null && IsInstanceValid(weapon))
+            weapon.QueueFree();
+        UpdateUnitLists();
+        return;
+    }
     
     // ✅ 修复：先检查 weaponManager 是否为 null，避免递归时重复操作
     if (weaponManager != null && weaponManager.AllWeapons.Contains(weapon))
