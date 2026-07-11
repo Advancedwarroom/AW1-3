@@ -79,7 +79,7 @@ public partial class TerrainEditor : Control
     private Vector2I pendingMultiTileAnchorPos = new Vector2I(-1, -1);
     private string pendingMultiTileScenePath = "";
     private string pendingMultiTileTeam = "";
-    private CannonDirection pendingCannonDirection = CannonDirection.Up;
+    private BlackCannon.CannonDirection pendingCannonDirection = BlackCannon.CannonDirection.Up;
 
     // 状态
     public bool IsEditMode { get; private set; } = false;
@@ -386,7 +386,7 @@ private void CreateSpawnMenu()
         dirBtn.CustomMinimumSize = new Vector2(50, 26);
         dirBtn.AddThemeFontSizeOverride("font_size", 10);
         dirBtn.Pressed += () => {
-            pendingCannonDirection = (CannonDirection)dirIndex;
+            pendingCannonDirection = (BlackCannon.CannonDirection)dirIndex;
             UpdateDirectionButtonStyles();
         };
         dirBtn.Name = $"DirBtn_{dirIndex}";
@@ -533,7 +533,7 @@ private void UpdateDirectionButtonStyles()
     {
         var btn = directionSelector.GetNodeOrNull<Button>($"DirBtn_{i}");
         if (btn == null) continue;
-        if ((CannonDirection)i == pendingCannonDirection)
+        if ((BlackCannon.CannonDirection)i == pendingCannonDirection)
         {
             var style = new StyleBoxFlat();
             style.BgColor = new Color(0.3f, 0.5f, 0.8f, 0.95f);
@@ -704,7 +704,7 @@ private Button CreateTemplateButton(UnitTemplate template)
             directionSelector.Visible = isCannon;
             if (isCannon)
             {
-                pendingCannonDirection = CannonDirection.Up; // 默认朝上
+                pendingCannonDirection = BlackCannon.CannonDirection.Up; // 默认朝上
                 UpdateDirectionButtonStyles();
             }
         }
