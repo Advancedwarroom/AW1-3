@@ -5142,7 +5142,7 @@ private void OpenWeaponTerrainMatrixEditor()
         }
 
         // 只打印一次总结，不打印每个字段
-        if (successCount > 0 || skipCount > 0)
+        if (successCount > 0 || skipCount > 0);
     }
 
     // ✅ 值层面：跳过节点引用/贴图/空集合等不需要导入的值

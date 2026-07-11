@@ -490,7 +490,7 @@ private void InitializeCooldownState()
         string anim = GetAnimName();
         if (animSprite.SpriteFrames.HasAnimation(anim))
             animSprite.Play(anim);
-        else
+        else;
     }
 
     // 计算三角形攻击范围内的所有格子
@@ -1267,7 +1267,6 @@ public override void OnTurnStart()
         }
 
         target.UpdateHpLabel();
-                 (CanDestroy ? "造成" : "锁血造成") + $" {damage} 点伤害");
 
         if (target.health <= 0)
         {
