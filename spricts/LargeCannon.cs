@@ -1,5 +1,6 @@
 // LargeCannon.cs - 大型多格黑炮（3×3占据），继承BlackCannon
 // 还原原版AW Black Cannon的大型版本：3×3不可通行，仅弱点可攻击，摧毁后Broken形态仍不可通行
+// 分离炮口（firePoint）和弱点（weakPoint）：Up时炮口在上中，弱点在下中
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,11 @@ public partial class LargeCannon : BlackCannon
 {
     [ExportGroup("大型多格配置")]
     [Export] public Vector2I multiTileSize = new Vector2I(3, 3);
+    [Export] public bool canRotate = false; // 旋转开关：默认关闭（原版Black Cannon不可旋转）
 
+    // 炮口（发射台）偏移：炮弹发射的起点
+    private Vector2I firePointOffset = new Vector2I(1, 0);
+    // 弱点偏移：可被攻击扣血的格子
     private Vector2I weakPointOffset = new Vector2I(1, 2);
 
     public override void _Ready()
@@ -18,16 +23,32 @@ public partial class LargeCannon : BlackCannon
         size = multiTileSize;
         base._Ready();
         
-        // 更新弱点偏移（基于当前方向）
-        UpdateWeakPointOffset();
+        // 更新偏移（基于当前方向）
+        UpdateOffsetsForDirection();
     }
 
-    // 根据方向计算弱点在3×3中的偏移
-    // 坐标系：锚点(0,0)为左上，x向右，y向下
+    // 炮口位置：炮弹发射的起点（攻击范围计算从这里开始）
+    // Right: (2,1) - 最右列中间（炮口朝右）
+    // Left:  (0,1) - 最左列中间（炮口朝左）
+    // Up:    (1,0) - 上中（炮口朝上）
+    // Down:  (1,2) - 下中（炮口朝下）
+    public Vector2I GetFirePointOffsetForDirection(CannonDirection dir)
+    {
+        return dir switch
+        {
+            CannonDirection.Right => new Vector2I(2, 1),
+            CannonDirection.Left  => new Vector2I(0, 1),
+            CannonDirection.Up    => new Vector2I(1, 0),
+            CannonDirection.Down  => new Vector2I(1, 2),
+            _ => new Vector2I(1, 0)
+        };
+    }
+
+    // 弱点位置：可被攻击的格子（被攻击时扣血的点）
     // Right: (2,1) - 最右列中间
     // Left:  (0,1) - 最左列中间
-    // Up:    (1,2) - 中间列最下方（固定位置）
-    // Down:  (1,2) - 中间列最下方（固定位置）
+    // Up:    (1,2) - 下中（固定位置！）
+    // Down:  (1,2) - 下中（固定位置！）
     public Vector2I GetWeakPointOffsetForDirection(CannonDirection dir)
     {
         return dir switch
@@ -40,20 +61,23 @@ public partial class LargeCannon : BlackCannon
         };
     }
 
-    private void UpdateWeakPointOffset()
+    private void UpdateOffsetsForDirection()
     {
+        firePointOffset = GetFirePointOffsetForDirection(direction);
         weakPointOffset = GetWeakPointOffsetForDirection(direction);
     }
 
     public override void RotateDirection()
     {
+        if (!canRotate) return; // 旋转开关关闭时不旋转
         base.RotateDirection();
-        UpdateWeakPointOffset();
+        UpdateOffsetsForDirection();
         UpdateMultiTileVisual();
     }
 
     public override void UpdateDirectionVisual()
     {
+        UpdateOffsetsForDirection(); // 确保偏移同步更新
         base.UpdateDirectionVisual();
         UpdateMultiTileVisual();
     }
@@ -72,6 +96,24 @@ public partial class LargeCannon : BlackCannon
         }
     }
 
+    // 获取炮口格子（发射台）
+    public Grids GetFirePointGrid()
+    {
+        if (occupiedGrids.Count == 0) return grid;
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager?.map == null) return grid;
+        
+        var anchorIndex = grid?.GridIndex ?? new Vector2I(0, 0);
+        var fpIndex = anchorIndex + firePointOffset;
+        
+        if (fpIndex.X >= 0 && fpIndex.X < gm.gridManager.searchRange.X &&
+            fpIndex.Y >= 0 && fpIndex.Y < gm.gridManager.searchRange.Y)
+        {
+            return gm.gridManager.map[fpIndex.X, fpIndex.Y];
+        }
+        return grid;
+    }
+
     public override Grids GetWeakPointGrid()
     {
         if (occupiedGrids.Count == 0) return grid;
@@ -79,8 +121,7 @@ public partial class LargeCannon : BlackCannon
         if (gm?.gridManager?.map == null) return grid;
         
         var anchorIndex = grid?.GridIndex ?? new Vector2I(0, 0);
-        var wpOffset = GetWeakPointOffsetForDirection(direction);
-        var wpIndex = anchorIndex + wpOffset;
+        var wpIndex = anchorIndex + weakPointOffset;
         
         if (wpIndex.X >= 0 && wpIndex.X < gm.gridManager.searchRange.X &&
             wpIndex.Y >= 0 && wpIndex.Y < gm.gridManager.searchRange.Y)
@@ -96,19 +137,19 @@ public partial class LargeCannon : BlackCannon
         return checkGrid == GetWeakPointGrid();
     }
 
-    // 计算攻击范围：从弱点格子开始，而不是从锚点开始
+    // 计算攻击范围：从炮口格子（firePoint）开始，而不是从弱点格子开始
     public override List<Grids> CalculateAttackRange()
     {
         var range = new List<Grids>();
-        var weakPointGrid = GetWeakPointGrid();
-        if (weakPointGrid == null) return range;
+        var firePointGrid = GetFirePointGrid();
+        if (firePointGrid == null) return range;
 
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         if (gm?.gridManager?.map == null) return range;
 
         Vector2I dir = DirectionVectors[(int)direction];
         Vector2I perp = PerpVectors[(int)direction];
-        Vector2I start = weakPointGrid.GridIndex;
+        Vector2I start = firePointGrid.GridIndex;
 
         // 遍历每一层深度（距离）
         for (int depth = 1; depth <= maxAttackDepth; depth++)
@@ -213,7 +254,9 @@ public partial class LargeCannon : BlackCannon
         info = info.Replace("[黑炮]", "[大型黑炮]");
         info += $"\n=== 多格占据 ===\n";
         info += $"尺寸: {size.X}×{size.Y}\n";
+        info += $"炮口位置: {direction} ({GetFirePointOffsetForDirection(direction)})\n";
         info += $"弱点位置: {direction} ({GetWeakPointOffsetForDirection(direction)})\n";
+        info += $"可旋转: {(canRotate ? "是" : "否")}\n";
         info += $"状态: {(isDestroyed ? "已摧毁" : "运作中")}\n";
         if (contributesToVictory)
         {

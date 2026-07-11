@@ -479,6 +479,7 @@ private void InitializeCooldownState()
 
     public override void RotateDirection()
     {
+        if (!canRotate) return;
         // 顺时针旋转90度
         direction = (CannonDirection)(((int)direction + 1) % 4);
         UpdateDirectionVisual();

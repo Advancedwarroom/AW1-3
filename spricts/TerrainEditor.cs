@@ -2274,6 +2274,10 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         else if (target is Weapon weapon)
         {
             AddWeaponVisionFields(weapon);
+            if (weapon is LargeCannon lc)
+            {
+                AddLargeCannonFields(lc);
+            }
         }
     }
 
@@ -2527,6 +2531,127 @@ private void BuildGridPropertyEditor(Grids grid)
                 (newDict) => { weapon.weaponTerrainVisionBonus = newDict; }
             );
             propertyContainer.AddChild(matrixEditor);
+        }
+    }
+
+    // ✅ 新增：大型黑炮专属字段（方向旋转按钮、旋转开关、胜利判定）
+    private void AddLargeCannonFields(LargeCannon lc)
+    {
+        var sectionLabel = new Label();
+        sectionLabel.Text = "=== 大型黑炮专属 ===";
+        sectionLabel.AddThemeFontSizeOverride("font_size", 14);
+        sectionLabel.AddThemeColorOverride("font_color", new Color(1f, 0.6f, 0.2f));
+        sectionLabel.CustomMinimumSize = new Vector2(0, 28);
+        propertyContainer.AddChild(sectionLabel);
+
+        // 方向旋转按钮
+        var dirLabel = new Label();
+        dirLabel.Text = "🧭 方向:";
+        dirLabel.AddThemeFontSizeOverride("font_size", 12);
+        dirLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
+        propertyContainer.AddChild(dirLabel);
+
+        var dirHBox = new HBoxContainer();
+        dirHBox.AddThemeConstantOverride("separation", 6);
+        dirHBox.CustomMinimumSize = new Vector2(0, 36);
+
+        string[] dirNames = { "⬆️上", "➡️右", "⬇️下", "⬅️左" };
+        var dirValues = new[] { BlackCannon.CannonDirection.Up, BlackCannon.CannonDirection.Right, BlackCannon.CannonDirection.Down, BlackCannon.CannonDirection.Left };
+
+        for (int i = 0; i < 4; i++)
+        {
+            var dirBtn = new Button();
+            dirBtn.Text = dirNames[i];
+            dirBtn.CustomMinimumSize = new Vector2(50, 32);
+            dirBtn.AddThemeFontSizeOverride("font_size", 11);
+            var capturedDir = dirValues[i];
+            dirBtn.Pressed += () => {
+                lc.direction = capturedDir;
+                lc.UpdateDirectionVisual();
+                OnPropertyChanged(lc, "direction");
+                // 刷新只读信息
+                RefreshLargeCannonInfo(lc);
+            };
+            dirHBox.AddChild(dirBtn);
+        }
+        propertyContainer.AddChild(dirHBox);
+
+        // 可旋转开关
+        var rotateHBox = new HBoxContainer();
+        rotateHBox.AddThemeConstantOverride("separation", 8);
+        rotateHBox.CustomMinimumSize = new Vector2(0, 32);
+        var rotateLabel = new Label();
+        rotateLabel.Text = "🔁 允许旋转:";
+        rotateLabel.CustomMinimumSize = new Vector2(120, 28);
+        rotateLabel.AddThemeFontSizeOverride("font_size", 12);
+        rotateLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
+        rotateHBox.AddChild(rotateLabel);
+        var rotateCheck = new CheckBox();
+        rotateCheck.ButtonPressed = lc.canRotate;
+        rotateCheck.Toggled += (pressed) => {
+            lc.canRotate = pressed;
+        };
+        rotateHBox.AddChild(rotateCheck);
+        propertyContainer.AddChild(rotateHBox);
+
+        // 介入胜利判定
+        var victoryHBox = new HBoxContainer();
+        victoryHBox.AddThemeConstantOverride("separation", 8);
+        victoryHBox.CustomMinimumSize = new Vector2(0, 32);
+        var victoryLabel = new Label();
+        victoryLabel.Text = "🏆 介入胜利判定:";
+        victoryLabel.CustomMinimumSize = new Vector2(120, 28);
+        victoryLabel.AddThemeFontSizeOverride("font_size", 12);
+        victoryLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
+        victoryHBox.AddChild(victoryLabel);
+        var victoryCheck = new CheckBox();
+        victoryCheck.ButtonPressed = lc.contributesToVictory;
+        victoryCheck.Toggled += (pressed) => {
+            lc.contributesToVictory = pressed;
+        };
+        victoryHBox.AddChild(victoryCheck);
+        propertyContainer.AddChild(victoryHBox);
+
+        // 需要摧毁数量
+        var countHBox = new HBoxContainer();
+        countHBox.AddThemeConstantOverride("separation", 8);
+        countHBox.CustomMinimumSize = new Vector2(0, 32);
+        var countLabel = new Label();
+        countLabel.Text = "📊 需摧毁数量:";
+        countLabel.CustomMinimumSize = new Vector2(120, 28);
+        countLabel.AddThemeFontSizeOverride("font_size", 12);
+        countLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
+        countHBox.AddChild(countLabel);
+        var countSpin = new SpinBox();
+        countSpin.MinValue = 1;
+        countSpin.MaxValue = 99;
+        countSpin.Value = lc.victoryCountRequired;
+        countSpin.CustomMinimumSize = new Vector2(80, 28);
+        countSpin.AddThemeFontSizeOverride("font_size", 12);
+        countSpin.ValueChanged += (newVal) => {
+            lc.victoryCountRequired = (int)newVal;
+        };
+        countHBox.AddChild(countSpin);
+        propertyContainer.AddChild(countHBox);
+
+        // 炮口和弱点信息（只读）
+        var infoLabel = new Label();
+        infoLabel.Name = "LargeCannonInfoLabel";
+        infoLabel.Text = $"炮口: {lc.GetFirePointOffsetForDirection(lc.direction)} | 弱点: {lc.GetWeakPointOffsetForDirection(lc.direction)}";
+        infoLabel.AddThemeFontSizeOverride("font_size", 11);
+        infoLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
+        propertyContainer.AddChild(infoLabel);
+    }
+
+    private void RefreshLargeCannonInfo(LargeCannon lc)
+    {
+        foreach (var child in propertyContainer.GetChildren())
+        {
+            if (child is Label label && label.Name == "LargeCannonInfoLabel")
+            {
+                label.Text = $"炮口: {lc.GetFirePointOffsetForDirection(lc.direction)} | 弱点: {lc.GetWeakPointOffsetForDirection(lc.direction)}";
+                break;
+            }
         }
     }
 
@@ -3997,6 +4122,58 @@ private void RefreshAllUnitVision()
         globalConfigContainer.AddChild(compactExportBtn);
 
         var compactImportBtn = new Button();
+
+        // ✅ 胜利判定配置
+        var victorySection = CreateConfigSectionTitle("🏆 胜利判定配置");
+        globalConfigContainer.AddChild(victorySection);
+
+        var p1AnnihHBox = new HBoxContainer();
+        p1AnnihHBox.AddThemeConstantOverride("separation", 10);
+        var p1AnnihLabel = new Label();
+        p1AnnihLabel.Text = "P1 全灭胜利判定:";
+        p1AnnihLabel.CustomMinimumSize = new Vector2(150, 28);
+        p1AnnihLabel.AddThemeFontSizeOverride("font_size", 13);
+        p1AnnihHBox.AddChild(p1AnnihLabel);
+        var p1AnnihCheck = new CheckBox();
+        p1AnnihCheck.ButtonPressed = gm?.p1AnnihilationVictoryEnabled ?? true;
+        p1AnnihCheck.CustomMinimumSize = new Vector2(28, 28);
+        p1AnnihCheck.Toggled += (pressed) => {
+            if (gm != null) gm.p1AnnihilationVictoryEnabled = pressed;
+        };
+        p1AnnihHBox.AddChild(p1AnnihCheck);
+        globalConfigContainer.AddChild(p1AnnihHBox);
+
+        var p2AnnihHBox = new HBoxContainer();
+        p2AnnihHBox.AddThemeConstantOverride("separation", 10);
+        var p2AnnihLabel = new Label();
+        p2AnnihLabel.Text = "P2 全灭胜利判定:";
+        p2AnnihLabel.CustomMinimumSize = new Vector2(150, 28);
+        p2AnnihLabel.AddThemeFontSizeOverride("font_size", 13);
+        p2AnnihHBox.AddChild(p2AnnihLabel);
+        var p2AnnihCheck = new CheckBox();
+        p2AnnihCheck.ButtonPressed = gm?.p2AnnihilationVictoryEnabled ?? true;
+        p2AnnihCheck.CustomMinimumSize = new Vector2(28, 28);
+        p2AnnihCheck.Toggled += (pressed) => {
+            if (gm != null) gm.p2AnnihilationVictoryEnabled = pressed;
+        };
+        p2AnnihHBox.AddChild(p2AnnihCheck);
+        globalConfigContainer.AddChild(p2AnnihHBox);
+
+        var weaponVictoryHBox = new HBoxContainer();
+        weaponVictoryHBox.AddThemeConstantOverride("separation", 10);
+        var weaponVictoryLabel = new Label();
+        weaponVictoryLabel.Text = "兵器摧毁胜利判定:";
+        weaponVictoryLabel.CustomMinimumSize = new Vector2(150, 28);
+        weaponVictoryLabel.AddThemeFontSizeOverride("font_size", 13);
+        weaponVictoryHBox.AddChild(weaponVictoryLabel);
+        var weaponVictoryCheck = new CheckBox();
+        weaponVictoryCheck.ButtonPressed = gm?.weaponVictoryEnabled ?? false;
+        weaponVictoryCheck.CustomMinimumSize = new Vector2(28, 28);
+        weaponVictoryCheck.Toggled += (pressed) => {
+            if (gm != null) gm.weaponVictoryEnabled = pressed;
+        };
+        weaponVictoryHBox.AddChild(weaponVictoryCheck);
+        globalConfigContainer.AddChild(weaponVictoryHBox);
         compactImportBtn.Text = "📥 极简导入";
         compactImportBtn.CustomMinimumSize = new Vector2(300, 40);
         compactImportBtn.AddThemeFontSizeOverride("font_size", 13);
