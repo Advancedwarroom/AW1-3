@@ -128,30 +128,41 @@ public partial class GridManager : Node
     {
         if (from == null || to == null) return new List<Grids>();
 
-        var queue = new Queue<Grids>();
-        var parent = new Dictionary<Grids, Grids>();
-        queue.Enqueue(from);
-        parent[from] = null;
+        var queue = new Queue<Vector2I>();
+        var parent = new Dictionary<Vector2I, Vector2I>();
+        var fromIdx = from.GridIndex;
+        var toIdx = to.GridIndex;
+        queue.Enqueue(fromIdx);
+        parent[fromIdx] = new Vector2I(-1, -1);
 
         while (queue.Count > 0)
         {
-            var cur = queue.Dequeue();
-            if (cur == to) break;
+            var curIdx = queue.Dequeue();
+            if (curIdx == toIdx) break;
 
-            foreach (var n in GetNeighbours(cur, true))
+            var curGrid = map[curIdx.X, curIdx.Y];
+            if (curGrid == null) continue;
+
+            foreach (var n in GetNeighbours(curGrid, true))
             {
-                if (n == null || parent.ContainsKey(n)) continue;
-                parent[n] = cur;
-                queue.Enqueue(n);
+                if (n == null) continue;
+                var nIdx = n.GridIndex;
+                if (parent.ContainsKey(nIdx)) continue;
+                parent[nIdx] = curIdx;
+                queue.Enqueue(nIdx);
             }
         }
 
         var path = new List<Grids>();
-        Grids walk = to;
-        while (walk != null)
+        var walkIdx = toIdx;
+        while (walkIdx != new Vector2I(-1, -1))
         {
-            path.Add(walk);
-            walk = parent.GetValueOrDefault(walk);
+            if (walkIdx.X >= 0 && walkIdx.X < searchRange.X && walkIdx.Y >= 0 && walkIdx.Y < searchRange.Y)
+            {
+                var grid = map[walkIdx.X, walkIdx.Y];
+                if (grid != null) path.Add(grid);
+            }
+            walkIdx = parent.GetValueOrDefault(walkIdx, new Vector2I(-1, -1));
         }
         path.Reverse();
         return path.Count > 1 ? path : new List<Grids>();
@@ -773,7 +784,6 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     // ========== ✅ 核心修改：HandleGridClick ==========
     public void HandleGridClick(Infantry infantry, Grids to)
     {
-        GD.Print($"[HandleGridClick] START {infantry?.Name} → {to?.GridIndex}, grid={infantry?.grid?.GridIndex}");
         // ✅ 编辑模式下禁止单位移动操作
         var terrainEditor = GetTree().GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
         if (terrainEditor != null && terrainEditor.ShouldBlockUnitOperations())
@@ -976,15 +986,14 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
     public void MoveTo(Infantry infantry, Grids to, bool showMenu = true)
     {
-        GD.Print($"[MoveTo] START {infantry?.Name} from={infantry?.grid?.GridIndex} to={to?.GridIndex}");
-        if (infantry == null || to == null) { GD.Print("[MoveTo] ABORT: null param"); return; }
+        if (infantry == null || to == null) return;
 
         bool isOozium = infantry is Oozium;
 
         if (infantry.overlapType == UnitOverlapType.NonOverlapping)
         {
             var otherUnits = to.infantries.Where(i => i != infantry && IsInstanceValid(i)).ToList();
-            if (otherUnits.Count > 0) { GD.Print($"[MoveTo] ABORT: target has {otherUnits.Count} other units"); return; }
+            if (otherUnits.Count > 0) return;
         }
 
         if (infantry.overlapType == UnitOverlapType.Oozium)
@@ -997,8 +1006,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
 
         var path = BuildPath(infantry.grid, to);
-        GD.Print($"[MoveTo] BuildPath result: {path.Count} grids");
-        if (path.Count == 0) { GD.Print("[MoveTo] ABORT: empty path"); return; }
+        if (path.Count == 0) return;
 
         int totalMoveCost = 0;
         int totalFuelCost = 0;
@@ -1021,14 +1029,14 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         if (isOozium)
         {
-            if (infantry.movePoints < 0) { GD.Print("[MoveTo] ABORT: Oozium no move points"); return; }
+            if (infantry.movePoints < 0) return;
         }
         else
         {
-            if (infantry.movePoints < totalMoveCost) { GD.Print($"[MoveTo] ABORT: movePoints={infantry.movePoints} < cost={totalMoveCost}"); return; }
+            if (infantry.movePoints < totalMoveCost) return;
         }
 
-        if (infantry.consumeFuel && infantry.fuel < totalFuelCost) { GD.Print($"[MoveTo] ABORT: fuel={infantry.fuel} < cost={totalFuelCost}"); return; }
+        if (infantry.consumeFuel && infantry.fuel < totalFuelCost) return;
 
         if (infantry.originalGrid == null)
             infantry.originalGrid = infantry.grid;
@@ -1055,7 +1063,6 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         infantry.state = UnitState.Moved;
         infantry.isMoved = true;
-        GD.Print($"[MoveTo] SUCCESS {infantry.Name} moved to {to.GridIndex}, MP={infantry.movePoints}, fuel={infantry.fuel}");
 
         // ✅ 移动完成后立即刷新战争迷雾
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -1120,7 +1127,15 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     public void HandleTruncatedMove(Infantry infantry, Grids target)
     {
         var path = BuildPath(infantry.grid, target);
-        if (path.Count <= 1) return; // 就在原地，不处理
+        if (path.Count <= 1)
+        {
+            CloseRange();
+            var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
+            actionMenu?.Hide();
+            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            gm?.ClearSelectedInfantry();
+            return;
+        }
 
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 
@@ -1172,12 +1187,10 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         if (truncatedTarget != infantry.grid)
         {
-            GD.Print($"[TruncatedMove] {infantry.Name} 截断至 {truncatedTarget.GridIndex} 后直接待机");
             MoveTo(infantry, truncatedTarget, showMenu: false);
         }
         else
         {
-            GD.Print($"[TruncatedMove] 无法截断，取消移动");
             CloseRange();
             var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
             actionMenu?.Hide();
