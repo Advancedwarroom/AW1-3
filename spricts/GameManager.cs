@@ -2359,6 +2359,22 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
 
         productionMenuTitle.Text = $"🏭 生产菜单 ({facility.GetType().Name})\n💰 资金: {currentFunds} G";
 
+        // ✅ 即时移动开关
+        var moveCheckBox = new CheckBox();
+        moveCheckBox.Text = "⚡ 生产后可立即移动";
+        moveCheckBox.AddThemeFontSizeOverride("font_size", 12);
+        moveCheckBox.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.4f));
+        moveCheckBox.ButtonPressed = facility.instantMoveAfterProduction;
+        moveCheckBox.Toggled += (pressed) => {
+            facility.instantMoveAfterProduction = pressed;
+        };
+        productionMenuContainer.AddChild(moveCheckBox);
+
+        // 分隔线
+        var sep = new HSeparator();
+        sep.CustomMinimumSize = new Godot.Vector2(0, 8);
+        productionMenuContainer.AddChild(sep);
+
         foreach (string unitName in facility.producibleUnitNames)
         {
             if (!UnitProductionDatabase.HasUnit(unitName)) continue;

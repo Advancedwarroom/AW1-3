@@ -263,7 +263,7 @@ public override void _Input(InputEvent @event)
     public override bool CanAttack() => !hasActed && remainingAttacks > 0 && HasAmmoAndCooldown();
 
     // 方向向量（上、右、下、左）
-    private static readonly Vector2I[] DirectionVectors = {
+    protected static readonly Vector2I[] DirectionVectors = {
         new Vector2I(0, -1),   // Up
         new Vector2I(1, 0),    // Right
         new Vector2I(0, 1),    // Down
@@ -271,7 +271,7 @@ public override void _Input(InputEvent @event)
     };
 
     // 垂直向量（用于计算横向扩散）
-    private static readonly Vector2I[] PerpVectors = {
+    protected static readonly Vector2I[] PerpVectors = {
         new Vector2I(1, 0),    // Up的垂直方向是Right
         new Vector2I(0, 1),    // Right的垂直方向是Down
         new Vector2I(-1, 0),   // Down的垂直方向是Left
@@ -484,7 +484,7 @@ private void InitializeCooldownState()
         UpdateDirectionVisual();
     }
 
-    public void UpdateDirectionVisual()
+    public virtual void UpdateDirectionVisual()
     {
         if (animSprite == null) return;
         string anim = GetAnimName();
@@ -1498,7 +1498,7 @@ public override void OnTurnStart()
     }
 
     // ========== ✅ 新增：获取黑炮完整信息（用于信息面板） ==========
-    public string GetBlackCannonFullInfo()
+    public virtual string GetBlackCannonFullInfo()
     {
         string info = "";
 

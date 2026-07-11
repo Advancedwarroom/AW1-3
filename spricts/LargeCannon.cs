@@ -9,6 +9,8 @@ public partial class LargeCannon : BlackCannon
     [ExportGroup("大型多格配置")]
     [Export] public Vector2I multiTileSize = new Vector2I(3, 3);
 
+    private Vector2I weakPointOffset = new Vector2I(1, 2);
+
     public override void _Ready()
     {
         // 在base._Ready之前设置多格属性
