@@ -1253,21 +1253,35 @@ private void AutoCategorizeUnit(Infantry unit)
     }
 }
 
-    // 兵器摧毁胜利判定：检查是否满足所有介入胜利的兵器条件
+    // ✅ 兵器摧毁胜利判定：检查是否满足介入胜利的兵器条件
+    // 修复：基于兵器原始归属团队判断，排除中立兵器，避免单一兵器被摧毁导致双方"获胜"
     private void CheckWeaponVictoryCondition(bool p1Alive, bool p2Alive)
     {
         if (weaponManager == null) return;
 
-        var allWeapons = weaponManager.AllWeapons.Where(w => IsInstanceValid(w)).ToList();
-        // 需要被摧毁的兵器：开启了contributesToVictory且未被摧毁的
-        var requiredWeapons = allWeapons.Where(w => w.contributesToVictory && !w.isDestroyed).ToList();
+        // 获取所有标记为 contributesToVictory 的兵器（包括已摧毁的，用于判断初始条件）
+        var allVictoryWeapons = weaponManager.AllWeapons
+            .Where(w => IsInstanceValid(w) && w.contributesToVictory)
+            .ToList();
 
-        // 按敌方团队分组统计
-        var p1EnemyWeapons = requiredWeapons.Where(w => w.team != TeamHelper.Player1).ToList();
-        var p2EnemyWeapons = requiredWeapons.Where(w => w.team != TeamHelper.Player2).ToList();
+        if (allVictoryWeapons.Count == 0) return; // 没有配置兵器胜利条件
 
-        bool p1WinsByWeapon = p1EnemyWeapons.Count == 0 && p1Alive;
-        bool p2WinsByWeapon = p2EnemyWeapons.Count == 0 && p2Alive;
+        // ✅ 关键修正：
+        // P1的胜利条件 = 所有属于P2团队且contributesToVictory的兵器都被摧毁
+        // P2的胜利条件 = 所有属于P1团队且contributesToVictory的兵器都被摧毁
+        // 中立兵器(Player0)和P-1兵器不参与任何一方的兵器胜利判定
+
+        var p1Targets = allVictoryWeapons.Where(w => w.team == TeamHelper.Player2).ToList();
+        var p2Targets = allVictoryWeapons.Where(w => w.team == TeamHelper.Player1).ToList();
+
+        // P1是否完成了摧毁P2目标兵器的任务
+        bool p1TargetsAllDestroyed = p1Targets.Count == 0 || p1Targets.All(w => w.isDestroyed);
+        // P2是否完成了摧毁P1目标兵器的任务  
+        bool p2TargetsAllDestroyed = p2Targets.Count == 0 || p2Targets.All(w => w.isDestroyed);
+
+        // 只有"有目标且全部摧毁"才算获胜，"无目标"不算获胜（避免平局bug）
+        bool p1WinsByWeapon = p1Targets.Count > 0 && p1TargetsAllDestroyed && p1Alive;
+        bool p2WinsByWeapon = p2Targets.Count > 0 && p2TargetsAllDestroyed && p2Alive;
 
         if (p1WinsByWeapon && !p2WinsByWeapon)
         {
@@ -1281,6 +1295,7 @@ private void AutoCategorizeUnit(Infantry unit)
         {
             ShowVictory("Draw", "Draw");
         }
+        // 如果双方都无目标，不触发兵器胜利（由全灭判定或其他逻辑处理）
     }
 
     // 势力失败判定：检查是否有势力因全灭（无单位且无兵器）而失败
