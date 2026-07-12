@@ -45,6 +45,8 @@ public partial class GameManager : Node
     [Export] public bool weaponVictoryEnabled = false;
     // 运行时统计：记录需要被摧毁的兵器列表（按团队）
     public Dictionary<string, List<Weapon>> victoryRequiredWeapons = new();
+    // 势力失败系统：记录已失败的势力
+    private HashSet<string> defeatedTeams = new();
 
     public List<Weapon> weapons = new List<Weapon>(); 
     // 各类单位列表
@@ -242,7 +244,7 @@ public override void _Input(InputEvent @event)
 
 public void OnSelectWeapon(Weapon weapon)
 {
-    if (weapon == null || weapon.hasActed) return;
+    if (weapon == null || weapon.hasActed || weapon.isDestroyed) return; // ✅ 已摧毁的兵器不可选择
     if (!IsTurnPhaseValid(weapon.team)) return;
 
     // ✅ 关键：清除单位选择
@@ -1226,15 +1228,22 @@ private void AutoCategorizeUnit(Infantry unit)
         if (gameEnded) return;
     }
 
-    // 判定全灭胜利条件：某一方单位全灭（如果该方全灭判定开启）
+    // 势力失败判定（新增）：只有失败的势力失败，其他势力继续游戏
+    CheckFactionDefeatCondition();
+    if (gameEnded) return;
+
+    // 判定全灭胜利条件：某一方单位全灭且没有兵器（如果该方全灭判定开启）
     bool p1Alive = p1Units.Count > 0;
     bool p2Alive = p2Units.Count > 0;
 
-    if (!p1Alive && p2Alive && p1AnnihilationVictoryEnabled)
+    bool p1HasWeapons = weaponManager?.AllWeapons.Any(w => IsInstanceValid(w) && !w.isDestroyed && w.team == TeamHelper.Player1) ?? false;
+    bool p2HasWeapons = weaponManager?.AllWeapons.Any(w => IsInstanceValid(w) && !w.isDestroyed && w.team == TeamHelper.Player2) ?? false;
+
+    if (!p1Alive && !p1HasWeapons && p2Alive && p1AnnihilationVictoryEnabled)
     {
         ShowVictory("Player2", "Player1");
     }
-    else if (!p2Alive && p1Alive && p2AnnihilationVictoryEnabled)
+    else if (!p2Alive && !p2HasWeapons && p1Alive && p2AnnihilationVictoryEnabled)
     {
         ShowVictory("Player1", "Player2");
     }
@@ -1273,6 +1282,58 @@ private void AutoCategorizeUnit(Infantry unit)
             ShowVictory("Draw", "Draw");
         }
     }
+
+    // 势力失败判定：检查是否有势力因全灭（无单位且无兵器）而失败
+    private void CheckFactionDefeatCondition()
+    {
+        if (gameEnded) return;
+
+        var allUnits = unitManager?.AllUnits.Where(u => IsInstanceValid(u) && u.health > 0).ToList();
+        var allWeapons = weaponManager?.AllWeapons.Where(w => IsInstanceValid(w) && !w.isDestroyed).ToList();
+
+        bool anyNewDefeat = false;
+        foreach (var team in TeamHelper.ActiveTeams)
+        {
+            if (defeatedTeams.Contains(team)) continue;
+
+            bool hasUnits = allUnits?.Any(u => u.team == team) ?? false;
+            bool hasWeapons = allWeapons?.Any(w => w.team == team) ?? false;
+
+            if (!hasUnits && !hasWeapons)
+            {
+                defeatedTeams.Add(team);
+                anyNewDefeat = true;
+                ShowFactionDefeat(team);
+            }
+        }
+
+        if (anyNewDefeat)
+        {
+            // 检查是否只剩一个势力
+            var remaining = TeamHelper.ActiveTeams.Where(t => !defeatedTeams.Contains(t)).ToList();
+            if (remaining.Count == 0)
+            {
+                ShowVictory("Draw", "All factions defeated");
+            }
+            else if (remaining.Count == 1)
+            {
+                ShowVictory(remaining[0], "Other factions defeated");
+            }
+        }
+    }
+
+    private void ShowFactionDefeat(string team)
+    {
+        GD.Print($"[FactionDefeat] {team} has been defeated!");
+        if (turnEndLabel != null)
+        {
+            turnEndLabel.Text = $"{team} 势力已被歼灭！";
+            turnEndLabel.Show();
+            var timer = GetTree().CreateTimer(2.0f);
+            timer.Timeout += () => { if (turnEndLabel != null) turnEndLabel.Hide(); };
+        }
+    }
+
 private void ShowVictory(string winner, string loser)
 {
     gameEnded = true;
@@ -1322,9 +1383,25 @@ private void ShowVictory(string winner, string loser)
     if (titleLabel != null)
     {
         titleLabel.BbcodeEnabled = false;
-        titleLabel.Text = winner == "Player1" ? "🔴 P1 获得胜利！" : "🔵 P2 获得胜利！";
-        titleLabel.AddThemeColorOverride("default_color", 
-            winner == "Player1" ? new Color(1, 0.2f, 0.2f) : new Color(0.2f, 0.5f, 1));
+        if (winner == "Player1")
+            titleLabel.Text = "🔴 P1 获得胜利！";
+        else if (winner == "Player2")
+            titleLabel.Text = "🔵 P2 获得胜利！";
+        else if (winner == "Draw")
+            titleLabel.Text = "🤝 平局！";
+        else
+            titleLabel.Text = $"🏆 {winner} 获得胜利！";
+
+        Color titleColor;
+        if (winner == "Player1")
+            titleColor = new Color(1, 0.2f, 0.2f);
+        else if (winner == "Player2")
+            titleColor = new Color(0.2f, 0.5f, 1);
+        else if (winner == "Draw")
+            titleColor = new Color(0.8f, 0.8f, 0.8f);
+        else
+            titleColor = new Color(1, 0.8f, 0.2f);
+        titleLabel.AddThemeColorOverride("default_color", titleColor);
         titleLabel.AddThemeFontSizeOverride("normal_font_size", 56);
 
         // ✅ 关键修复：在容器中水平填充并居中
@@ -1340,7 +1417,14 @@ private void ShowVictory(string winner, string loser)
     if (subLabel != null)
     {
         subLabel.BbcodeEnabled = false;
-        subLabel.Text = winner == "Player1" ? "🔵 P2 战败" : "🔴 P1 战败";
+        if (winner == "Player1")
+            subLabel.Text = "🔵 P2 战败";
+        else if (winner == "Player2")
+            subLabel.Text = "🔴 P1 战败";
+        else if (winner == "Draw")
+            subLabel.Text = "双方均未能取胜";
+        else
+            subLabel.Text = "其他势力战败";
         subLabel.AddThemeColorOverride("default_color", new Color(0.8f, 0.8f, 0.8f));
         subLabel.AddThemeFontSizeOverride("normal_font_size", 32);
 
@@ -1362,7 +1446,14 @@ private void ShowVictory(string winner, string loser)
         // 按钮不需要 ExpandFill，因为它有固定宽度，VBox 会自动居中它
 
         var style = new StyleBoxFlat();
-        style.BgColor = winner == "Player1" ? new Color(1, 0.3f, 0.3f) : new Color(0.3f, 0.5f, 1);
+        if (winner == "Player1")
+            style.BgColor = new Color(1, 0.3f, 0.3f);
+        else if (winner == "Player2")
+            style.BgColor = new Color(0.3f, 0.5f, 1);
+        else if (winner == "Draw")
+            style.BgColor = new Color(0.5f, 0.5f, 0.5f);
+        else
+            style.BgColor = new Color(1, 0.8f, 0.2f);
         style.SetCornerRadiusAll(12);
         btn.AddThemeStyleboxOverride("normal", style);
 
@@ -1538,6 +1629,26 @@ public void RestartGame()
         // ✅ 照明弹效果大回合过期处理
         fogOfWarManager?.OnBigTurnEnd();
 
+        }
+
+        // ✅ 跳过已失败势力的回合
+        int skipSafety = 0;
+        while (skipSafety < totalPhases)
+        {
+            string checkTeam = TeamHelper.GetPhaseTeamName(turnPhase);
+            if (TeamHelper.ActiveTeams.Contains(checkTeam) && defeatedTeams.Contains(checkTeam))
+            {
+                turnPhase++;
+                if (turnPhase > totalPhases)
+                {
+                    turnPhase = 1;
+                }
+            }
+            else
+            {
+                break;
+            }
+            skipSafety++;
         }
 
         string currentTeam = TeamHelper.GetPhaseTeamName(turnPhase);

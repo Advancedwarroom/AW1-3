@@ -878,6 +878,18 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
             return;
         }
 
+        // ✅ 关键修复：Instantiate 不会立即触发 _Ready，多格兵器属性需在 _Ready 前手动设置
+        if (weapon is LargeCannon lc && !weapon.isMultiTile)
+        {
+            weapon.isMultiTile = true;
+            weapon.size = lc.multiTileSize;
+        }
+        else if (weapon is DeathRay dr && !weapon.isMultiTile)
+        {
+            weapon.isMultiTile = true;
+            weapon.size = dr.multiTileSize;
+        }
+
         weapon.Position = grid.Position;
         weapon.team = team;
         weapon.Name = $"{team}_{weapon.GetType().Name}_{gameManager.weaponManager.AllWeapons.Count}";

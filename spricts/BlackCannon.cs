@@ -182,6 +182,7 @@ protected void ShowAttackRangeAsDisabled(GameManager gm)
 
 public override void _Input(InputEvent @event)
 {
+    if (isDestroyed) return; // ✅ 已摧毁的兵器不接受输入
     var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     
     // 只有本炮被选中、且当前回合是己方、且还没行动才能转
@@ -479,6 +480,7 @@ private void InitializeCooldownState()
 
     public override void RotateDirection()
     {
+        if (isDestroyed) return; // ✅ 已摧毁的兵器不可旋转
         if (!canRotate) return;
         // 顺时针旋转90度
         direction = (CannonDirection)(((int)direction + 1) % 4);
