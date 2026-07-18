@@ -262,10 +262,6 @@ public partial class APC : Infantry
         gm?.ClearSelectedInfantry();
     }
 
-    public override void OnAttackSelected()
-    {
-    }
-
     public override void InputClick(Node viewport, InputEvent inputs, int shape_index)
     {
         if (inputs is InputEventMouseButton mouseEvent && mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)

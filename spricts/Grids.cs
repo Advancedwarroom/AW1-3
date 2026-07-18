@@ -566,6 +566,12 @@ public partial class Grids : Node2D
     public List<Infantry> GetEnemyInfantries(Infantry reference) { return infantries.Where(i => i != reference && IsInstanceValid(i) && TeamHelper.IsEnemyForAttacker(reference.team, i.team)).ToList(); }
     public bool HasEnemyInfantry(Infantry reference) { return infantries.Any(i => i != reference && IsInstanceValid(i) && TeamHelper.IsEnemyForAttacker(reference.team, i.team)); }
 
+    // 格子上是否存在攻击者实际能造成伤害的敌方单位（伤害矩阵中有可用武器，含弹药检查）
+    public bool HasAttackableEnemyInfantry(Infantry attacker)
+    {
+        return GetEnemyInfantries(attacker).Any(e => attacker.SelectWeaponByMatrix(e) != WeaponType.None);
+    }
+
     // ========== 地形绑定图标系统 ==========
     private void InitializeTerrainIcons()
     {

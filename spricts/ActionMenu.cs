@@ -88,8 +88,8 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
     currentUnit = transport;
     currentTransport = transport;  // 兼容旧代码
 
-    // 武器按钮可见性
-    attackButton.Visible = transport.hasPrimaryWeapon || transport.hasSecondaryWeapon;
+    // 武器按钮可见性（与普通单位统一判定）
+    attackButton.Visible = CanShowAttackButton(transport);
 
     if (!IsNodeReady()) return;
 
@@ -704,8 +704,6 @@ private List<Grids> GetAdjacentGrids(Grids center)
 
 
         currentWeapon = null;
-        bool hasEnemyInRange = false;
-        bool hasAmmo = unit.CanUsePrimaryWeapon() || unit.CanUseSecondaryWeapon();
 
         // ✅ 切换单位时重置爆炸预览状态，防止状态残留
         if (currentUnit != unit)
@@ -717,12 +715,10 @@ private List<Grids> GetAdjacentGrids(Grids center)
         }
 
         currentUnit = unit;
-        bool canAttackAfterMove = unit.CanAttackAfterMove();
 
         if (!IsNodeReady()) return;
         if (currentUnit == null) return;
 
-        bool canAttack = unit.attackType == AttackType.CanAttack;
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.gridManager?.ClearWeaponRange();
         gm?.gridManager?.HideAttackRange();
@@ -739,58 +735,8 @@ private List<Grids> GetAdjacentGrids(Grids center)
             }
         }
 
-        if (gm != null && !unit.isAttacked)
-        {        
-            if (unit.useMinMaxAttackRange)
-                hasEnemyInRange = CheckMinMaxRangeEnemy(unit, gm);
-            else
-            {
-                var range = gm.gridManager.GetAttackNeighbours(unit.grid);
-                foreach (var grid in range)
-                {
-                    if (grid.HasEnemyInfantry(unit)) hasEnemyInRange = true;  
-                }
-                if (!hasEnemyInRange && unit.overlapType == UnitOverlapType.Overlapping)
-                    if (unit.grid.HasEnemyInfantry(unit)) hasEnemyInRange = true;
-            }
-        }
-
-        if (unit.useMinMaxAttackRange)
-        {
-            hasEnemyInRange = CheckMinMaxRangeEnemy(unit, gm);
-        }
-        else if (unit.attackRange > 1)
-        {
-            // ✅ 修复：当 attackRange > 1 时，使用 FindRange 检查更大范围
-            var extendedRange = gm.gridManager.FindRange(unit.grid, unit.attackRange, false);
-            hasEnemyInRange = extendedRange.Any(g =>
-                g.HasEnemyInfantry(unit) || g.HasEnemyWeapon(unit.team)
-            );
-            if (!hasEnemyInRange && unit.overlapType == UnitOverlapType.Overlapping)
-                if (unit.grid.HasEnemyInfantry(unit) || unit.grid.HasEnemyWeapon(unit.team))
-                    hasEnemyInRange = true;
-        }
-        else
-        {
-            // 默认4邻域
-            var range = gm.gridManager.GetAttackNeighbours(unit.grid);
-            hasEnemyInRange = range.Any(g =>
-                g.HasEnemyInfantry(unit) || g.HasEnemyWeapon(unit.team)
-            );
-            if (!hasEnemyInRange && unit.overlapType == UnitOverlapType.Overlapping)
-                if (unit.grid.HasEnemyInfantry(unit) || unit.grid.HasEnemyWeapon(unit.team))
-                    hasEnemyInRange = true;
-        }
-
-        bool canShowAttack = canAttack && !unit.isAttacked && hasEnemyInRange;
-
-        if (!canAttackAfterMove)
-            canShowAttack = false;
-
-        if (!hasAmmo)
-            canShowAttack = false;
-
-        attackButton.Visible = canShowAttack;
+        // ✅ 统一判定：可攻击类型 + 未攻击 + 移动后允许 + 有弹药 + 射程内有可伤害目标
+        attackButton.Visible = CanShowAttackButton(unit);
 
         bool canCapture = unit.CanCaptureCurrentGrid();
         bool isCapturing = unit.currentCaptureProgress > 0 && unit.capturingGrid == unit.grid;
@@ -1004,7 +950,8 @@ public void ShowTransportMenu(Infantry transport, bool afterMove)
     waitButton.Visible = true;
     infoButton.Visible = true;
 
-    attackButton.Visible = transport.hasPrimaryWeapon || transport.hasSecondaryWeapon;
+    // ✅ 与普通单位统一判定：尊重 attackType/弹药/射程内可伤害目标
+    attackButton.Visible = CanShowAttackButton(transport);
     captureButton.Visible = false;
 
     var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -1100,6 +1047,53 @@ private void OnSupplyPressed()
 
     private bool isCaptureProcessing = false;
 
+    // ✅ 攻击按钮统一判定：可攻击类型 + 未攻击 + 移动后允许 + 有弹药 + 射程内有可伤害目标
+    private bool CanShowAttackButton(Infantry unit)
+    {
+        if (unit == null) return false;
+        if (unit.attackType == AttackType.NoAttack) return false;
+        if (unit.isAttacked) return false;
+        if (!unit.CanAttackAfterMove()) return false;
+        if (!unit.CanUsePrimaryWeapon() && !unit.CanUseSecondaryWeapon()) return false;
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        return gm != null && HasAttackableEnemyInRange(unit, gm);
+    }
+
+    // 射程内是否存在“实际能造成伤害”的敌人（infantry 用伤害矩阵判定，weapon 维持队伍判定）
+    private bool HasAttackableEnemyInRange(Infantry unit, GameManager gm)
+    {
+        if (gm?.gridManager == null || unit.grid == null) return false;
+
+        bool hasEnemyInRange;
+        if (unit.useMinMaxAttackRange)
+        {
+            hasEnemyInRange = CheckMinMaxRangeEnemy(unit, gm);
+        }
+        else if (unit.attackRange > 1)
+        {
+            // 当 attackRange > 1 时，使用 FindRange 检查更大范围
+            var extendedRange = gm.gridManager.FindRange(unit.grid, unit.attackRange, false);
+            hasEnemyInRange = extendedRange.Any(g =>
+                g.HasAttackableEnemyInfantry(unit) || g.HasEnemyWeapon(unit.team)
+            );
+            if (!hasEnemyInRange && unit.overlapType == UnitOverlapType.Overlapping)
+                if (unit.grid.HasAttackableEnemyInfantry(unit) || unit.grid.HasEnemyWeapon(unit.team))
+                    hasEnemyInRange = true;
+        }
+        else
+        {
+            // 默认4邻域
+            var range = gm.gridManager.GetAttackNeighbours(unit.grid);
+            hasEnemyInRange = range.Any(g =>
+                g.HasAttackableEnemyInfantry(unit) || g.HasEnemyWeapon(unit.team)
+            );
+            if (!hasEnemyInRange && unit.overlapType == UnitOverlapType.Overlapping)
+                if (unit.grid.HasAttackableEnemyInfantry(unit) || unit.grid.HasEnemyWeapon(unit.team))
+                    hasEnemyInRange = true;
+        }
+        return hasEnemyInRange;
+    }
+
     private bool CheckMinMaxRangeEnemy(Infantry unit, GameManager gm)
     {
         if (unit.grid == null) return false;
@@ -1116,7 +1110,7 @@ private void OnSupplyPressed()
 
             if (distance >= minRange && distance <= maxRange)
             {
-                if (grid.HasEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team))
+                if (grid.HasAttackableEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team))
                     return true;
             }
         }

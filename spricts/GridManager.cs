@@ -1521,7 +1521,10 @@ public void CloseRange()
     {
         if (blindZoneGrids.Contains(grid)) continue;
         
-        bool hasEnemyTarget = grid.HasEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team);
+        // 多格兵器：只有弱点格子可被攻击
+        if (grid.weapon != null && grid.weapon.isMultiTile && !grid.weapon.IsWeakPointGrid(grid)) continue;
+        
+        bool hasEnemyTarget = grid.HasAttackableEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team);
         if (hasEnemyTarget)
         {
             if (isFogEnabled && !fog.IsGridVisible(grid)) continue;
@@ -1578,7 +1581,7 @@ public void CloseRange()
                 grid.OnMouseExitedAttackGrid = () => HideDamagePreview();
             }
             
-            bool hasEnemyTarget = grid.HasEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team);
+            bool hasEnemyTarget = grid.HasAttackableEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team);
             if (hasEnemyTarget)
             {
                 // 多格兵器：只有弱点格子显示为可攻击
@@ -1644,7 +1647,8 @@ public void CloseRange()
         
         foreach (var neighbor in neighbors)
         {
-            if (neighbor.weapon != null && neighbor.weapon.team != unit.team && !neighbor.weapon.hasActed)
+            if (neighbor.weapon != null && neighbor.weapon.team != unit.team && !neighbor.weapon.hasActed
+                && (!neighbor.weapon.isMultiTile || neighbor.weapon.IsWeakPointGrid(neighbor)))
             {
                 if (isFogEnabled && fog != null && !fog.IsGridVisible(neighbor)) continue;
                 attackRange.Add(neighbor);
@@ -1658,7 +1662,7 @@ public void CloseRange()
                 neighbor.OnMouseExitedAttackGrid = () => HideDamagePreview();
             }
             
-            if (neighbor.HasEnemyInfantry(unit))
+            if (neighbor.HasAttackableEnemyInfantry(unit))
             {
                 if (isFogEnabled && fog != null && !fog.IsGridVisible(neighbor)) continue;
                 attackRange.Add(neighbor);
@@ -1677,7 +1681,7 @@ public void CloseRange()
             }
         }
 
-        if (unit.overlapType == UnitOverlapType.Overlapping && unit.grid.HasEnemyInfantry(unit))
+        if (unit.overlapType == UnitOverlapType.Overlapping && unit.grid.HasAttackableEnemyInfantry(unit))
         {
             if (isFogEnabled && fog != null && !fog.IsGridVisible(unit.grid)) { /* 不添加 */ }
             else
@@ -1768,7 +1772,9 @@ public void CloseRange()
         }
         
         Weapon targetWeapon = null;
-        if (to.weapon != null && to.weapon.team != attacker.team)
+        // 多格兵器兜底：非弱点部位不可作为攻击目标
+        if (to.weapon != null && to.weapon.team != attacker.team
+            && (!to.weapon.isMultiTile || to.weapon.IsWeakPointGrid(to)))
             targetWeapon = to.weapon;
 
         if (targetWeapon != null)
