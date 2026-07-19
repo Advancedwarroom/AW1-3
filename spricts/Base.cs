@@ -24,7 +24,7 @@ public partial class Base : City
             {
                 "Infantry", "Mech", "Bike", "Oozium",
                 "LightTank", "MdTank", "Rocket", "Artillery",
-                "APC", "AntiAir", "Recon", "AntiTank", "Flare"
+                "APC", "AntiAir", "Recon", "AntiTank", "Flare", "PipeRunner",
             };
         }
 

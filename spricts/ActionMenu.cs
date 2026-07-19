@@ -162,7 +162,42 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
     Position = transport.GlobalPosition + new Vector2(-40, -120);
     Show();
 }
+    private AnimatedSprite2D GetUnitAnim(Infantry u)
+    {
+        // 1. 优先通过反射获取 animSprite 字段（通用，不硬编码类型）
+        var animField = u.GetType().GetField("animSprite", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        if (animField != null)
+        {
+            var anim = animField.GetValue(u) as AnimatedSprite2D;
+            if (anim != null && IsInstanceValid(anim)) return anim;
+        }
 
+        // 2. 兼容旧硬编码（保留所有类型）
+        if (u is Mech m && m?.animSprite != null) return m.animSprite;
+        if (u is LightTank t && t?.animSprite != null) return t.animSprite;
+        if (u is APC a && a?.animSprite != null) return a.animSprite;
+        if (u is Oozium o && o?.animSprite != null) return o.animSprite;
+        if (u is Artillery ar && ar?.animSprite != null) return ar.animSprite;
+        if (u is PipeRunner pr && pr?.animSprite != null) return pr.animSprite;
+        if (u is Flare fl && fl?.animSprite != null) return fl.animSprite;
+        if (u is Bike bk && bk?.animSprite != null) return bk.animSprite;
+        if (u is AntiAir aa && aa?.animSprite != null) return aa.animSprite;
+        if (u is AntiTank at && at?.animSprite != null) return at.animSprite;
+        if (u is Recon rc && rc?.animSprite != null) return rc.animSprite;
+        if (u is MdTank md && md?.MdSprite != null) return md.MdSprite;
+        if (u is Rocket rk && rk?.animSprite != null) return rk.animSprite;
+        if (u is FlyBomb fb && fb?.animSprite != null) return fb.animSprite;
+
+        // 3. 递归查找子节点（备用）
+        foreach (var child in u.GetChildren())
+        {
+            if (child is AnimatedSprite2D anim) return anim;
+            foreach (var grandChild in (child as Node)?.GetChildren() ?? new Godot.Collections.Array<Node>())
+                if (grandChild is AnimatedSprite2D deepAnim) return deepAnim;
+        }
+
+        return null;
+    }
 // ✅ 究极自由：通用运输单位装载菜单
 public void ShowTransportLoadMenu(Infantry transport, Infantry unit)
 {
@@ -670,24 +705,7 @@ private List<Grids> GetAdjacentGrids(Grids center)
         }
     }
 
-    private AnimatedSprite2D GetUnitAnim(Infantry u)
-{
-    if (u is Mech m && m?.animSprite != null) return m.animSprite;
-    if (u is LightTank t && t?.animSprite != null) return t.animSprite;
-    if (u is APC a && a?.animSprite != null) return a.animSprite;
-    if (u is Oozium o && o?.animSprite != null) return o.animSprite;
-    if (u is Artillery ar && ar?.animSprite != null) return ar.animSprite;
 
-    // 递归查找子节点
-    foreach (var child in u.GetChildren())
-    {
-        if (child is AnimatedSprite2D anim) return anim;
-        foreach (var grandChild in (child as Node)?.GetChildren() ?? new Godot.Collections.Array<Node>())
-            if (grandChild is AnimatedSprite2D deepAnim) return deepAnim;
-    }
-
-    return null;
-}
     public void ShowMenu(Infantry unit, bool afterMove = false, bool onlyShowMenu = false)
     {
         var container = GetNode<VBoxContainer>("unloadContainer");
@@ -1268,6 +1286,7 @@ private void OnSupplyPressed()
                 currentUnit is Rocket ? "火箭炮" :
                 currentUnit is MdTank ? "重型坦克" :
                 currentUnit is AntiAir ? "防空高炮" :
+                currentUnit is PipeRunner ? "管道炮" :
                 currentUnit is Infantry ? "步兵" : "Unknown";
 
         infoText += $"单位类型: {unitType}\n";

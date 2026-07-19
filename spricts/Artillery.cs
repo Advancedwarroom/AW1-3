@@ -216,12 +216,10 @@ public partial class Artillery : Infantry
         return canAttackAfterMoving;
     }
 
-    public void OnTurnEnd()
+    public override void OnTurnEnd()
     {
-        originalGrid = null; movePoints = defaultMovePoints;
-        isMoved = false; isAttacked = false; state = UnitState.Idle;
+        base.OnTurnEnd();
         string animName = GetIdleAnimName();
         ShowAnimState(animName);
-        StartBreath();
     }
 }

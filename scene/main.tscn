@@ -2571,7 +2571,7 @@ gridManager = NodePath("../../GridManager")
 minAttackRange = 4
 team = "Player2"
 
-[node name="FlyBomb" parent="UnitManager/Units" unique_id=1148536001 node_paths=PackedStringArray("gridManager") instance=ExtResource("28_vneqc")]
+[node name="FlyBomb" parent="UnitManager/Units" unique_id=1986724623 node_paths=PackedStringArray("gridManager") instance=ExtResource("28_vneqc")]
 position = Vector2(448, 416)
 gridManager = NodePath("../../GridManager")
 team = "Player1"

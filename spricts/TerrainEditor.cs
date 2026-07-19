@@ -165,6 +165,9 @@ private readonly List<UnitTemplate> unitTemplates = new()
     new UnitTemplate { DisplayName = "🏍️ 摩托兵", ScenePath = "res://Prefabs/Bike.tscn", 
         Category = "步兵", Team = "Player1", DisplayColor = new Color(0.5f, 0.5f, 0.35f), 
         Description = "快速步兵单位，可占领城市，移动力5，轮胎移动" },
+    new UnitTemplate { DisplayName = "🚀 管道炮", ScenePath = "res://Prefabs/PipeRunner.tscn", 
+        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.5f, 0.4f, 0.6f), 
+        Description = "仅限管道移动，远程间接火力，射程2-5" },
 
     // 特殊单位
     new UnitTemplate { DisplayName = "🦠 史莱姆", ScenePath = "res://Prefabs/oozium.tscn", 
@@ -483,7 +486,10 @@ private string GetFriendlyTypeName(Infantry unit)
         APC => "运输",
         Flare => "照明车",
         Bike => "摩托兵",
+        PipeRunner => "管道炮",
         Oozium => "史莱姆",
+                AntiTank => "反坦克炮",
+        FlyBomb => "飞弹",
         Infantry => "步兵",
         _ => unit.GetType().Name
     };
@@ -798,6 +804,14 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
             return;
         }
 
+        // ✅ 关键修复：强制重置所有回合状态，覆盖场景预设值
+        unit.isMoved = false;
+        unit.isAttacked = false;
+        unit.hasActed = false;
+        unit.state = UnitState.Idle;
+        unit.movePoints = unit.defaultMovePoints;
+        unit.originalGrid = null;
+
         unit.Position = grid.Position;
         unit.team = team;
         int unitNumber = gameManager.unitManager.AllUnits.Count + 1;
@@ -818,6 +832,9 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
             spawnHintLabel.Text = "❌ 绑定格子失败";
             return;
         }
+
+        // ✅ 关键修复：添加到 AllUnits 列表（编辑模式生成时缺少这一步）
+        gameManager.unitManager.AllUnits.Add(unit);
 
         gameManager.RegisterUnit(unit, GetUnitCategory(unit));
         unit.OnClickPiece = gameManager.OnSelectPiece;
@@ -877,6 +894,9 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
             spawnHintLabel.Text = "❌ 兵器实例化失败";
             return;
         }
+
+        // ✅ 关键修复：重置兵器行动状态，覆盖场景预设值
+        weapon.hasActed = false;
 
         // ✅ 关键修复：Instantiate 不会立即触发 _Ready，多格兵器属性需在 _Ready 前手动设置
         if (weapon is LargeCannon lc && !weapon.isMultiTile)
@@ -1184,9 +1204,13 @@ private UnitCategory GetUnitCategory(Infantry unit)
         APC _ => UnitCategory.APC,
         Flare _ => UnitCategory.Vehicle,
         Bike _ => UnitCategory.Infantry,
+        PipeRunner _ => UnitCategory.PipeRunner,
         Artillery _ => UnitCategory.Artillery,
         Rocket _ => UnitCategory.Rocket,
         FlyBomb _ => UnitCategory.FlyBomb,
+                MdTank _ => UnitCategory.MdTank,
+        AntiAir _ => UnitCategory.AntiAir,
+        AntiTank _ => UnitCategory.AntiTank,
         Infantry _ => UnitCategory.Infantry,
         _ => UnitCategory.Other
     };
@@ -3228,6 +3252,7 @@ private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
     
     gameManager?.UpdateUnitLists();
+    gameManager?.RefreshSpecializedUnitLists();
 }
 
 // ✅ 摧毁格子上的设施
@@ -3580,6 +3605,10 @@ public void SetEditMode(bool editMode)
             fogOfWarCheckBox.Disabled = false;
             fogOfWarCheckBox.ButtonPressed = fogStateBeforeEdit;
         }
+
+        // ✅ 修复：切回游玩模式时只刷新状态，不立即判定胜负
+        // 避免空地图/刚导入地图时误报平局
+        CallDeferred(nameof(DeferredCheckVictoryOnExitEdit));
     }
 }
 
@@ -3591,6 +3620,21 @@ private void DeferredRefreshFog()
         fowManager.ForceRefresh();
     }
 }
+
+// ✅ 新增：切回游玩模式时只刷新状态，不立即判定胜负
+// 避免空地图/刚导入地图时误报平局
+private void DeferredCheckVictoryOnExitEdit()
+{
+    var gm = gameManager;
+    if (gm != null && !gm.gameEnded)
+    {
+        // 只刷新迷雾，不判定胜负
+        gm.fogOfWarManager?.ForceRefresh();
+        // 注意：不调用 gm.CheckVictoryCondition()
+        // 胜负判定应在正常游戏流程中（单位死亡、回合切换时）自动触发
+    }
+}
+
    private void CloseAllMenus()
     {
         selectionMenuPanel.Visible = false;
@@ -4340,6 +4384,60 @@ private void RefreshAllUnitVision()
         var btnSeparator = new HSeparator();
         btnSeparator.CustomMinimumSize = new Vector2(0, 10);
         globalConfigContainer.AddChild(btnSeparator);
+
+        // ✅ 新增：地图生成配置
+        var mapGenSection = CreateConfigSectionTitle("🗺️ 生成地图");
+        globalConfigContainer.AddChild(mapGenSection);
+
+        var mapGenHBox = new HBoxContainer();
+        mapGenHBox.AddThemeConstantOverride("separation", 10);
+
+        var widthLabel = new Label();
+        widthLabel.Text = "宽:";
+        widthLabel.CustomMinimumSize = new Vector2(40, 28);
+        widthLabel.AddThemeFontSizeOverride("font_size", 13);
+        mapGenHBox.AddChild(widthLabel);
+
+        var widthSpin = new SpinBox();
+        widthSpin.Name = "MapWidthSpin";
+        widthSpin.MinValue = 1;
+        widthSpin.MaxValue = 100;
+        widthSpin.Value = gridManager?.map?.GetLength(0) ?? 20;
+        widthSpin.CustomMinimumSize = new Vector2(70, 28);
+        widthSpin.AddThemeFontSizeOverride("font_size", 12);
+        mapGenHBox.AddChild(widthSpin);
+
+        var heightLabel = new Label();
+        heightLabel.Text = "高:";
+        heightLabel.CustomMinimumSize = new Vector2(40, 28);
+        heightLabel.AddThemeFontSizeOverride("font_size", 13);
+        mapGenHBox.AddChild(heightLabel);
+
+        var heightSpin = new SpinBox();
+        heightSpin.Name = "MapHeightSpin";
+        heightSpin.MinValue = 1;
+        heightSpin.MaxValue = 100;
+        heightSpin.Value = gridManager?.map?.GetLength(1) ?? 15;
+        heightSpin.CustomMinimumSize = new Vector2(70, 28);
+        heightSpin.AddThemeFontSizeOverride("font_size", 12);
+        mapGenHBox.AddChild(heightSpin);
+
+        var genMapBtn = new Button();
+        genMapBtn.Text = "🗺️ 生成新地图";
+        genMapBtn.CustomMinimumSize = new Vector2(140, 36);
+        genMapBtn.AddThemeFontSizeOverride("font_size", 13);
+        var genStyle = new StyleBoxFlat();
+        genStyle.BgColor = new Color(0.2f, 0.5f, 0.3f, 0.9f);
+        genStyle.SetCornerRadiusAll(8);
+        genMapBtn.AddThemeStyleboxOverride("normal", genStyle);
+        genMapBtn.Pressed += () => {
+            int w = (int)widthSpin.Value;
+            int h = (int)heightSpin.Value;
+            GenerateNewMap(w, h);
+        };
+        mapGenHBox.AddChild(genMapBtn);
+
+        globalConfigContainer.AddChild(mapGenHBox);
 
         var btnHBox = new HBoxContainer();
         btnHBox.AddThemeConstantOverride("separation", 10);
@@ -5216,6 +5314,18 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         // ✅ 批量清理，避免逐个调用 gameManager.RemoveUnit 触发胜利检查
         
+        // ✅ 关键修复：清理已失败势力记录，避免导入后延迟判定失败
+        if (gameManager != null)
+        {
+            gameManager.ResetForMapImport();
+        }
+        
+        // ✅ 导入后自动进入编辑模式
+        if (!IsEditMode)
+        {
+            SetEditMode(true);
+        }
+        
         // 1. 清理单位 - 直接从 units 子节点遍历，确保包含所有对象
         if (gameManager?.unitManager?.units != null)
         {
@@ -5352,6 +5462,8 @@ private void OpenWeaponTerrainMatrixEditor()
             if (mapWidth > 0 && mapHeight > 0)
             {
                 gridManager?.ResizeMap(mapWidth, mapHeight);
+                // ✅ 关键：ResizeMap 后必须重新获取 grids 引用
+                gridManager?.Init();
             }
 
             int lineIdx = 0;
@@ -5752,7 +5864,8 @@ private void OpenWeaponTerrainMatrixEditor()
         { "LightTank", "LTk" }, { "MdTank", "MTk" }, { "Rocket", "Rck" },
         { "Artillery", "Art" }, { "APC", "APC" }, { "Recon", "Rec" },
         { "AntiAir", "AA" }, { "AntiTank", "AT" }, { "Flare", "Flr" },
-        { "Bike", "Bke" }, { "FlyBomb", "FBo" }
+        { "Bike", "Bke" }, { "FlyBomb", "FBo" },
+        { "PipeRunner", "PRun" }
     };
     private readonly Dictionary<string, string> compactWeaponAbbr = new()
     {
@@ -5944,6 +6057,8 @@ private void OpenWeaponTerrainMatrixEditor()
             if (mapWidth > 0 && mapHeight > 0)
             {
                 gridManager?.ResizeMap(mapWidth, mapHeight);
+                // ✅ 关键：ResizeMap 后必须重新获取 grids 引用
+                gridManager?.Init();
             }
 
             string section = "";
@@ -6116,7 +6231,11 @@ private void OpenWeaponTerrainMatrixEditor()
         }
         finally
         {
-            if (gameManager != null) gameManager.blockVictoryCheck = false;
+            // ✅ 关键修复：不再在这里重置 blockVictoryCheck
+            // 因为 GameManager.ResetForMapImport() 已经设置了3秒保护计时器
+            // 这里立即重置会导致保护失效，触发延迟判定
+            // 保护计时器会在3秒后自动解除并调用 CheckVictoryCondition
+            GD.Print("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理");
         }
     }
 
@@ -6227,6 +6346,12 @@ private void OpenWeaponTerrainMatrixEditor()
         fileBtn.CustomMinimumSize = new Vector2(360, 45);
         fileBtn.AddThemeFontSizeOverride("font_size", 14);
         fileBtn.Pressed += () => {
+            // ✅ Android：无存储权限则先发起请求并提示授权后重试
+            if (!GameManager.EnsureStoragePermission())
+            {
+                ShowImportHint("⚠️ 需要存储权限才能导入文件\n请在系统设置中允许「所有文件访问」后重试");
+                return;
+            }
             dialog.QueueFree();
             var fd = new FileDialog();
             fd.FileMode = FileDialog.FileModeEnum.OpenFile;
@@ -6234,6 +6359,9 @@ private void OpenWeaponTerrainMatrixEditor()
             fd.Filters = new string[] { "*.txt ; Text Files" };
             fd.Title = "选择 AWBW 地图导出文件";
             fd.Size = new Vector2I(800, 600);
+            // ✅ Android：默认打开下载目录，方便找到手机下载的文件
+            if (OS.GetName() == "Android")
+                fd.CurrentDir = OS.GetSystemDir(OS.SystemDir.Downloads);
             fd.FileSelected += (path) => {
                 try { ParseAWBWMap(File.ReadAllText(path)); }
                 catch (Exception ex) { ShowImportHint($"❌ 读取失败: {ex.Message}"); }
@@ -6454,6 +6582,8 @@ private void OpenWeaponTerrainMatrixEditor()
             if (mapWidth > 0 && mapHeight > 0)
             {
                 gridManager?.ResizeMap(mapWidth, mapHeight);
+                // ✅ 关键：ResizeMap 后必须重新获取 grids 引用
+                gridManager?.Init();
             }
 
             int importedTiles = 0;
@@ -6537,7 +6667,11 @@ private void OpenWeaponTerrainMatrixEditor()
         }
         finally
         {
-            if (gameManager != null) gameManager.blockVictoryCheck = false;
+            // ✅ 关键修复：不再在这里重置 blockVictoryCheck
+            // 因为 GameManager.ResetForMapImport() 已经设置了3秒保护计时器
+            // 这里立即重置会导致保护失效，触发延迟判定
+            // 保护计时器会在3秒后自动解除并调用 CheckVictoryCondition
+            GD.Print("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理");
         }
     }
 
@@ -6823,6 +6957,12 @@ private void OpenWeaponTerrainMatrixEditor()
         fileBtn.CustomMinimumSize = new Vector2(360, 45);
         fileBtn.AddThemeFontSizeOverride("font_size", 14);
         fileBtn.Pressed += () => {
+            // ✅ Android：无存储权限则先发起请求并提示授权后重试
+            if (!GameManager.EnsureStoragePermission())
+            {
+                ShowImportHint("⚠️ 需要存储权限才能导入文件\n请在系统设置中允许「所有文件访问」后重试");
+                return;
+            }
             dialog.QueueFree();
             var fd = new FileDialog();
             fd.FileMode = FileDialog.FileModeEnum.OpenFile;
@@ -6830,6 +6970,9 @@ private void OpenWeaponTerrainMatrixEditor()
             fd.Filters = new string[] { "*.aws ; AW Advance Wars", "*.aw2 ; AW2 Black Hole Rising", "*.awm ; AWM Advance Wars Map", "*.awd ; AWDS Dual Strike" };
             fd.Title = "选择 AW 地图文件";
             fd.Size = new Vector2I(800, 600);
+            // ✅ Android：默认打开下载目录，方便找到手机下载的文件
+            if (OS.GetName() == "Android")
+                fd.CurrentDir = OS.GetSystemDir(OS.SystemDir.Downloads);
             fd.FileSelected += (path) => {
                 try {
                     byte[] fileData = File.ReadAllBytes(path);
@@ -6929,14 +7072,19 @@ private void OpenWeaponTerrainMatrixEditor()
             var unknownUnitIds = new HashSet<int>();
             var unknownWeaponIds = new HashSet<int>();
 
-            // 读取地形数据（同时包含地形和建筑/设施）
-            // ✅ 列优先：文件按 x 优先、y 内层存储，与 AWS Map Editor 实际保存顺序一致
+            // ✅ 修复：读取地形数据（纯地形层，不包含设施/单位/兵器）
+            // AWS 格式是列优先（Column-major）：x * height + y
+            // 每个格子 2 字节：Byte0=地形ID(0-255), Byte1=地形变体/方向
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {
                     int idx = offset + (x * height + y) * 2;
-                    ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
+                    if (idx + 1 >= fileData.Length) continue;
+
+                    // ✅ 修复：地形层使用单字节地形ID（0-255）
+                    byte terrainId = fileData[idx];
+                    byte terrainVariant = fileData[idx + 1];  // 变体/方向，暂时保留
 
                     if (x >= gridManager.map.GetLength(0) || y >= gridManager.map.GetLength(1))
                         continue;
@@ -6944,21 +7092,45 @@ private void OpenWeaponTerrainMatrixEditor()
                     var grid = gridManager.map[x, y];
                     if (grid == null) continue;
 
-                    if (rawVal < 300)
+                    // 纯地形解析（0-255）
+                    var terrain = GetAWMETerrainMapping((int)terrainId);
+                    if (terrain == GridType.GROUND && terrainId != 0)
                     {
-                        var terrain = GetAWMETerrainMapping((int)rawVal);
-                        if (terrain == GridType.GROUND && rawVal != 0 && rawVal != 167)
-                        {
-                            unknownTerrainIds.Add((int)rawVal);
-                            skippedTiles++;
-                        }
-                        else
-                        {
-                            importedTiles++;
-                        }
-                        grid.gridType = terrain;
+                        unknownTerrainIds.Add((int)terrainId);
+                        skippedTiles++;
                     }
-                    else if (rawVal >= 300 && rawVal <= 499)
+                    else
+                    {
+                        importedTiles++;
+                    }
+                    grid.gridType = terrain;
+                }
+            }
+
+            // ✅ 修复：读取单位/设施/兵器数据（单位层）
+            // 单位层同样是列优先，每个格子 2 字节
+            // 0xFFFF 表示空
+            int unitOffset = offset + width * height * 2;
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    int idx = unitOffset + (x * height + y) * 2;
+                    if (idx + 1 >= fileData.Length) continue;
+
+                    ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
+
+                    // 空格子检测
+                    if (rawVal == 0xFFFF) continue;
+
+                    if (x >= gridManager.map.GetLength(0) || y >= gridManager.map.GetLength(1))
+                        continue;
+
+                    var grid = gridManager.map[x, y];
+                    if (grid == null) continue;
+
+                    // 设施 (300-499)
+                    if (rawVal >= 300 && rawVal <= 499)
                     {
                         var (facType, facTeam) = GetAWMEFacilityMapping((int)rawVal);
                         if (!string.IsNullOrEmpty(facType))
@@ -6977,10 +7149,9 @@ private void OpenWeaponTerrainMatrixEditor()
                         else
                         {
                             unknownFacilityIds.Add((int)rawVal);
-                            skippedTiles++;
                         }
-                        grid.gridType = GridType.GROUND;
                     }
+                    // 单位 (500-899)
                     else if (rawVal >= 500 && rawVal <= 899)
                     {
                         var (unitType, unitTeam) = GetAWMEUnitMapping((int)rawVal);
@@ -7001,8 +7172,8 @@ private void OpenWeaponTerrainMatrixEditor()
                         {
                             unknownUnitIds.Add((int)rawVal);
                         }
-                        grid.gridType = GridType.GROUND;
                     }
+                    // 兵器 (900-1299)
                     else if (rawVal >= 900 && rawVal <= 1299)
                     {
                         var (wepType, wepTeam, variant) = GetAWMEWeaponMapping((int)rawVal);
@@ -7027,7 +7198,6 @@ private void OpenWeaponTerrainMatrixEditor()
                                 }
                                 else if (spawned is Laser laser)
                                 {
-                                    // ✅ L-Cannon / DeathRay → Laser 四方向全开
                                     laser.SetFireAngles(new List<float> { 0f, 90f, 180f, 270f });
                                     laser.UpdateLaserVisual();
                                 }
@@ -7041,116 +7211,6 @@ private void OpenWeaponTerrainMatrixEditor()
                         else
                         {
                             unknownWeaponIds.Add((int)rawVal);
-                        }
-                        grid.gridType = GridType.GROUND;
-                    }
-                    else
-                    {
-                        grid.gridType = GridType.GROUND;
-                        unknownTerrainIds.Add((int)rawVal);
-                        skippedTiles++;
-                    }
-                }
-            }
-
-            // 读取单位数据（0xFFFF = 空）
-            // ✅ 列优先：与地形数据相同的 x 优先、y 内层顺序
-            int unitOffset = offset + terrainDataSize;
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    int idx = unitOffset + (x * height + y) * 2;
-                    ushort rawVal = (ushort)(fileData[idx] | (fileData[idx + 1] << 8));
-
-                    if (rawVal == 0xFFFF) continue;
-
-                    if (x >= gridManager.map.GetLength(0) || y >= gridManager.map.GetLength(1))
-                        continue;
-
-                    var grid = gridManager.map[x, y];
-                    if (grid == null) continue;
-
-                    if (rawVal >= 500 && rawVal <= 899)
-                    {
-                        var (unitType, unitTeam) = GetAWMEUnitMapping((int)rawVal);
-                        if (!string.IsNullOrEmpty(unitType))
-                        {
-                            string scenePath = GetScenePathForUnitType(unitType);
-                            if (!string.IsNullOrEmpty(scenePath))
-                            {
-                                SpawnUnitAtGrid(grid, scenePath, unitTeam ?? "Player1");
-                                unitCount++;
-                            }
-                            else
-                            {
-                                unknownUnitIds.Add((int)rawVal);
-                            }
-                        }
-                        else
-                        {
-                            unknownUnitIds.Add((int)rawVal);
-                        }
-                    }
-                    else if (rawVal >= 900 && rawVal <= 1299)
-                    {
-                        var (wepType, wepTeam, variant) = GetAWMEWeaponMapping((int)rawVal);
-                        if (!string.IsNullOrEmpty(wepType))
-                        {
-                            string scenePath = GetScenePathForWeaponType(wepType);
-                            if (!string.IsNullOrEmpty(scenePath))
-                            {
-                                SpawnWeaponAtGrid(grid, scenePath, wepTeam ?? "Player0");
-                                var spawned = grid.weapon;
-                                if (spawned is BlackCannon cannon)
-                                {
-                                    cannon.direction = variant switch
-                                    {
-                                        0 => BlackCannon.CannonDirection.Down,
-                                        1 => BlackCannon.CannonDirection.Up,
-                                        2 => BlackCannon.CannonDirection.Right,
-                                        3 => BlackCannon.CannonDirection.Left,
-                                        _ => BlackCannon.CannonDirection.Down
-                                    };
-                                    cannon.UpdateDirectionVisual();
-                                }
-                                else if (spawned is Laser laser)
-                                {
-                                    // ✅ L-Cannon / DeathRay → Laser 四方向全开
-                                    laser.SetFireAngles(new List<float> { 0f, 90f, 180f, 270f });
-                                    laser.UpdateLaserVisual();
-                                }
-                                weaponCount++;
-                            }
-                            else
-                            {
-                                unknownWeaponIds.Add((int)rawVal);
-                            }
-                        }
-                        else
-                        {
-                            unknownWeaponIds.Add((int)rawVal);
-                        }
-                    }
-                    else if (rawVal >= 300 && rawVal <= 499)
-                    {
-                        var (facType, facTeam) = GetAWMEFacilityMapping((int)rawVal);
-                        if (!string.IsNullOrEmpty(facType))
-                        {
-                            string scenePath = GetScenePathForFacilityType(facType);
-                            if (!string.IsNullOrEmpty(scenePath))
-                            {
-                                SpawnFacilityAtGrid(grid, scenePath, facTeam ?? "Player0");
-                                facilityCount++;
-                            }
-                            else
-                            {
-                                unknownFacilityIds.Add((int)rawVal);
-                            }
-                        }
-                        else
-                        {
-                            unknownFacilityIds.Add((int)rawVal);
                         }
                     }
                     else
@@ -7168,11 +7228,14 @@ private void OpenWeaponTerrainMatrixEditor()
                 }
             }
 
+            // ✅ 关键：导入完成后刷新所有列表和状态
             gameManager?.unitManager?.RefreshUnitList();
+            gameManager?.weaponManager?.RefreshWeaponList();
             gameManager?.UpdateUnitLists();
             gameManager?.RefreshSpecializedUnitLists();
             gameManager?.fogOfWarManager?.RefreshFog();
-            gameManager?.ResetGameState();
+            // ✅ 不再调用 ResetGameState()，因为 ResetForMapImport 已经设置了保护计时器
+            // 保护计时器会在3秒后自动解除并检查胜利条件
 
             string summary = $"✅ AW 地图导入成功！\n尺寸: {width}×{height} | 导入: {importedTiles} 格";
             if (facilityCount > 0) summary += $" | 设施: {facilityCount} 个";
@@ -7199,7 +7262,11 @@ private void OpenWeaponTerrainMatrixEditor()
         }
         finally
         {
-            if (gameManager != null) gameManager.blockVictoryCheck = false;
+            // ✅ 关键修复：不再在这里重置 blockVictoryCheck
+            // 因为 GameManager.ResetForMapImport() 已经设置了3秒保护计时器
+            // 这里立即重置会导致保护失效，触发延迟判定
+            // 保护计时器会在3秒后自动解除并调用 CheckVictoryCondition
+            GD.Print("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理");
         }
     }
 
@@ -7316,29 +7383,59 @@ private void OpenWeaponTerrainMatrixEditor()
             _ => "Player0"
         };
 
-        // ✅ 智能平替：MiniCannon → BlackCannon，BlackCannon → LargeCannon，L-Cannon → Laser
+        // ✅ 修复：扩大映射范围，支持 AW2/AWD 中 DeathRay 和 BlackCannon 的不同编码
+        // 同时支持 y=0,1,2,3 等多种变体，避免映射到错误类型
         string typeName = x switch
         {
-            0 => "black_cannon",   // MiniCannon N(0,0) / E(0,1) → BlackCannon（单格小炮）
-            1 => "black_cannon",   // MiniCannon W(1,0) / S(1,1) → BlackCannon（单格小炮）
-            2 => "Laser",          // L-Cannon (2,0) → Laser 平替
-            3 => "Crystal",        // BlackCrystal (3,1)
-            4 => "large_cannon",   // ✅ BlackCannon (4,0=S, 4,1=N) → LargeCannon（3×3大型黑炮）
-            5 => "death_ray",     // DeathRay (5,1) → DeathRay
-            6 => "Crystal",       // BlackObelisk (6,1)
+            // MiniCannon (单格小炮) - 4方向
+            0 => "black_cannon",
+            1 => "black_cannon",
+
+            // L-Cannon / Laser - 支持多 y 值
+            2 => "Laser",
+
+            // BlackCrystal / Crystal - 支持多 y 值  
+            3 => "Crystal",
+
+            // ✅ 关键修复：BlackCannon (大型黑炮) → LargeCannon
+            // 支持所有 y 值，避免被错误映射
+            4 => "large_cannon",
+
+            // ✅ 关键修复：DeathRay → DeathRay
+            // 支持所有 y 值（y=0,1,2,3），避免被错误映射为 Laser 或其他
+            5 => "death_ray",
+
+            // BlackObelisk / Crystal
+            6 => "Crystal",
+
+            // 扩展：处理更多可能的编码位置
+            7 => "black_cannon",   // 额外的 MiniCannon 变体
+            8 => "Laser",         // 额外的 Laser 变体
+            9 => "Crystal",       // 额外的 Crystal 变体
+            10 => "large_cannon", // 额外的 LargeCannon 变体
+            11 => "death_ray",    // 额外的 DeathRay 变体
+            12 => "Crystal",      // 额外的 Obelisk 变体
+
             _ => null
         };
 
         // Variant: 0=Down, 1=Up, 2=Right, 3=Left
+        // ✅ 修复：根据 y 值计算正确的方向，而不是固定值
         int variant = x switch
         {
-            0 => y switch { 0 => 1, 1 => 2, _ => 0 },  // (0,0)N→Up(1), (0,1)E→Right(2)
-            1 => y switch { 0 => 3, 1 => 0, _ => 0 },  // (1,0)W→Left(3), (1,1)S→Down(0)
-            2 => 0,   // L-Cannon → Laser default
-            3 => 0,   // Crystal
-            4 => y,   // BlackCannon (4,0)=Down(0), (4,1)=Up(1)
-            5 => 1,   // DeathRay (5,1) → Up(1)
-            6 => 0,   // Obelisk
+            0 => y % 4 switch { 0 => 1, 1 => 2, 2 => 0, 3 => 3, _ => 0 },
+            1 => y % 4 switch { 0 => 3, 1 => 0, 2 => 1, 3 => 2, _ => 0 },
+            2 => y % 4,           // Laser: 根据 y 值循环方向
+            3 => 0,               // Crystal: 无方向
+            4 => y % 4,           // ✅ LargeCannon: 根据 y 值正确设置方向
+            5 => y % 4,           // ✅ DeathRay: 根据 y 值正确设置方向
+            6 => 0,               // Obelisk: 无方向
+            7 => y % 4,
+            8 => y % 4,
+            9 => 0,
+            10 => y % 4,
+            11 => y % 4,
+            12 => 0,
             _ => 0
         };
 
@@ -7570,5 +7667,62 @@ private void OpenWeaponTerrainMatrixEditor()
         pendingMultiTileAnchorPos = new Vector2I(-1, -1);
         pendingMultiTileScenePath = "";
         pendingMultiTileTeam = "";
+    }
+
+    // ✅ 新增：生成新地图
+    private void GenerateNewMap(int width, int height)
+    {
+        if (gridManager == null)
+        {
+            ShowImportHint("❌ GridManager 未初始化");
+            return;
+        }
+
+        // 确认对话框
+        var confirm = new ConfirmationDialog();
+        confirm.Title = "⚠️ 确认生成新地图";
+        confirm.DialogText = $"将生成 {width}×{height} 的新地图，\n当前所有单位、兵器、设施将被清空！\n\n是否继续？";
+        confirm.Size = new Vector2I(400, 200);
+        confirm.Confirmed += () => {
+            confirm.QueueFree();
+            ExecuteGenerateMap(width, height);
+        };
+        confirm.Canceled += () => confirm.QueueFree();
+        AddChild(confirm);
+        confirm.PopupCentered();
+    }
+
+    private void ExecuteGenerateMap(int width, int height)
+    {
+        try
+        {
+            // 清空所有实体
+            ClearAllMapEntities();
+
+            // 调整地图大小
+            gridManager.ResizeMap(width, height);
+            gridManager.Init();
+
+            // 所有格子默认设为平原
+            foreach (var grid in gridManager.grids)
+            {
+                if (grid != null)
+                {
+                    grid.gridType = GridType.GROUND;
+                    UpdateGridVisual(grid);
+                }
+            }
+
+            // 重置游戏状态
+            gameManager?.ResetGameState();
+            gameManager?.UpdateUnitLists();
+            gameManager?.RefreshSpecializedUnitLists();
+
+            ShowImportHint($"✅ 地图生成成功！\n尺寸: {width}×{height}");
+        }
+        catch (Exception ex)
+        {
+            ShowImportHint($"❌ 生成失败: {ex.Message}");
+        }
     }
 }

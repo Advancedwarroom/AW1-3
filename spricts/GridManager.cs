@@ -23,11 +23,18 @@ public partial class GridManager : Node
 
     public WeaponManager weaponManager;
 
+    // ========== ✅ 移动端触摸轨迹预览状态 ==========
+    private bool isMobilePlatform = false;
+    private bool touchPathActive = false;
+    private int activeTouchCount = 0;
+    private Grids touchHoverGrid = null;
+
     public override void _Ready()
     {
     
 
         AddToGroup("grid_manager");
+        isMobilePlatform = OS.GetName() == "Android" || OS.GetName() == "iOS";
 
         pathLine = new Line2D
         {
@@ -52,6 +59,98 @@ public partial class GridManager : Node
         AddChild(damagePreviewLabel);
         
         weaponManager = GetTree().GetFirstNodeInGroup("weapon_manager") as WeaponManager;
+    }
+
+    // ========== ✅ 移动端：手指划过显示移动轨迹（移动范围激活时接管触摸输入） ==========
+    public override void _Input(InputEvent @event)
+    {
+        if (!isMobilePlatform) return;
+
+        bool moveRangeActive = moveRange.Count > 0 && selectedUnit != null;
+
+        if (@event is InputEventScreenTouch touch)
+        {
+            if (touch.Pressed)
+            {
+                activeTouchCount++;
+                if (!moveRangeActive) { touchPathActive = false; return; }
+                if (activeTouchCount >= 2)
+                {
+                    // 双指操作（缩放相机）：退出轨迹模式，交给相机控制器
+                    touchPathActive = false;
+                    touchHoverGrid = null;
+                    ClearPathPreview();
+                    return;
+                }
+                // 起点在 UI 控件上：不干预，让按钮正常响应
+                if (IsTouchOverUI(touch.Position)) { touchPathActive = false; return; }
+                // 不拦截事件：格子拾取已被禁用，相机平移由 Drag 拦截
+                touchPathActive = true;
+                UpdateTouchHover(touch.Position);
+            }
+            else
+            {
+                activeTouchCount = Mathf.Max(0, activeTouchCount - 1);
+                if (!touchPathActive) return;
+                touchPathActive = false;
+                var target = touchHoverGrid;
+                touchHoverGrid = null;
+                ClearPathPreview();
+                // 松手确认：复用 SetupMoveRangeCallbacks 分配的现有点击回调（移动/截断/范围外回退）
+                if (moveRangeActive && target != null)
+                {
+                    if (target.OnClickGrid != null) target.OnClickGrid.Invoke(target);
+                    else target.OnClickEmpty?.Invoke();
+                }
+                // 不拦截：让相机控制器清理触摸状态
+            }
+        }
+        else if (@event is InputEventScreenDrag drag)
+        {
+            if (!moveRangeActive || !touchPathActive) return;
+            UpdateTouchHover(drag.Position);
+            GetViewport().SetInputAsHandled(); // 画轨迹期间阻止相机平移
+        }
+    }
+
+    private void UpdateTouchHover(Vector2 screenPos)
+    {
+        var grid = ScreenPosToGrid(screenPos);
+        touchHoverGrid = grid;
+        if (grid != null && moveRange.Contains(grid))
+            OnMouseEnteredGrid(grid);
+        else
+            ClearPathPreview();
+    }
+
+    private Grids ScreenPosToGrid(Vector2 screenPos)
+    {
+        if (map == null) return null;
+        Vector2 world = GetViewport().GetCanvasTransform().AffineInverse() * screenPos;
+        int x = Mathf.FloorToInt((world.X - startPos.X) / gridSize.X);
+        int y = Mathf.FloorToInt((world.Y - startPos.Y) / gridSize.Y);
+        if (x < 0 || x >= searchRange.X || y < 0 || y >= searchRange.Y) return null;
+        return map[x, y];
+    }
+
+    // 检查屏幕坐标是否落在任何可见可交互 UI 控件上（避免拦截按钮点击）
+    private bool IsTouchOverUI(Vector2 screenPos)
+    {
+        return FindUIAtPoint(GetTree().Root, screenPos);
+    }
+
+    private bool FindUIAtPoint(Node node, Vector2 screenPos)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            // 先递归子控件（更具体的优先）
+            if (FindUIAtPoint(child, screenPos)) return true;
+            if (child is Control c && c.IsVisibleInTree()
+                && c.MouseFilter != Control.MouseFilterEnum.Ignore
+                && c.GetGlobalRect().HasPoint(screenPos))
+                return true;
+        }
+        return false;
     }
 
     public void ShowWeaponAttackRange(Weapon weapon)
@@ -347,45 +446,97 @@ public partial class GridManager : Node
 
     public void OnMouseEnteredGrid(Grids grid)
     {
+        if (selectedUnit == null || selectedUnit.grid == null) return;
         if (!moveRange.Contains(grid)) return;
 
-        // ✅ 雾战紫色路径：恢复所有移动范围格子的颜色，再标记路径为紫色
-        foreach (var g in moveRange)
-        {
-            if (g?.pathIcon != null)
-                g.pathIcon.Modulate = Colors.White;
-        }
+        // 恢复所有移动范围格子的基础颜色（白色可达/红色不可停留）
+        ResetMoveRangeIconColors();
 
         previewPath = BuildPath(selectedUnit.grid, grid, selectedUnit);
 
-        // ✅ 将路径上在移动范围内的格子标记为紫色
-        foreach (var g in previewPath)
+        // ✅ 战争迷雾截断：正序扫描路径，撞到不可移动格子（敌方单位/兵器/不可通行地形）即截断，
+        // 与 HandleGridClick / HandleTruncatedMove 的执行判定保持一致（不检查可见性）
+        int truncateCount = previewPath.Count;
+        if (selectedUnit.overlapType == UnitOverlapType.NonOverlapping)
         {
+            for (int i = 1; i < previewPath.Count; i++)
+            {
+                var g = previewPath[i];
+                bool blocked = false;
+
+                g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
+                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team))
+                    blocked = true; // 敌方单位阻挡（迷雾中隐藏的也算）
+                else if (selectedUnit is not Oozium && g.weapon != null)
+                    blocked = true; // 兵器阻挡
+                else
+                {
+                    int moveCost = selectedUnit.GetMoveCost(g.gridType);
+                    if (moveCost >= 999 || moveCost == int.MaxValue)
+                        blocked = true; // 地形不可通行
+                    else if (unitManager?.CanMoveTo(g.GridIndex, selectedUnit) == false)
+                        blocked = true;
+                }
+
+                if (blocked)
+                {
+                    truncateCount = i; // 截断到阻挡格之前
+                    break;
+                }
+            }
+        }
+
+        // ✅ 截断后的路径前缀标记为紫色（仅移动范围内的格子）
+        for (int i = 1; i < truncateCount; i++)
+        {
+            var g = previewPath[i];
             if (moveRange.Contains(g) && g?.pathIcon != null)
                 g.pathIcon.Modulate = new Color(0.7f, 0.3f, 1.0f, 1.0f); // 紫色
         }
 
-        UpdatePathLine();
+        UpdatePathLine(truncateCount);
     }
 
     public void OnMouseExitedGrid(Grids _)
     {
-        previewPath.Clear();
-        pathLine.ClearPoints();
+        ClearPathPreview();
+    }
 
-        // ✅ 恢复所有移动范围格子的颜色
+    // 清除轨迹预览（紫色格 + 黄色线），恢复移动范围基础颜色
+    public void ClearPathPreview()
+    {
+        previewPath.Clear();
+        pathLine?.ClearPoints();
+        ResetMoveRangeIconColors();
+    }
+
+    // 恢复移动范围格子的基础颜色：可见的不可停留格为红色，其余为白色
+    private void ResetMoveRangeIconColors()
+    {
+        if (selectedUnit == null) return;
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        var fog = gm?.fogOfWarManager;
+        bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
+
         foreach (var g in moveRange)
         {
-            if (g?.pathIcon != null)
+            if (g?.pathIcon == null) continue;
+            bool canStay = CanStayOnGrid(g, selectedUnit);
+            bool gridVisible = !isFogEnabled || fog.IsGridVisible(g);
+            if (!canStay && selectedUnit.overlapType == UnitOverlapType.NonOverlapping && gridVisible)
+                g.pathIcon.Modulate = new Color(1, 0.3f, 0.3f, 0.6f); // 红色不可停留
+            else
                 g.pathIcon.Modulate = Colors.White;
         }
     }
 
-    public void UpdatePathLine()
+    public void UpdatePathLine(int pointCount = -1)
     {
+        if (pathLine == null) return;
         pathLine.ClearPoints();
-        foreach (var g in previewPath)
-            pathLine.AddPoint(g.Position + new Godot.Vector2(16, 16));
+        int count = pointCount < 0 ? previewPath.Count : Mathf.Min(pointCount, previewPath.Count);
+        for (int i = 0; i < count; i++)
+            pathLine.AddPoint(previewPath[i].Position + new Godot.Vector2(16, 16));
     }
 
     public List<Grids> GetNeighbours(Grids grid, bool walk = false)
@@ -464,6 +615,13 @@ public partial class GridManager : Node
         // ✅ 究极自由：所有单位使用统一的通用移动范围计算
         CalculateMoveRangeGeneric(infantry, effectiveMovePoints);
         SetupMoveRangeCallbacks(infantry);
+
+        // ✅ 移动端：移动范围激活期间禁用格子拾取，防止触摸按下即触发点击（改为滑动轨迹+松手确认）
+        if (isMobilePlatform)
+        {
+            foreach (var g in grids)
+                g?.SetAreaPickable(false);
+        }
     }
 
     private void ForceClearAllRangeVisuals()
@@ -660,6 +818,10 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
 
         g.OnClickEmpty = null;
+
+        // ✅ 悬停轨迹预览（鼠标划过/手指划过显示移动轨迹）
+        g.OnHoverGrid = OnMouseEnteredGrid;
+        g.OnUnhoverGrid = OnMouseExitedGrid;
     }
 
     // ✅ 空地点击回退（包括范围外的单位所在格子）
@@ -1285,6 +1447,8 @@ public void CloseRange()
             grid.pathIcon?.SetDeferred("modulate", Colors.White);
             grid.OnClickGrid = null;
             grid.OnClickEmpty = null;
+            grid.OnHoverGrid = null;
+            grid.OnUnhoverGrid = null;
             
             // ✅ 恢复单位输入
             OverrideUnitInput(grid, false);
@@ -1292,6 +1456,17 @@ public void CloseRange()
     }
     moveRange.Clear();
     HideExplosionRange(); // ✅ 关闭移动范围时也清除爆炸预览
+
+    // ✅ 清理轨迹预览与触摸状态，恢复格子拾取
+    previewPath.Clear();
+    pathLine?.ClearPoints();
+    touchPathActive = false;
+    touchHoverGrid = null;
+    if (isMobilePlatform)
+    {
+        foreach (var g in grids)
+            g?.SetAreaPickable(true);
+    }
 }
 
     public void ClearAllEmptyCallbacks()

@@ -20,6 +20,10 @@ public enum UnitCategory
     Recon,
     AntiAir,
     AntiTank,
+    PipeRunner,
+    Bike,
+    Flare,
+
     Other       // 其他未分类单位
 }
 
@@ -35,7 +39,7 @@ public partial class GameManager : Node
     [Export] public RichTextLabel victoryTitleLabel; 
     [Export] public RichTextLabel  victorySubtitleLabel; 
     [Export] public Button restartButton;
-    private bool gameEnded = false;
+    public bool gameEnded = false;
 
     [ExportGroup("全灭胜利判定开关")]
     [Export] public bool p1AnnihilationVictoryEnabled = true;
@@ -65,6 +69,10 @@ public partial class GameManager : Node
     public Godot.Collections.Array<Infantry> flareUnits = new();
     public Godot.Collections.Array<Infantry> bikeUnits = new();
 
+    public Godot.Collections.Array<Infantry> PipeRunnerUnits = new();
+    public Godot.Collections.Array<Infantry> lightTankUnits = new();
+    public Godot.Collections.Array<Infantry> rocketUnits = new();
+    public Godot.Collections.Array<Infantry> antiAirUnits = new();
     // 回合管理
     public int turns = 1;
     public int turnPhase = 1;
@@ -114,6 +122,7 @@ public partial class GameManager : Node
     {   
 
         AddToGroup("game_manager");
+        RequestStoragePermissionsIfNeeded();
         CallDeferred(nameof(DeferredInit));
         turnEndLabel = GetTree().CurrentScene.GetNodeOrNull<Label>("TurnEndLabel");
         TurnLabel = GetTree().CurrentScene.GetNodeOrNull<Label>("TurnLabel");
@@ -173,6 +182,37 @@ public partial class GameManager : Node
 }
 
 // 新增方法
+    // ========== ✅ Android 存储权限（导入外部地图文件的前提） ==========
+
+    // 启动时请求存储权限（权限在 export_presets.cfg 中声明）
+    private void RequestStoragePermissionsIfNeeded()
+    {
+        if (OS.GetName() != "Android") return;
+
+        // 批量请求清单中声明的危险权限（READ/WRITE_EXTERNAL_STORAGE，旧版安卓有效）
+        OS.RequestPermissions();
+
+        // MANAGE_EXTERNAL_STORAGE（所有文件访问）需单独请求，会跳转系统设置页由用户手动开启
+        if (!HasStoragePermission())
+            OS.RequestPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+    }
+
+    // 是否已有存储访问权限（非安卓平台视为已有）
+    public static bool HasStoragePermission()
+    {
+        if (OS.GetName() != "Android") return true;
+        return OS.GetGrantedPermissions().Contains("android.permission.MANAGE_EXTERNAL_STORAGE");
+    }
+
+    // 导入前兜底检查：无权限则重新发起请求并返回 false（调用方应提示用户授权后重试）
+    public static bool EnsureStoragePermission()
+    {
+        if (HasStoragePermission()) return true;
+        OS.RequestPermissions();
+        OS.RequestPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+        return false;
+    }
+
 private void DeferredFogRefresh()
 {
     fogOfWarManager?.RefreshFog();
@@ -412,6 +452,15 @@ public void RemoveWeapon(Weapon weapon)
                     case UnitCategory.FlyBomb:
                         flyBombUnits.Add(unit);
                         break;
+                    case UnitCategory.Flare:
+                        flareUnits.Add(unit);
+                        break;
+                    case UnitCategory.Bike:
+                        bikeUnits.Add(unit);
+                        break;
+                    case UnitCategory.PipeRunner:
+                        PipeRunnerUnits.Add(unit);
+                        break;
                 }
             }
             else
@@ -441,6 +490,7 @@ private void AutoCategorizeUnit(Infantry unit)
             category = UnitCategory.Recon;
             reconUnits.Add(unit);
             break;
+            
 
         case Mech _:
             category = UnitCategory.Mech;
@@ -477,6 +527,10 @@ private void AutoCategorizeUnit(Infantry unit)
         case Bike _:
             category = UnitCategory.Infantry;
             bikeUnits.Add(unit);
+            break;
+        case PipeRunner _:
+            category = UnitCategory.PipeRunner;
+            PipeRunnerUnits.Add(unit);
             break;
         case Artillery _:
             category = UnitCategory.Artillery;
@@ -635,6 +689,7 @@ private void AutoCategorizeUnit(Infantry unit)
     }
     public void UpdateUnitLists()
     {
+        
         if (UnitLists == null) return;
         switch (statsMode)
         {
@@ -651,7 +706,7 @@ private void AutoCategorizeUnit(Infantry unit)
 
         // ✅ 直接从源头实时计算，不依赖维护的列表
         var all = unitManager?.AllUnits ?? new List<Infantry>();
-        
+
         // 四队伍计数器: P-1(Player), P0(Player0), P1(Player1), P2(Player2)
         int pn1Infantry = 0, p0Infantry = 0, p1Infantry = 0, p2Infantry = 0;
         int pn1Mech = 0, p0Mech = 0, p1Mech = 0, p2Mech = 0;
@@ -667,9 +722,11 @@ private void AutoCategorizeUnit(Infantry unit)
         int pn1FlyBomb = 0, p0FlyBomb = 0, p1FlyBomb = 0, p2FlyBomb = 0;
         int pn1Flare = 0, p0Flare = 0, p1Flare = 0, p2Flare = 0;
         int pn1Bike = 0, p0Bike = 0, p1Bike = 0, p2Bike = 0;
+        int pn1PipeRunner = 0, p0PipeRunner = 0, p1PipeRunner = 0, p2PipeRunner = 0;
 
         foreach (var u in all)
         {
+                GD.Print($"Unit: {u.Name}, Type: {u.GetType().Name}, IsPipeRunner: {u is PipeRunner}");
             if (u == null || !IsInstanceValid(u)) continue;
             string team = u.team;
 
@@ -697,6 +754,11 @@ private void AutoCategorizeUnit(Infantry unit)
             { 
                 if (team == "Player") pn1Bike++; else if (team == "Player0") p0Bike++;
                 else if (team == "Player1") p1Bike++; else if (team == "Player2") p2Bike++;
+            }
+            else if (u is PipeRunner) 
+            { 
+                if (team == "Player") pn1PipeRunner++; else if (team == "Player0") p0PipeRunner++;
+                else if (team == "Player1") p1PipeRunner++; else if (team == "Player2") p2PipeRunner++;
             }
             else if (u is LightTank) 
             { 
@@ -822,11 +884,14 @@ private void AutoCategorizeUnit(Infantry unit)
         if (pn1Bike > 0 || p0Bike > 0 || p1Bike > 0 || p2Bike > 0)
             text += $"摩[color={cPN1}] {pn1Bike,2}|[color={cP0}]{p0Bike,2}|[color={cP1}]{p1Bike,2}|[color={cP2}]{p2Bike,2}[/color]\n";
 
+        if (pn1PipeRunner > 0 || p0PipeRunner > 0 || p1PipeRunner > 0 || p2PipeRunner > 0)
+            text += $"管[color={cPN1}] {pn1PipeRunner,2}|[color={cP0}]{p0PipeRunner,2}|[color={cP1}]{p1PipeRunner,2}|[color={cP2}]{p2PipeRunner,2}[/color]\n";
+
         // 兵器统计
         bool hasAnyWeapon = pn1Cannons > 0 || p0Cannons > 0 || p1Cannons > 0 || p2Cannons > 0
                          || pn1Lasers > 0 || p0Lasers > 0 || p1Lasers > 0 || p2Lasers > 0
                          || pn1Weapons > 0 || p0Weapons > 0 || p1Weapons > 0 || p2Weapons > 0;
-        
+
         if (hasAnyWeapon)
         {
             text += $"\n[color={cTitle}]===兵器===[/color]\n";
@@ -841,10 +906,10 @@ private void AutoCategorizeUnit(Infantry unit)
 
         int totalAll = totalUnits + totalWeapons;
 
-        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike;
-        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike;
-        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike;
-        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike;
+        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike + pn1PipeRunner;
+        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike + p0PipeRunner;
+        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike + p1PipeRunner;
+        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike + p2PipeRunner;
 
         int pn1TotalWeapons = pn1Cannons + pn1Lasers + pn1Weapons;
         int p0TotalWeapons = p0Cannons + p0Lasers + p0Weapons;
@@ -864,7 +929,7 @@ private void AutoCategorizeUnit(Infantry unit)
 
         UnitLists.Text = text;
     }
-    public void UpdateFacilityLists()
+public void UpdateFacilityLists()
     {
         if (UnitLists == null) return;
         if (gridManager == null) return;
@@ -1201,6 +1266,7 @@ private void AutoCategorizeUnit(Infantry unit)
             Artillery _ => UnitCategory.Artillery,
             AntiAir _ => UnitCategory.AntiAir,
             AntiTank _ => UnitCategory.AntiTank,
+            PipeRunner _ => UnitCategory.PipeRunner,
             Infantry _ => UnitCategory.Infantry,
             _ => UnitCategory.Other
         };
@@ -1209,7 +1275,20 @@ private void AutoCategorizeUnit(Infantry unit)
     // 动态移除单位
        public void CheckVictoryCondition()
 {
-    if (gameEnded || blockVictoryCheck) return;
+        if (gameEnded) return;
+
+        // ✅ 关键修复：编辑模式下完全跳过胜负判定
+        var terrainEditor = GetTree()?.GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
+        if (terrainEditor != null && terrainEditor.IsEditMode)
+        {
+            return;
+        }
+
+        // ✅ 导入保护期
+        if (blockVictoryCheck) return;
+
+        // ✅ 额外保护：如果单位列表正在刷新中，跳过判定
+        if (unitManager?.AllUnits == null || weaponManager?.AllWeapons == null) return;
 
     // 获取所有存活单位
     var allUnits = unitManager?.AllUnits.Where(u => IsInstanceValid(u) && u.health > 0).ToList();
@@ -1301,7 +1380,10 @@ private void AutoCategorizeUnit(Infantry unit)
     // 势力失败判定：检查是否有势力因全灭（无单位且无兵器）而失败
     private void CheckFactionDefeatCondition()
     {
-        if (gameEnded) return;
+        if (gameEnded || blockVictoryCheck) return; // ✅ 导入期间跳过判定
+
+        // ✅ 额外保护：确保列表已初始化
+        if (unitManager?.AllUnits == null || weaponManager?.AllWeapons == null) return;
 
         var allUnits = unitManager?.AllUnits.Where(u => IsInstanceValid(u) && u.health > 0).ToList();
         var allWeapons = weaponManager?.AllWeapons.Where(w => IsInstanceValid(w) && !w.isDestroyed).ToList();
@@ -1600,12 +1682,20 @@ public void RestartGame()
         mechUnits.Remove(unit);
         ooziumUnits.Remove(unit);
         tankUnits.Remove(unit);
+        lightTankUnits.Remove(unit);
+        rocketUnits.Remove(unit);
+        antiAirUnits.Remove(unit);
         mdTankUnits.Remove(unit);
+        antiTankUnits.Remove(unit);
+        flareUnits.Remove(unit);
+        bikeUnits.Remove(unit);
         vehicleUnits.Remove(unit);
         artilleryUnits.Remove(unit);
         antiairUnits.Remove(unit);
         apcUnits.Remove(unit);
         reconUnits.Remove(unit);
+        flyBombUnits.Remove(unit);
+        PipeRunnerUnits.Remove(unit);
 
         unitCategories.Remove(unit);
         unitManager?.RemoveUnit(unit);
@@ -1628,6 +1718,13 @@ public void RestartGame()
     // 切换回合
     public void NextPhase()
     {
+        // ✅ 关键修复：编辑模式下禁止切换回合
+        var terrainEditor = GetTree()?.GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
+        if (terrainEditor != null && terrainEditor.IsEditMode)
+        {
+            return;
+        }
+
         HideProductionMenu();
         turnEndLabel?.Show();
         GetTree().CreateTimer(1.2f).Timeout += () => turnEndLabel?.Hide();
@@ -1667,6 +1764,16 @@ public void RestartGame()
         }
 
         string currentTeam = TeamHelper.GetPhaseTeamName(turnPhase);
+
+        // ✅ 切换回合：刷新当前势力建筑的生产次数（P-1通用建筑每个势力回合开始都刷新）
+        if (gridManager?.grids != null)
+        {
+            foreach (var g in gridManager.grids)
+            {
+                if (g?.city != null && (g.city.facilityTeam == currentTeam || g.city.facilityTeam == TeamHelper.Player))
+                    g.city.ResetProductionCount();
+            }
+        }
 
         // ✅ 资金系统：每回合开始时给对应势力增加资金
         if (turnPhase == 1)
@@ -1747,20 +1854,12 @@ public void RestartGame()
 
 
 
-            unit.originalGrid = null;
-            unit.state = UnitState.Idle;
-            unit.isMoved = false;
-            unit.isAttacked = false;
-            unit.movePoints = unit.defaultMovePoints;
-            unit.SetWaitVisual(false);
-            unit.StartBreath();
-
-
+            unit.OnTurnEnd();
             var turnEndMethod = unit.GetType().GetMethod("OnTurnEnd");
-            if (turnEndMethod != null && turnEndMethod.DeclaringType != typeof(Infantry))
-            {
-                turnEndMethod.Invoke(unit, null);
-            }
+if (turnEndMethod != null && turnEndMethod.DeclaringType != typeof(Infantry))
+{
+    turnEndMethod.Invoke(unit, null);
+}
 
             if (unit.hpLabel != null)
             {
@@ -2157,6 +2256,18 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
             case UnitCategory.AntiAir:
                 if (!antiairUnits.Contains(unit)) antiairUnits.Add(unit);
                 break;
+            case UnitCategory.AntiTank:
+                if (!antiTankUnits.Contains(unit)) antiTankUnits.Add(unit);
+                break;
+            case UnitCategory.Flare:
+                if (!flareUnits.Contains(unit)) flareUnits.Add(unit);
+                break;
+            case UnitCategory.Bike:
+                if (!bikeUnits.Contains(unit)) bikeUnits.Add(unit);
+                break;
+            case UnitCategory.PipeRunner:
+                if (!PipeRunnerUnits.Contains(unit)) PipeRunnerUnits.Add(unit);
+                break;
             case UnitCategory.Artillery:
                 if (!artilleryUnits.Contains(unit)) artilleryUnits.Add(unit);
                 break;
@@ -2187,6 +2298,9 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
                 break;
             case UnitCategory.Tank:
                 tankUnits.Remove(unit);
+        lightTankUnits.Remove(unit);
+        rocketUnits.Remove(unit);
+        antiAirUnits.Remove(unit);
                 break;
             case UnitCategory.MdTank:
                 mdTankUnits.Remove(unit);
@@ -2511,7 +2625,8 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         string currentTeam = turnPhase == 1 ? "Player1" : "Player2";
         int currentFunds = GetTeamFunds(currentTeam);
 
-        productionMenuTitle.Text = $"🏭 生产菜单 ({facility.GetType().Name})\n💰 资金: {currentFunds} G";
+        int remainingProductions = Mathf.Max(0, facility.maxProductionsPerTurn - facility.productionsThisTurn);
+        productionMenuTitle.Text = $"🏭 生产菜单 ({facility.GetType().Name})\n💰 资金: {currentFunds} G\n⚙️ 本回合剩余生产: {remainingProductions}/{facility.maxProductionsPerTurn}";
 
         // ✅ 即时移动开关
         var moveCheckBox = new CheckBox();
@@ -2536,6 +2651,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
             var info = UnitProductionDatabase.GetInfo(unitName);
             bool canAfford = currentFunds >= info.Cost;
             bool gridEmpty = grid.infantries.Count == 0 && grid.weapons.Count == 0;
+            bool productionAvailable = facility.CanProduceNow();
 
             var btn = new Button();
             btn.CustomMinimumSize = new Godot.Vector2(300, 50);
@@ -2543,7 +2659,17 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
             btn.Text = $"{info.DisplayName}\n💰 {info.Cost} G";
             btn.AddThemeFontSizeOverride("font_size", 13);
 
-            if (!gridEmpty)
+            if (!productionAvailable)
+            {
+                btn.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
+                var disabledStyle = new StyleBoxFlat();
+                disabledStyle.BgColor = new Color(0.2f, 0.2f, 0.2f, 0.6f);
+                disabledStyle.SetCornerRadiusAll(6);
+                btn.AddThemeStyleboxOverride("normal", disabledStyle);
+                btn.TooltipText = "已达本回合生产上限";
+                btn.Disabled = true;
+            }
+            else if (!gridEmpty)
             {
                 btn.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
                 var disabledStyle = new StyleBoxFlat();
@@ -2697,6 +2823,8 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
     {
         if (productionTargetGrid == null || productionTargetFacility == null) return;
         if (!UnitProductionDatabase.HasUnit(unitName)) return;
+        // ✅ 每回合生产次数限制
+        if (!productionTargetFacility.CanProduceNow()) return;
 
         var info = UnitProductionDatabase.GetInfo(unitName);
         string currentTeam = turnPhase == 1 ? "Player1" : "Player2";
@@ -2750,9 +2878,13 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         {
             unit.isMoved = true;
             unit.isAttacked = true;
+            unit.hasActed = true;
             unit.state = UnitState.Acted;
             unit.SetWaitVisual(true);
         }
+
+        // ✅ 累计本回合生产次数
+        productionTargetFacility.productionsThisTurn++;
 
         UpdateUnitLists();
         RefreshSpecializedUnitLists();
@@ -2769,6 +2901,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
     {
         if (facility == null || grid == null || !UnitProductionDatabase.HasUnit(unitName)) return false;
         if (!facility.canProduce || !facility.producibleUnitNames.Contains(unitName)) return false;
+        if (!facility.CanProduceNow()) return false; // ✅ 每回合生产次数限制
         if (facility.facilityTeam != team) return false;
         if (grid.infantries.Count > 0 || grid.weapons.Count > 0) return false; // 格子必须为空
 
@@ -2808,7 +2941,28 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         unit.OnClickPiece = OnSelectPiece;
         unit.UpdateTeamVisual();
         unit.UpdateHpLabel();
-        unit.SetWaitVisual(true);
+
+        // ✅ 修复：始终重置状态，覆盖场景预设值
+        unit.isMoved = false;
+        unit.isAttacked = false;
+        unit.hasActed = false;
+        unit.state = UnitState.Idle;
+        unit.movePoints = unit.defaultMovePoints;
+        unit.originalGrid = null;
+        unit.SetWaitVisual(false);
+
+        // ✅ 修复：与玩家生产一致——不支持生产后立即移动时，单位生产出来直接待机（下回合才能行动）
+        if (!facility.instantMoveAfterProduction)
+        {
+            unit.isMoved = true;
+            unit.isAttacked = true;
+            unit.hasActed = true;
+            unit.state = UnitState.Acted;
+            unit.SetWaitVisual(true);
+        }
+
+        // ✅ 累计本回合生产次数
+        facility.productionsThisTurn++;
 
         UpdateUnitLists();
         RefreshSpecializedUnitLists();
@@ -2837,11 +2991,40 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
     public void ResetGameState()
     {
         gameEnded = false;
+        defeatedTeams.Clear(); // ✅ 清理已失败势力记录，避免导入后延迟判定
         if (victoryPanel != null)
         {
             victoryPanel.Hide();
             victoryPanel.Modulate = new Color(1, 1, 1, 1);
         }
+    }
+
+    // ✅ 新增：供 TerrainEditor 调用的彻底重置方法
+    public void ResetForMapImport()
+    {
+        gameEnded = false;
+        defeatedTeams.Clear();
+        selectedInfantry = null;
+        selectedWeapon = null;
+        isSelectingAttackTarget = false;
+        turns = 1;
+        turnPhase = 1;
+        if (victoryPanel != null)
+        {
+            victoryPanel.Hide();
+            victoryPanel.Modulate = new Color(1, 1, 1, 1);
+        }
+        // ✅ 导入期间屏蔽判定，3秒后自动解除
+        blockVictoryCheck = true;
+        var protectTimer = new Timer();
+        protectTimer.WaitTime = 3.0f;
+        protectTimer.OneShot = true;
+        protectTimer.Timeout += () => {
+            blockVictoryCheck = false;
+            protectTimer.QueueFree();
+        };
+        AddChild(protectTimer);
+        protectTimer.Start();
     }
 
     // ========== ✅ 生产菜单拖拽处理 ==========

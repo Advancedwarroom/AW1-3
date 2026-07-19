@@ -11,6 +11,14 @@ public partial class Facility : Node2D
     [Export] public bool canProduce = false;
     [Export] public Godot.Collections.Array<string> producibleUnitNames = new();
     [Export] public bool instantMoveAfterProduction = false; // 生产后是否可立即移动（默认false=生产后待机）
+    [Export] public int maxProductionsPerTurn = 1;           // 每回合最多生产次数（0=禁止生产）
+    [Export] public int productionsThisTurn = 0;             // 本回合已生产次数（运行时计数，切换回合刷新）
+
+    // 本回合是否还能生产
+    public bool CanProduceNow() => canProduce && productionsThisTurn < maxProductionsPerTurn;
+
+    // 回合刷新：重置生产计数
+    public void ResetProductionCount() => productionsThisTurn = 0;
 
     [ExportGroup("设施基础")]
     [Export] public string facilityTeam = "";

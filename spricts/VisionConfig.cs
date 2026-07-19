@@ -15,7 +15,7 @@ public static class VisionConfig
         ["MdTank"] = 3, ["Artillery"] = 2, ["Rocket"] = 2,
         ["APC"] = 3, ["Oozium"] = 2, ["AntiAir"] = 5,
         ["Recon"] = 5, ["FlyBomb"] = 1, ["AntiTank"] = 2,
-        ["Flare"] = 2, ["Bike"] = 2,
+        ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
     };
 
     // ========== 单位类型额外视野加成（全局）==========
@@ -321,7 +321,7 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
             ["MdTank"] = 1, ["Artillery"] = 1, ["Rocket"] = 1,
             ["APC"] = 1, ["Oozium"] = 2, ["AntiAir"] = 2,
             ["Recon"] = 5,
-            ["Flare"] = 2, ["Bike"] = 2,
+            ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
         };
 
         weaponVisionRange = new()
@@ -415,6 +415,9 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
             {
 
             },
+            ["PipeRunner"] = new()
+{
+},
         };
     }
 

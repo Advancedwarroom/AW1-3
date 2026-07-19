@@ -193,6 +193,19 @@ public void InitializeDefaultMatrix()
             ["Oozium_Flare"] = 999,       ["Oozium_Bike"] = 999,
             ["AntiAir_Flare"] = 50,       ["AntiAir_Bike"] = 105,
             ["AntiTank_Flare"] = 75,      ["AntiTank_Bike"] = 65,
+            ["PipeRunner_Infantry"] = 95,   ["PipeRunner_Mech"] = 90,
+["PipeRunner_LightTank"] = 80,  ["PipeRunner_MdTank"] = 55,
+["PipeRunner_Rocket"] = 85,     ["PipeRunner_Recon"] = 90,
+["PipeRunner_APC"] = 80,        ["PipeRunner_AntiAir"] = 85,
+["PipeRunner_Artillery"] = 80,  ["PipeRunner_FlyBomb"] = 120,
+["PipeRunner_PipeRunner"] = 80,["PipeRunner_Flare"] = 75,
+["PipeRunner_AntiTank"] = 60,   ["PipeRunner_Bike"] = 90,
+// ✅ 其他单位主武器攻击 PipeRunner
+["AntiAir_PipeRunner"] = 85,    ["Artillery_PipeRunner"] = 70,
+["MdTank_PipeRunner"] = 85,    ["Mech_PipeRunner"] = 55,
+["PipeRunner_PipeRunner"] = 80,["Rocket_PipeRunner"] = 80,
+["LightTank_PipeRunner"] = 55, ["AntiTank_PipeRunner"] = 85,
+["Flare_PipeRunner"] = 12,      ["Bike_PipeRunner"] = 4,
         };
     }
 
@@ -214,6 +227,25 @@ public void InitializeDefaultMatrix()
             ["LightTank_Infantry"] = 35,  ["LightTank_Mech"] = 25,  ["LightTank_LightTank"] = 5,
             ["LightTank_Artillery"] = 5,  ["LightTank_Rocket"] = 5,   ["LightTank_APC"] = 5,
             ["LightTank_Oozium"] = 10,      ["APC_MdTank"] = 2,
+            ["Infantry_AntiAir"] = 5,     ["Infantry_PipeRunner"] = 5,
+            ["Mech_AntiAir"] = 55,       ["Mech_PipeRunner"] = 6,
+            ["LightTank_MdTank"] = 2,    ["LightTank_AntiAir"] = 5,  ["LightTank_PipeRunner"] = 6,
+            ["MdTank_AntiAir"] = 1,      ["MdTank_PipeRunner"] = 8,
+            ["Artillery_AntiAir"] = 0,   ["Artillery_PipeRunner"] = 0,
+            ["Rocket_AntiAir"] = 0,      ["Rocket_PipeRunner"] = 0,
+            ["APC_AntiAir"] = 0,         ["APC_PipeRunner"] = 0,
+            ["Oozium_AntiAir"] = 0,      ["Oozium_AntiTank"] = 0,    ["Oozium_PipeRunner"] = 0,
+            ["Recon_PipeRunner"] = 30,
+            ["AntiAir_PipeRunner"] = 15,
+            ["AntiTank_Oozium"] = 0,     ["AntiTank_PipeRunner"] = 0,
+            ["Flare_PipeRunner"] = 25,
+            ["Bike_PipeRunner"] = 4,
+            ["FlyBomb_PipeRunner"] = 0,
+            ["PipeRunner_Infantry"] = 0, ["PipeRunner_Mech"] = 0,     ["PipeRunner_LightTank"] = 0,["PipeRunner_MdTank"] = 0,
+            ["PipeRunner_Artillery"] = 0,["PipeRunner_Rocket"] = 0,   ["PipeRunner_APC"] = 0,   ["PipeRunner_Oozium"] = 0,
+            ["PipeRunner_Recon"] = 0,    ["PipeRunner_AntiAir"] = 0, ["PipeRunner_AntiTank"] = 0,["PipeRunner_Flare"] = 0,
+            ["PipeRunner_Bike"] = 0,     ["PipeRunner_FlyBomb"] = 0, ["PipeRunner_PipeRunner"] = 0,
+
             
             // 火炮/火箭——无副武器（或极低自卫）
             ["Artillery_Infantry"] = 0,  ["Artillery_Mech"] = 0,  ["Artillery_LightTank"] = 0,
@@ -293,10 +325,22 @@ public void InitializeDefaultMatrix()
             ["AntiAir_Bike"] = 55,        ["LightTank_Bike"] = 25,      ["MdTank_Bike"] = 45,
             ["Artillery_Bike"] = 0,       ["Rocket_Bike"] = 0,          ["APC_Bike"] = 0,
             ["Oozium_Bike"] = 0,          ["AntiTank_Bike"] = 0,        ["FlyBomb_Bike"] = 0,
+            // ✅ 副武器攻击 PipeRunner
+            ["Mech_PipeRunner"] = 6,        ["MdTank_PipeRunner"] = 8,
+            ["LightTank_PipeRunner"] = 6,
         };
     }
 }
-
+public virtual void OnTurnEnd()
+{
+    originalGrid = null;
+    state = UnitState.Idle;
+    isMoved = false;
+    isAttacked = false;
+    movePoints = defaultMovePoints;
+    SetWaitVisual(false);
+    StartBreath();
+}
 // 查主武器表
 public virtual int GetPrimaryDamageFromMatrix(Infantry target)
 {

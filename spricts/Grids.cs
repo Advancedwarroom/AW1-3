@@ -124,8 +124,27 @@ public partial class Grids : Node2D
         UpdateTerrainIcon();
     }
 
-    public void OnArea2DMouseEntered() { if (IsInAttackRangeMode) OnMouseEnteredAttackGrid?.Invoke(); }
-    public void OnArea2DMouseExited() { if (IsInAttackRangeMode) OnMouseExitedAttackGrid?.Invoke(); }
+    // ✅ 通用悬停回调（移动轨迹预览用，不受攻击模式门控）
+    public Action<Grids> OnHoverGrid;
+    public Action<Grids> OnUnhoverGrid;
+
+    public void OnArea2DMouseEntered()
+    {
+        if (IsInAttackRangeMode) OnMouseEnteredAttackGrid?.Invoke();
+        OnHoverGrid?.Invoke(this);
+    }
+    public void OnArea2DMouseExited()
+    {
+        if (IsInAttackRangeMode) OnMouseExitedAttackGrid?.Invoke();
+        OnUnhoverGrid?.Invoke(this);
+    }
+
+    // 开关格子的物理输入拾取（移动端轨迹模式时禁用，防止触摸按下即触发点击）
+    public void SetAreaPickable(bool pickable)
+    {
+        var area = GetNodeOrNull<Area2D>("GridArea");
+        if (area != null) area.InputPickable = pickable;
+    }
 
     public HashSet<Grids> CalculateGridVision(GameManager gm)
     {
