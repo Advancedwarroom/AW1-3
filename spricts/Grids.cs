@@ -450,8 +450,14 @@ public partial class Grids : Node2D
 
     public float TerrainDefenseBonus
     {
+        
         get
         {
+                    var extraSave = ExtraSave.Instance;
+        if (extraSave != null && extraSave.CustomTerrainTypes.TryGetValue(gridType.ToString(), out var customTerrain))
+        {
+            return customTerrain.defenseBonus;
+        }
             return gridType switch
             {
                 GridType.GROUND => 0.10f, GridType.FOREST => 0.20f,
@@ -522,11 +528,15 @@ public partial class Grids : Node2D
                     }
                 }
 
-                // ✅ 检查是否为可旋转的己方瞭望塔
+                // ✅ 检查是否为可旋转的瞭望塔（己方或P-1公共设施）
                 if (gridVisionMode != GridVisionMode.None && towerCanRotate && city != null && !string.IsNullOrEmpty(city.facilityTeam))
                 {
                     string currentTeam = gm?.turnPhase == 1 ? "Player1" : "Player2";
-                    if (city.facilityTeam == currentTeam && gm?.selectedInfantry == null)
+                    bool isOwnTower = city.facilityTeam == currentTeam;
+                    bool isPublicTower = city.facilityTeam == TeamHelper.Player || city.isPublicFacility;
+
+                    // ✅ 己方瞭望塔或P-1公共设施瞭望塔都可以被旋转
+                    if ((isOwnTower || isPublicTower) && gm?.selectedInfantry == null)
                     {
                         var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
                         actionMenu?.ShowGridRotateMenu(this);

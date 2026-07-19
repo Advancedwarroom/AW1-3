@@ -93,6 +93,10 @@ public partial class Infantry : Node2D
 [Export] public Godot.Collections.Dictionary<GridType, int> unitTerrainVisionBonus = new();
 [Export] public bool overrideGlobalTerrainBonus = false;  // 是否覆盖全局地形加成
 
+// ✅ 新增：P-1 单位视野共享标记（Inspector可配置）
+[ExportGroup("P-1 视野共享")]
+[Export] public bool isPublicVisionUnit = false;  // 是否将视野共享给所有势力（P-1单位默认true）
+
 // 运行时实际视野（由VisionConfig或Inspector覆盖计算得出）
 public int ActualVisionRange 
 {
@@ -897,6 +901,12 @@ public override void _Ready()
                 unitTerrainVisionBonus[kvp.Key] = kvp.Value;
         }
 
+        // ✅ P-1 单位默认开启视野共享（如果team是Player且未手动设置）
+        if (team == TeamHelper.Player && !isPublicVisionUnit)
+        {
+            isPublicVisionUnit = true;
+        }
+
 }
 
 // ========== 子类覆盖：单位特有默认值 ==========
@@ -1016,6 +1026,14 @@ public override void _Process(double delta)
 
 public virtual int GetMoveCost(GridType gridType)
 {
+        var extraSave = ExtraSave.Instance;
+    if (extraSave != null)
+    {
+        string terrainName = gridType.ToString();
+        string moveTypeName = this.moveType.ToString();
+        int customCost = extraSave.GetMoveCost(moveTypeName, terrainName);
+        if (customCost >= 0) return customCost; // -1 表示走内置逻辑，继续原有代码
+    }
     return moveType switch
     {
         // ========== Infantry（步兵）==========

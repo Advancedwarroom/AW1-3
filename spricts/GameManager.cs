@@ -136,7 +136,7 @@ public partial class GameManager : Node
 
         UpdateTurnLabel();
         UpdateUnitLists();  // ✅ 初始化单位统计
-        
+
         // ✅ 创建统计切换按钮
         CreateStatsToggleButtons();
         SetProcessInput(true);
@@ -151,23 +151,23 @@ public partial class GameManager : Node
         }
 
     }
-    
+
     if (turnEndLabel != null) turnEndLabel.ZIndex = 200;
     if (TurnLabel != null) TurnLabel.ZIndex = 200;
     if (UnitLists != null) UnitLists.ZIndex = 200;
     gameEnded = false;
-    
+
         if (fogOfWarManager == null)
     {
         fogOfWarManager = GetTree().GetFirstNodeInGroup("fog_of_war_manager") as FogOfWarManager;
     }
-    
+
     // 延迟刷新战争迷雾，确保所有节点就绪
     if (fogOfWarManager != null && fogOfWarManager.isFogOfWarEnabled)
     {
         CallDeferred(nameof(DeferredFogRefresh));
     }
-    
+
     // ✅ 确保 AI_Manager 存在
     var aiManager = GetTree().GetFirstNodeInGroup("ai_manager") as AI_Manager;
     if (aiManager == null)
@@ -177,7 +177,7 @@ public partial class GameManager : Node
         aiManager.gameManager = this;
         AddChild(aiManager);
     }
-    
+
     gameEnded = false;
 }
 
@@ -331,7 +331,7 @@ public void RemoveWeapon(Weapon weapon)
         UpdateUnitLists();
         return;
     }
-    
+
     // ✅ 修复：先检查 weaponManager 是否为 null，避免递归时重复操作
     if (weaponManager != null && weaponManager.AllWeapons.Contains(weapon))
     {
@@ -341,7 +341,7 @@ public void RemoveWeapon(Weapon weapon)
         weapons.Remove(weapon);
         if (selectedWeapon == weapon)
             selectedWeapon = null;
-        
+
         // 通知 WeaponManager 清理（但不触发回调）
         wm.AllWeapons.Remove(weapon);
         if (weapon.grid != null)
@@ -405,6 +405,10 @@ public void RemoveWeapon(Weapon weapon)
         antiTankUnits.Clear();
         apcUnits.Clear();
         reconUnits.Clear();
+        flyBombUnits.Clear();
+        flareUnits.Clear();
+        bikeUnits.Clear();
+        PipeRunnerUnits.Clear();
 
         foreach (var unit in unitManager.AllUnits)
         {
@@ -490,7 +494,7 @@ private void AutoCategorizeUnit(Infantry unit)
             category = UnitCategory.Recon;
             reconUnits.Add(unit);
             break;
-            
+
 
         case Mech _:
             category = UnitCategory.Mech;
@@ -565,13 +569,13 @@ private void AutoCategorizeUnit(Infantry unit)
     private void CreateStatsToggleButtons()
     {
         if (UnitLists == null) return;
-        
+
         var canvasLayer = GetTree().CurrentScene.GetNodeOrNull<CanvasLayer>("CanvasLayer");
         if (canvasLayer == null) return;
-        
+
         // 5个按钮排成一排（价值、单位、设施、资金、统计）
         // 每个按钮宽80px，统计按钮宽60px
-        
+
         // 价值按钮
         valueStatsBtn = new Button();
         valueStatsBtn.Name = "ValueStatsBtn";
@@ -594,7 +598,7 @@ private void AutoCategorizeUnit(Infantry unit)
         valueStatsBtn.ZIndex = 200;
         valueStatsBtn.Pressed += () => { statsMode = StatsMode.Value; UpdateUnitLists(); };
         canvasLayer.AddChild(valueStatsBtn);
-        
+
         // 单位按钮
         unitStatsBtn = new Button();
         unitStatsBtn.Name = "UnitStatsBtn";
@@ -617,7 +621,7 @@ private void AutoCategorizeUnit(Infantry unit)
         unitStatsBtn.ZIndex = 200;
         unitStatsBtn.Pressed += () => { statsMode = StatsMode.Units; UpdateUnitLists(); };
         canvasLayer.AddChild(unitStatsBtn);
-        
+
         // 设施按钮
         facilityStatsBtn = new Button();
         facilityStatsBtn.Name = "FacilityStatsBtn";
@@ -640,7 +644,7 @@ private void AutoCategorizeUnit(Infantry unit)
         facilityStatsBtn.ZIndex = 200;
         facilityStatsBtn.Pressed += () => { statsMode = StatsMode.Facilities; UpdateUnitLists(); };
         canvasLayer.AddChild(facilityStatsBtn);
-        
+
         // 资金按钮
         fundsStatsBtn = new Button();
         fundsStatsBtn.Name = "FundsStatsBtn";
@@ -689,7 +693,7 @@ private void AutoCategorizeUnit(Infantry unit)
     }
     public void UpdateUnitLists()
     {
-        
+
         if (UnitLists == null) return;
         switch (statsMode)
         {
@@ -933,10 +937,10 @@ public void UpdateFacilityLists()
     {
         if (UnitLists == null) return;
         if (gridManager == null) return;
-        
+
         var cities = gridManager.GetAllCities();
         int p0Cities = 0, p1Cities = 0, p2Cities = 0, pN1Cities = 0;
-        
+
         foreach (var city in cities)
         {
             if (city == null) continue;
@@ -948,7 +952,7 @@ public void UpdateFacilityLists()
                 case "Player": pN1Cities++; break;
             }
         }
-        
+
         string text = " [color=yellow]设施统计[/color] \n";
         text += $"[color=gray]中立(P0): {p0Cities}[/color]\n";
         text += $"[color=red]🔴P1: {p1Cities}[/color]\n";
@@ -956,35 +960,51 @@ public void UpdateFacilityLists()
         if (pN1Cities > 0)
             text += $"[color=orange]P-1: {pN1Cities}[/color]\n";
         text += $"总计: {cities.Count} 设施";
-        
+
         UnitLists.Text = text;
     }
     public void UpdateFundsLists()
     {
         if (UnitLists == null) return;
-        
-        // 计算P1/P2每回合收入
-        int p1Income = 0, p2Income = 0;
+
+        // 计算P1/P2/P-1每回合收入
+        int p1Income = 0, p2Income = 0, pN1Income = 0;
         if (gridManager?.grids != null)
         {
             foreach (var grid in gridManager.grids)
             {
                 if (grid?.city == null) continue;
-                if (grid.city is City c)
+                var c = grid.city;
+                int income = c.GetCurrentIncome();
+                if (income <= 0) continue;
+
+                // ✅ P-1公共设施：给所有势力提供收入
+                if (c.facilityTeam == TeamHelper.Player || c.isPublicFacility)
                 {
-                    if (grid.city.facilityTeam == "Player1")
-                        p1Income += c.fundsPerTurn;
-                    else if (grid.city.facilityTeam == "Player2")
-                        p2Income += c.fundsPerTurn;
+                    p1Income += income;
+                    p2Income += income;
+                    pN1Income += income;
+                }
+                else if (c.facilityTeam == "Player1")
+                {
+                    p1Income += income;
+                }
+                else if (c.facilityTeam == "Player2")
+                {
+                    p2Income += income;
                 }
             }
         }
-        
+
         string cP1 = "#ff4d4d";
         string cP2 = "#4d80ff";
+        string cPN1 = "#b366ff";
         string cTitle = "#ffaa33";
-        
+
         string text = $" [color={cTitle}]💰 资金统计[/color] \n\n";
+        text += $"[color={cPN1}]🟣 P-1 资金[/color]\n";
+        text += $"  现有: {GetTeamFunds(TeamHelper.Player)} G\n";
+        text += $"  收入: +{pN1Income} G/回合\n\n";
         text += $"[color={cP1}]🔴 P1 资金[/color]\n";
         text += $"  现有: {p1Funds} G\n";
         text += $"  收入: +{p1Income} G/回合\n";
@@ -993,16 +1013,16 @@ public void UpdateFacilityLists()
         text += $"  现有: {p2Funds} G\n";
         text += $"  收入: +{p2Income} G/回合\n";
         text += $"  上限: {p2FundsMax} G\n";
-        
+
         UnitLists.Text = text;
     }
-    
+
     public void UpdateValueLists()
     {
         if (UnitLists == null) return;
-        
+
         long pn1Funds = 0, p0Funds = 0, p1Funds = 0, p2Funds = 0;
-        
+
         // 统计单位造价
         var all = unitManager?.AllUnits ?? new List<Infantry>();
         foreach (var u in all)
@@ -1016,7 +1036,7 @@ public void UpdateFacilityLists()
                 case "Player2": p2Funds += u.cost; break;
             }
         }
-        
+
         // 统计兵器造价
         if (weaponManager != null)
         {
@@ -1032,24 +1052,23 @@ public void UpdateFacilityLists()
                 }
             }
         }
-        
+
         long totalFunds = pn1Funds + p0Funds + p1Funds + p2Funds;
-        
+
         string cP1 = "#ff4d4d";
         string cP2 = "#4d80ff";
         string cP0 = "#b3b3b3";
         string cPN1 = "#b366ff";
         string cTitle = "#ffaa33";
-        
+
         string text = $" [color={cTitle}]💎 单位价值统计[/color] \n";
         text += $"  [color={cPN1}]🟣P-1[/color]  [color={cP0}]⚪P0[/color]  [color={cP1}]🔴P1[/color]  [color={cP2}]🔵P2[/color]\n";
         text += $"💵 [color={cPN1}]{pn1Funds,7}|[color={cP0}]{p0Funds,7}|[color={cP1}]{p1Funds,7}|[color={cP2}]{p2Funds,7}[/color]\n";
         text += $"\n[color={cTitle}]===总计===[/color]\n";
         text += $"💰 {totalFunds} G\n";
-        
+
         UnitLists.Text = text;
     }
-
 
     // ========== ✅ 新增：缩放滑块 ==========
     private void SetupZoomSlider()
@@ -1290,16 +1309,17 @@ public void UpdateFacilityLists()
         // ✅ 额外保护：如果单位列表正在刷新中，跳过判定
         if (unitManager?.AllUnits == null || weaponManager?.AllWeapons == null) return;
 
-    // 获取所有存活单位
+    // 获取所有存活单位（排除P-1和P0的中立单位）
     var allUnits = unitManager?.AllUnits.Where(u => IsInstanceValid(u) && u.health > 0).ToList();
     if (allUnits == null) return;
 
+    // ✅ 胜利判定只统计 P1 和 P2 的单位，P-1/P0 不参与胜负判定
     var p1Units = allUnits.Where(u => u.team == TeamHelper.Player1).ToList();
     var p2Units = allUnits.Where(u => u.team == TeamHelper.Player2).ToList();
     var p0Units = allUnits.Where(u => u.team == TeamHelper.Player0).ToList();
     var pN1Units = allUnits.Where(u => u.team == TeamHelper.Player).ToList();
 
-    // 兵器摧毁胜利判定
+    // 兵器摧毁胜利判定（同样排除P-1和P0兵器）
     if (weaponVictoryEnabled && weaponManager != null)
     {
         CheckWeaponVictoryCondition(p1Units.Count > 0, p2Units.Count > 0);
@@ -1308,6 +1328,7 @@ public void UpdateFacilityLists()
     }
 
     // 势力失败判定（新增）：只有失败的势力失败，其他势力继续游戏
+    // ✅ 排除P-1和P0，它们不会失败
     CheckFactionDefeatCondition();
     if (gameEnded) return;
 
@@ -1315,6 +1336,7 @@ public void UpdateFacilityLists()
     bool p1Alive = p1Units.Count > 0;
     bool p2Alive = p2Units.Count > 0;
 
+    // ✅ 兵器也只统计P1/P2的
     bool p1HasWeapons = weaponManager?.AllWeapons.Any(w => IsInstanceValid(w) && !w.isDestroyed && w.team == TeamHelper.Player1) ?? false;
     bool p2HasWeapons = weaponManager?.AllWeapons.Any(w => IsInstanceValid(w) && !w.isDestroyed && w.team == TeamHelper.Player2) ?? false;
 
@@ -1338,18 +1360,15 @@ public void UpdateFacilityLists()
     {
         if (weaponManager == null) return;
 
-        // 获取所有标记为 contributesToVictory 的兵器（包括已摧毁的，用于判断初始条件）
+        // 获取所有标记为 contributesToVictory 的兵器（只统计P1/P2的，排除P-1/P0）
         var allVictoryWeapons = weaponManager.AllWeapons
-            .Where(w => IsInstanceValid(w) && w.contributesToVictory)
+            .Where(w => IsInstanceValid(w) && w.contributesToVictory 
+                && (w.team == TeamHelper.Player1 || w.team == TeamHelper.Player2))
             .ToList();
 
         if (allVictoryWeapons.Count == 0) return; // 没有配置兵器胜利条件
 
-        // ✅ 关键修正：
-        // P1的胜利条件 = 所有属于P2团队且contributesToVictory的兵器都被摧毁
-        // P2的胜利条件 = 所有属于P1团队且contributesToVictory的兵器都被摧毁
-        // 中立兵器(Player0)和P-1兵器不参与任何一方的兵器胜利判定
-
+        // ✅ 关键修正：只统计P1/P2的兵器
         var p1Targets = allVictoryWeapons.Where(w => w.team == TeamHelper.Player2).ToList();
         var p2Targets = allVictoryWeapons.Where(w => w.team == TeamHelper.Player1).ToList();
 
@@ -1378,6 +1397,7 @@ public void UpdateFacilityLists()
     }
 
     // 势力失败判定：检查是否有势力因全灭（无单位且无兵器）而失败
+    // ✅ 只检查 P1 和 P2，P-1和P0 永远不会被判定为失败
     private void CheckFactionDefeatCondition()
     {
         if (gameEnded || blockVictoryCheck) return; // ✅ 导入期间跳过判定
@@ -1389,7 +1409,10 @@ public void UpdateFacilityLists()
         var allWeapons = weaponManager?.AllWeapons.Where(w => IsInstanceValid(w) && !w.isDestroyed).ToList();
 
         bool anyNewDefeat = false;
-        foreach (var team in TeamHelper.ActiveTeams)
+
+        // ✅ 只检查 P1 和 P2，P-1/P0 永远不会被判定为失败
+        var playableTeams = new[] { TeamHelper.Player1, TeamHelper.Player2 };
+        foreach (var team in playableTeams)
         {
             if (defeatedTeams.Contains(team)) continue;
 
@@ -1407,7 +1430,7 @@ public void UpdateFacilityLists()
         if (anyNewDefeat)
         {
             // 检查是否只剩一个势力
-            var remaining = TeamHelper.ActiveTeams.Where(t => !defeatedTeams.Contains(t)).ToList();
+            var remaining = playableTeams.Where(t => !defeatedTeams.Contains(t)).ToList();
             if (remaining.Count == 0)
             {
                 ShowVictory("Draw", "All factions defeated");
@@ -1776,6 +1799,7 @@ public void RestartGame()
         }
 
         // ✅ 资金系统：每回合开始时给对应势力增加资金
+        // ✅ P-1公共设施给所有势力提供收入
         if (turnPhase == 1)
         {
             AddFundsForTeam("Player1");
@@ -1798,7 +1822,7 @@ public void RestartGame()
         }
 
         UpdateTurnLabel();
-        
+
         // ========== ✅ 刷新战争迷雾 ==========
         fogOfWarManager?.OnTurnChanged();
         bool isNewTurn = (turns > previousTurn);
@@ -1809,7 +1833,7 @@ public void RestartGame()
         }
         Infantry.UpdateUnitsCannotMove();
         // 重置所有单位状态
-        
+
                 foreach (var wp in weaponManager?.AllWeapons ?? new List<Weapon>())
         {
             if (IsInstanceValid(wp))
@@ -1850,7 +1874,6 @@ public void RestartGame()
     {
         inf.UpdateTeamVisual();
     }
-
 
 
 
@@ -1914,6 +1937,7 @@ if (turnEndMethod != null && turnEndMethod.DeclaringType != typeof(Infantry))
     }
 
     // ✅ 资金系统：给指定势力增加设施资金收入
+    // ✅ 修改：P-1公共设施给所有势力提供收入
     private void AddFundsForTeam(string team)
     {
         if (gridManager?.grids == null) return;
@@ -1921,10 +1945,21 @@ if (turnEndMethod != null && turnEndMethod.DeclaringType != typeof(Infantry))
         foreach (var grid in gridManager.grids)
         {
             if (grid?.city == null) continue;
-            if (grid.city.facilityTeam != team) continue;
-            if (grid.city is City c)
+
+            // ✅ P-1公共设施：给所有势力提供收入
+            if (grid.city.facilityTeam == TeamHelper.Player || grid.city.isPublicFacility)
             {
-                income += c.fundsPerTurn;
+                if (grid.city is City c)
+                {
+                    income += c.fundsPerTurn;
+                }
+            }
+            else if (grid.city.facilityTeam == team)
+            {
+                if (grid.city is City c)
+                {
+                    income += c.fundsPerTurn;
+                }
             }
         }
 
@@ -2885,6 +2920,8 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
 
         // ✅ 累计本回合生产次数
         productionTargetFacility.productionsThisTurn++;
+        // ✅ P-1公共设施：记录使用势力，添加"不可生产"状态给当前势力
+        productionTargetFacility.OnUnitProducedBy(currentTeam);
 
         UpdateUnitLists();
         RefreshSpecializedUnitLists();
@@ -2902,7 +2939,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         if (facility == null || grid == null || !UnitProductionDatabase.HasUnit(unitName)) return false;
         if (!facility.canProduce || !facility.producibleUnitNames.Contains(unitName)) return false;
         if (!facility.CanProduceNow()) return false; // ✅ 每回合生产次数限制
-        if (facility.facilityTeam != team) return false;
+        if (facility.facilityTeam != team && !facility.isPublicFacility) return false;
         if (grid.infantries.Count > 0 || grid.weapons.Count > 0) return false; // 格子必须为空
 
         var info = UnitProductionDatabase.GetInfo(unitName);
@@ -2963,6 +3000,8 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
 
         // ✅ 累计本回合生产次数
         facility.productionsThisTurn++;
+        // ✅ P-1公共设施：记录使用势力
+        facility.OnUnitProducedBy(team);
 
         UpdateUnitLists();
         RefreshSpecializedUnitLists();
@@ -3038,4 +3077,3 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
     }
 
 }
-

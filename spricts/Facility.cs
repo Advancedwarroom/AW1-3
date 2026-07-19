@@ -3,6 +3,40 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+// ========== 建筑状态定义 ==========
+public enum FacilityStatusType
+{
+    None,           // 无状态
+    CannotProduce,  // 不可生产
+    NoIncome        // 无收入
+}
+
+public partial class FacilityStatus
+{
+    public FacilityStatusType Type { get; set; }
+    public int RemainingTurns { get; set; }  // 剩余回合数，-1=永久
+    public string AppliedByTeam { get; set; }  // 由哪个势力施加/关联
+
+    public bool IsExpired => RemainingTurns == 0;
+    public bool IsPermanent => RemainingTurns < 0;
+
+    public void Tick()
+    {
+        if (RemainingTurns > 0)
+            RemainingTurns--;
+    }
+
+    public string GetDisplayName()
+    {
+        return Type switch
+        {
+            FacilityStatusType.CannotProduce => "不可生产",
+            FacilityStatusType.NoIncome => "无收入",
+            _ => "未知"
+        };
+    }
+}
+
 public partial class Facility : Node2D
 {
     public Grids ParentGrid { get; private set; }
@@ -10,28 +44,42 @@ public partial class Facility : Node2D
     [ExportGroup("生产模块")]
     [Export] public bool canProduce = false;
     [Export] public Godot.Collections.Array<string> producibleUnitNames = new();
-    [Export] public bool instantMoveAfterProduction = false; // 生产后是否可立即移动（默认false=生产后待机）
-    [Export] public int maxProductionsPerTurn = 1;           // 每回合最多生产次数（0=禁止生产）
-    [Export] public int productionsThisTurn = 0;             // 本回合已生产次数（运行时计数，切换回合刷新）
+    [Export] public bool instantMoveAfterProduction = false;
+    [Export] public int maxProductionsPerTurn = 1;
+    [Export] public int productionsThisTurn = 0;
 
-    // 本回合是否还能生产
-    public bool CanProduceNow() => canProduce && productionsThisTurn < maxProductionsPerTurn;
+    // ========== 状态栏系统 ==========
+    [ExportGroup("初始状态（运行时生效）")]
+    [Export] public Godot.Collections.Array<FacilityStatusData> initialStatuses = new();
+    
+    // 运行时状态列表（不Export）
+    private List<FacilityStatus> activeStatuses = new();
 
-    // 回合刷新：重置生产计数
-    public void ResetProductionCount() => productionsThisTurn = 0;
+    // 状态栏UI引用（运行时创建）
+    private VBoxContainer statusBarContainer;
+    private Dictionary<FacilityStatusType, Label> statusLabels = new();
+
+    public bool CanProduceNow() => canProduce && productionsThisTurn < maxProductionsPerTurn && !HasStatus(FacilityStatusType.CannotProduce);
+
+    public void ResetProductionCount()
+    {
+        productionsThisTurn = 0;
+        TickStatuses();
+        UpdateStatusBarUI();
+    }
 
     [ExportGroup("设施基础")]
     [Export] public string facilityTeam = "";
     [Export] public int capturePointsRequired = 20;
-    [Export] public int healMode = 0;               // 0=固定数值(用healAmount), 1=固定百分比(用healPercent)
-    [Export] public int healAmount = 0;             // 数值模式：每回合回血值（负扣血，零不动，正回血）
-    [Export] public float healPercent = 0.0f;       // 百分比模式：每回合回血百分比（如0.2=20%最大HP，负值扣血）
+    [Export] public int healMode = 0;
+    [Export] public int healAmount = 0;
+    [Export] public float healPercent = 0.0f;
 
     [ExportGroup("补给配置：数值驱动")]
-    [Export] public int flareAmmoSupply = 0;     // 照明弹补给量（999=补满）
-    [Export] public int explodeAmmoSupply = 0;   // 自爆弹补给量（999=补满）
-    [Export] public int primaryAmmoSupply = 0;   // 主武器弹药补给量（999=补满）
-    [Export] public int fuelSupply = 0;          // 燃料补给量（999=补满）
+    [Export] public int flareAmmoSupply = 0;
+    [Export] public int explodeAmmoSupply = 0;
+    [Export] public int primaryAmmoSupply = 0;
+    [Export] public int fuelSupply = 0;
 
     [ExportGroup("补给支持兵种过滤（为空=不限制）")]
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForHeal = new();
@@ -39,6 +87,12 @@ public partial class Facility : Node2D
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForExplode = new();
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForPrimaryAmmo = new();
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForFuel = new();
+
+    // ========== P-1设施收入共享配置 ==========
+    [ExportGroup("P-1公共设施配置")]
+    [Export] public bool isPublicFacility = false;
+    [Export] public int fundsPerTurn = 1000;
+    [Export] public bool provideIncomeToAllTeams = false;
 
     public List<Infantry> capturingUnits = new();
     private CaptureContestEffect contestEffect;
@@ -53,15 +107,177 @@ public partial class Facility : Node2D
             return;
         }
 
+        if (facilityTeam == TeamHelper.Player)
+        {
+            isPublicFacility = true;
+            provideIncomeToAllTeams = true;
+        }
+
+        // ========== 初始化初始状态 ==========
+        foreach (var data in initialStatuses)
+        {
+            if (data != null)
+            {
+                activeStatuses.Add(new FacilityStatus
+                {
+                    Type = data.Type,
+                    RemainingTurns = data.RemainingTurns,
+                    AppliedByTeam = data.AppliedByTeam
+                });
+            }
+        }
+
         UpdateCityVisual();
+        CreateStatusBarUI();
     }
+
+    // ========== 状态栏系统核心方法 ==========
+
+    public void AddStatus(FacilityStatusType type, int durationTurns = -1, string appliedByTeam = "")
+    {
+        var existing = activeStatuses.FirstOrDefault(s => s.Type == type);
+        if (existing != null)
+        {
+            existing.RemainingTurns = durationTurns;
+            existing.AppliedByTeam = appliedByTeam;
+        }
+        else
+        {
+            activeStatuses.Add(new FacilityStatus
+            {
+                Type = type,
+                RemainingTurns = durationTurns,
+                AppliedByTeam = appliedByTeam
+            });
+        }
+        UpdateStatusBarUI();
+    }
+
+    public void RemoveStatus(FacilityStatusType type)
+    {
+        activeStatuses.RemoveAll(s => s.Type == type);
+        UpdateStatusBarUI();
+    }
+
+    public bool HasStatus(FacilityStatusType type)
+    {
+        return activeStatuses.Any(s => s.Type == type && !s.IsExpired);
+    }
+
+    public int GetStatusRemainingTurns(FacilityStatusType type)
+    {
+        var status = activeStatuses.FirstOrDefault(s => s.Type == type && !s.IsExpired);
+        return status?.RemainingTurns ?? 0;
+    }
+
+    private void TickStatuses()
+    {
+        foreach (var status in activeStatuses.ToList())
+        {
+            status.Tick();
+            if (status.IsExpired)
+            {
+                activeStatuses.Remove(status);
+                GD.Print($"[Facility] {ParentGrid?.Name} 的状态 '{status.GetDisplayName()}' 已过期");
+            }
+        }
+    }
+
+    private void CreateStatusBarUI()
+    {
+        if (ParentGrid == null) return;
+
+        statusBarContainer = new VBoxContainer();
+        statusBarContainer.Name = "StatusBar";
+        statusBarContainer.ZIndex = 300;
+        statusBarContainer.Position = new Vector2(-20, -40);
+        statusBarContainer.Size = new Vector2(40, 0);
+        statusBarContainer.AddThemeConstantOverride("separation", 2);
+
+        AddChild(statusBarContainer);
+        UpdateStatusBarUI();
+    }
+
+    private void UpdateStatusBarUI()
+    {
+        if (statusBarContainer == null) return;
+
+        foreach (var child in statusBarContainer.GetChildren())
+            child.QueueFree();
+        statusLabels.Clear();
+
+        if (activeStatuses.Count == 0)
+        {
+            statusBarContainer.Hide();
+            return;
+        }
+
+        statusBarContainer.Show();
+
+        foreach (var status in activeStatuses.Where(s => !s.IsExpired))
+        {
+            var label = new Label();
+            label.Name = $"Status_{status.Type}";
+            label.HorizontalAlignment = HorizontalAlignment.Center;
+            label.VerticalAlignment = VerticalAlignment.Center;
+            label.AddThemeFontSizeOverride("font_size", 10);
+
+            Color statusColor = status.Type switch
+            {
+                FacilityStatusType.CannotProduce => new Color(1f, 0.3f, 0.3f),
+                FacilityStatusType.NoIncome => new Color(0.8f, 0.8f, 0.2f),
+                _ => Colors.White
+            };
+
+            label.AddThemeColorOverride("font_color", statusColor);
+
+            string durationText = status.IsPermanent ? "" : $" ({status.RemainingTurns})";
+            label.Text = $"{status.GetDisplayName()}{durationText}";
+
+            var bg = new StyleBoxFlat();
+            bg.BgColor = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+            bg.SetCornerRadiusAll(4);
+            label.AddThemeStyleboxOverride("normal", bg);
+
+            statusBarContainer.AddChild(label);
+            statusLabels[status.Type] = label;
+        }
+
+        statusBarContainer.CustomMinimumSize = new Vector2(40, activeStatuses.Count * 16);
+    }
+
+    // ========== 生产权限判定（支持P-1轮流生产） ==========
 
     public bool CanBeProducedBy(string team)
     {
         if (!canProduce || string.IsNullOrEmpty(facilityTeam)) return false;
-        if (facilityTeam == TeamHelper.Player0) return false; // P0中立设施不能生产
-        if (facilityTeam == TeamHelper.Player) return true;   // P-1设施所有势力可用
-        return facilityTeam == team;                          // P1/P2只能用自己的
+        if (facilityTeam == TeamHelper.Player0) return false;
+
+        if (facilityTeam == TeamHelper.Player || isPublicFacility)
+        {
+            var cannotProduceStatus = activeStatuses.FirstOrDefault(s => 
+                s.Type == FacilityStatusType.CannotProduce && 
+                !s.IsExpired &&
+                s.AppliedByTeam == team);
+
+            if (cannotProduceStatus != null)
+                return false;
+
+            return productionsThisTurn < maxProductionsPerTurn;
+        }
+
+        return facilityTeam == team;
+    }
+
+    public void OnUnitProducedBy(string team)
+    {
+        productionsThisTurn++;
+
+        if ((facilityTeam == TeamHelper.Player || isPublicFacility) && team != TeamHelper.Player0)
+        {
+            AddStatus(FacilityStatusType.CannotProduce, durationTurns: 1, appliedByTeam: team);
+            GD.Print($"[Facility] P-1公共设施 {ParentGrid?.Name} 被 {team} 使用，{team} 下回合不可再生产");
+        }
     }
 
     public bool CanProduceUnit(string unitName)
@@ -103,9 +319,22 @@ public partial class Facility : Node2D
     {
         foreach (var u in capturingUnits.ToList()) { if (u != unit) { u.currentCaptureProgress = 0; u.capturingGrid = null; } }
         capturingUnits.Clear();
+
+        string oldTeam = facilityTeam;
         facilityTeam = unit.team;
+
+        if (facilityTeam == TeamHelper.Player)
+        {
+            isPublicFacility = true;
+            provideIncomeToAllTeams = true;
+        }
+
+        activeStatuses.Clear();
+
         ClearCaptureVisual();
         ShowCaptureCompletedVisual(unit.team);
+        UpdateCityVisual();
+        UpdateStatusBarUI();
     }
 
     public bool HasContest()
@@ -138,7 +367,6 @@ public partial class Facility : Node2D
 
         var tween = CreateTween();
         tween.TweenProperty(sprite, "modulate", teamColor, 0.5f);
-
     }
 
     public void ShowCaptureContestVisual()
@@ -192,7 +420,6 @@ public partial class Facility : Node2D
             Color supplyColor = Colors.Green;
             var supplyParts = new List<string>();
 
-            // 1. 回血（数值模式 或 百分比模式）
             int healValue = 0;
             if (healMode == 0)
                 healValue = healAmount;
@@ -219,7 +446,6 @@ public partial class Facility : Node2D
                 }
             }
 
-            // 2. 主武器弹药补给
             if (primaryAmmoSupply != 0)
             {
                 if (unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && unit.maxPrimaryAmmo < 99)
@@ -241,7 +467,6 @@ public partial class Facility : Node2D
                 }
             }
 
-            // 3. 燃料补给
             if (fuelSupply != 0)
             {
                 if (unit.consumeFuel)
@@ -263,7 +488,6 @@ public partial class Facility : Node2D
                 }
             }
 
-            // 4. 照明弹补给
             if (flareAmmoSupply != 0)
             {
                 if (unit.canIlluminate)
@@ -285,10 +509,9 @@ public partial class Facility : Node2D
                 }
             }
 
-            // 5. 自爆弹补给
             if (explodeAmmoSupply != 0)
             {
-                if (unit.canExplode && !unit.explosionDestroysSelf) // 只有无限自爆模式的单位才需要自爆弹
+                if (unit.canExplode && !unit.explosionDestroysSelf)
                 {
                     if (supportedUnitTypesForExplode.Count == 0 || supportedUnitTypesForExplode.Contains(unitType))
                     {
@@ -326,14 +549,39 @@ public partial class Facility : Node2D
 
     private void ShowGridSupplyEffectNew() { var effect = new GridSupplyEffect(); AddChild(effect); }
 
-    // ========== 设施视野（所属势力提供自身格子的视野）==========
+    // ========== 设施视野（P-1设施给所有势力共享） ==========
 
     public HashSet<Grids> CalculateFacilityVision(GameManager gm)
     {
         var visible = new HashSet<Grids>();
         if (gm == null || gm.gridManager?.map == null) return visible;
-        if (TeamHelper.DoesFacilityProvideVision(facilityTeam) && ParentGrid != null)
+
+        if ((facilityTeam == TeamHelper.Player || isPublicFacility) && ParentGrid != null)
+        {
             visible.Add(ParentGrid);
+        }
+        else if (TeamHelper.DoesFacilityProvideVision(facilityTeam) && ParentGrid != null)
+        {
+            visible.Add(ParentGrid);
+        }
         return visible;
+    }
+
+    public int GetCurrentIncome()
+    {
+        if (HasStatus(FacilityStatusType.NoIncome))
+            return 0;
+        return fundsPerTurn;
+    }
+
+    public bool ProvidesIncomeTo(string team)
+    {
+        if (HasStatus(FacilityStatusType.NoIncome))
+            return false;
+
+        if (facilityTeam == TeamHelper.Player || isPublicFacility || provideIncomeToAllTeams)
+            return true;
+
+        return facilityTeam == team;
     }
 }

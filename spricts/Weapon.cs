@@ -43,6 +43,10 @@ public partial class Weapon : Node2D
     [Export] public Godot.Collections.Dictionary<GridType, int> weaponTerrainVisionBonus = new();
     [Export] public bool overrideGlobalTerrainBonus = false;
 
+    // ✅ 新增：P-1 兵器视野共享标记
+    [ExportGroup("P-1 视野共享")]
+    [Export] public bool isPublicVisionWeapon = false;  // 是否将视野共享给所有势力（P-1兵器默认true）
+
     public int ActualVisionRange
     {
         get
@@ -136,6 +140,12 @@ public partial class Weapon : Node2D
                 visionRange = VisionConfig.GetWeaponVisionRange(this.GetType().Name);
                 if (VisionConfig.IsWeaponIndependentMode(this.GetType().Name)) visionMode = VisionMode.Independent;
             }
+        }
+
+        // ✅ P-1 兵器默认开启视野共享
+        if (team == TeamHelper.Player && !isPublicVisionWeapon)
+        {
+            isPublicVisionWeapon = true;
         }
         var area2D = GetNodeOrNull<Area2D>("Area2D");
         if (area2D != null) area2D.InputEvent += OnInputEvent;

@@ -151,13 +151,20 @@ public partial class FogOfWarManager : Node
         {
             if (grid == null || !IsInstanceValid(grid)) continue;
 
-            // 己方或P-1占领的建筑/格子才提供视野
             if (grid.city == null || string.IsNullOrEmpty(grid.city.facilityTeam)) continue;
-            if (grid.city.facilityTeam != team && grid.city.facilityTeam != TeamHelper.Player) continue;
 
-            // 计算该格子提供的视野
-            var gridVision = grid.CalculateGridVision(gameManager);
-            visible.UnionWith(gridVision);
+            // ✅ 己方建筑提供视野
+            if (grid.city.facilityTeam == team)
+            {
+                var gridVision = grid.CalculateGridVision(gameManager);
+                visible.UnionWith(gridVision);
+            }
+            // ✅ P-1 公共设施：给所有势力提供视野
+            else if (grid.city.facilityTeam == TeamHelper.Player || grid.city.isPublicFacility)
+            {
+                var gridVision = grid.CalculateGridVision(gameManager);
+                visible.UnionWith(gridVision);
+            }
         }
 
         return visible;
@@ -218,14 +225,24 @@ public partial class FogOfWarManager : Node
         if (unitManager?.AllUnits != null)
             foreach (var unit in unitManager.AllUnits)
                 if (unit != null && IsInstanceValid(unit) && unit.health > 0)
-                    if (unit.team == team || unit.team == TeamHelper.Player)
+                {
+                    // ✅ P-1 单位：如果 isPublicVisionUnit=true，为所有势力提供视野
+                    if (unit.team == team)
                         providers.Add(new UnitVisionProvider(unit));
+                    else if (unit.team == TeamHelper.Player && unit.isPublicVisionUnit)
+                        providers.Add(new UnitVisionProvider(unit));
+                }
 
         if (weaponManager?.AllWeapons != null)
             foreach (var weapon in weaponManager.AllWeapons)
                 if (weapon != null && IsInstanceValid(weapon) && weapon.health > 0)
-                    if (weapon.team == team || weapon.team == TeamHelper.Player)
+                {
+                    // ✅ P-1 兵器：如果 isPublicVisionWeapon=true，为所有势力提供视野
+                    if (weapon.team == team)
                         providers.Add(new WeaponVisionProvider(weapon));
+                    else if (weapon.team == TeamHelper.Player && weapon.isPublicVisionWeapon)
+                        providers.Add(new WeaponVisionProvider(weapon));
+                }
         return providers;
     }
 
@@ -339,13 +356,28 @@ public partial class FogOfWarManager : Node
         foreach (var grid in gridManager.grids)
         {
             if (grid == null || !IsInstanceValid(grid)) continue;
-            if (grid.city != null && (grid.city.facilityTeam == team || grid.city.facilityTeam == TeamHelper.Player) && TeamHelper.DoesFacilityProvideVision(grid.city.facilityTeam)) visible.Add(grid);
-            if (grid.isWatchtower && grid.city != null && (grid.city.facilityTeam == team || grid.city.facilityTeam == TeamHelper.Player) && TeamHelper.DoesFacilityProvideVision(grid.city.facilityTeam))
-            {
+
+            // ✅ 己方建筑提供视野
+            if (grid.city != null && grid.city.facilityTeam == team && TeamHelper.DoesFacilityProvideVision(grid.city.facilityTeam)) 
                 visible.Add(grid);
-                int towerRange = 1 + grid.visionBonus;
-                var towerVision = CalculateManhattanVision(grid.GridIndex, towerRange);
-                visible.UnionWith(towerVision);
+
+            // ✅ P-1 公共设施：给所有势力提供视野
+            if (grid.city != null && (grid.city.facilityTeam == TeamHelper.Player || grid.city.isPublicFacility) && TeamHelper.DoesFacilityProvideVision(grid.city.facilityTeam)) 
+                visible.Add(grid);
+
+            // ✅ 瞭望塔：己方或P-1的都给视野
+            if (grid.isWatchtower && grid.city != null)
+            {
+                bool isTeamTower = grid.city.facilityTeam == team;
+                bool isPublicTower = grid.city.facilityTeam == TeamHelper.Player || grid.city.isPublicFacility;
+
+                if ((isTeamTower || isPublicTower) && TeamHelper.DoesFacilityProvideVision(grid.city.facilityTeam))
+                {
+                    visible.Add(grid);
+                    int towerRange = 1 + grid.visionBonus;
+                    var towerVision = CalculateManhattanVision(grid.GridIndex, towerRange);
+                    visible.UnionWith(towerVision);
+                }
             }
         }
         return visible;

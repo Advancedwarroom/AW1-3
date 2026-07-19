@@ -20,6 +20,7 @@ public enum SpawnMode { None, Unit, Weapon, Facility }
 public partial class TerrainEditor : Control
 {
     [Export] public GameManager gameManager;
+    [Export] public ExtraSave extraSave;
     [Export] public GridManager gridManager;
 
     // ========== UI 组件 ==========
@@ -83,7 +84,7 @@ public partial class TerrainEditor : Control
 
     // 状态
     public bool IsEditMode { get; private set; } = false;
-    private Grids selectedGrid = null;
+    public Grids selectedGrid = null;
     private object currentEditingTarget = null;
     private bool isMenuOpen = false;
 
@@ -842,7 +843,7 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
         unit.UpdateHpLabel();
         if (unit.sprite != null)
             unit.StartBreath();
-
+        ApplySavedUnitData(unit);
         gameManager.UpdateUnitLists();
         gameManager.RefreshSpecializedUnitLists();
 
@@ -937,7 +938,7 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
             cannon.UpdateDirectionVisual();
             cannon.UpdateAmmoVisual();
         }
-
+        ApplySavedWeaponData(weapon);
         gameManager.UpdateUnitLists();
 
         spawnHintLabel.Text = $"✅ 生成兵器: {weapon.Name}";
@@ -3247,7 +3248,7 @@ private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
         facility.UpdateCityVisual();
     }
     
-    
+    ApplySavedFacilityData(facility);
     spawnHintLabel.Text = $"✅ 生成设施: {facility.GetType().Name} ({team})";
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
     
@@ -7725,4 +7726,311 @@ private void OpenWeaponTerrainMatrixEditor()
             ShowImportHint($"❌ 生成失败: {ex.Message}");
         }
     }
+        /// <summary>
+    /// 从 ExtraSave 的保存槽位加载单位数据并应用到实例
+    /// </summary>
+    public void SpawnSavedUnitAtGrid(Grids grid, int slotIndex, string teamOverride = null)
+    {
+        var data = ExtraSave.Instance?.GetSavedUnit(slotIndex);
+        if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
+
+        var scene = GD.Load<PackedScene>(data.scenePath);
+        if (scene == null) return;
+
+        var unit = scene.Instantiate<Infantry>();
+        if (unit == null) return;
+
+        // 重置状态
+        unit.isMoved = false;
+        unit.isAttacked = false;
+        unit.hasActed = false;
+        unit.state = UnitState.Idle;
+        unit.movePoints = unit.defaultMovePoints;
+        unit.originalGrid = null;
+
+        unit.Position = grid.Position;
+        unit.team = teamOverride ?? data.team;
+        unit.Name = data.displayName ?? $"SavedUnit_{slotIndex}";
+
+        // 应用字段覆盖
+        ApplyFieldValues(unit, data.fieldValues);
+
+        // 应用攻防表
+        if (data.attackMatrix != null && data.attackMatrix.Count > 0)
+            unit.attackMatrix = ToGodotDict(data.attackMatrix);
+        if (data.secondaryAttackMatrix != null && data.secondaryAttackMatrix.Count > 0)
+            unit.secondaryAttackMatrix = ToGodotDict(data.secondaryAttackMatrix);
+
+        // 应用自定义贴图
+        if (data.useCustomTexture && !string.IsNullOrEmpty(data.customTexturePath))
+        {
+            ApplyCustomTextureToUnit(unit, data.customTexturePath);
+        }
+
+        gameManager.unitManager.units.AddChild(unit);
+        gameManager.unitManager.BindUnitToGrid(unit, true);
+        gameManager.unitManager.AllUnits.Add(unit);
+        gameManager.RegisterUnit(unit, GetUnitCategory(unit));
+        unit.OnClickPiece = gameManager.OnSelectPiece;
+        unit.UpdateTeamVisual();
+        unit.UpdateHpLabel();
+        unit.StartBreath();
+
+        gameManager.UpdateUnitLists();
+        gameManager.RefreshSpecializedUnitLists();
+
+        // 更新使用时间
+        ExtraSave.Instance?.UpdateUnitLastUsed(slotIndex);
+    }
+
+    /// <summary>
+    /// 从 ExtraSave 的保存槽位加载兵器数据并应用到实例
+    /// </summary>
+    public void SpawnSavedWeaponAtGrid(Grids grid, int slotIndex, string teamOverride = null)
+    {
+        var data = ExtraSave.Instance?.GetSavedWeapon(slotIndex);
+        if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
+
+        var scene = GD.Load<PackedScene>(data.scenePath);
+        if (scene == null) return;
+
+        var weapon = scene.Instantiate<Weapon>();
+        if (weapon == null) return;
+
+        weapon.hasActed = false;
+        weapon.Position = grid.Position;
+        weapon.team = teamOverride ?? data.team;
+        weapon.Name = data.displayName ?? $"SavedWeapon_{slotIndex}";
+
+        // 应用字段覆盖
+        ApplyFieldValues(weapon, data.fieldValues);
+
+        // 应用自定义贴图
+        if (data.useCustomTexture && !string.IsNullOrEmpty(data.customTexturePath))
+        {
+            ApplyCustomTextureToWeapon(weapon, data.customTexturePath);
+        }
+
+        gameManager.weaponManager.weaponsNode.AddChild(weapon);
+        gameManager.weaponManager.BindWeaponToGrid(weapon, true);
+        gameManager.weaponManager.AllWeapons.Add(weapon);
+        weapon.OnClickWeapon = gameManager.OnSelectWeapon;
+        weapon.UpdateHpLabel();
+
+        gameManager.UpdateUnitLists();
+
+        // 更新使用时间
+        ExtraSave.Instance?.UpdateWeaponLastUsed(slotIndex);
+    }
+
+    /// <summary>
+    /// 从 ExtraSave 的保存槽位加载设施数据并应用到实例
+    /// </summary>
+    public void SpawnSavedFacilityAtGrid(Grids grid, int slotIndex, string teamOverride = null)
+    {
+        var data = ExtraSave.Instance?.GetSavedFacility(slotIndex);
+        if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
+
+        var scene = GD.Load<PackedScene>(data.scenePath);
+        if (scene == null) return;
+
+        var facility = scene.Instantiate<Facility>();
+        if (facility == null) return;
+
+        facility.Name = "Facility";
+        grid.AddChild(facility);
+        grid.city = facility;
+
+        facility.facilityTeam = teamOverride ?? data.team;
+
+        // 应用字段覆盖
+        ApplyFieldValues(facility, data.fieldValues);
+
+        // 应用自定义贴图
+        if (data.useCustomTexture && !string.IsNullOrEmpty(data.customTexturePath))
+        {
+            ApplyCustomTextureToFacility(facility, data.customTexturePath);
+        }
+
+        facility.UpdateCityVisual();
+
+        gameManager.UpdateUnitLists();
+        gameManager.RefreshSpecializedUnitLists();
+
+        // 更新使用时间
+        ExtraSave.Instance?.UpdateFacilityLastUsed(slotIndex);
+    }
+
+    /// <summary>
+    /// 从 ExtraSave 的保存槽位加载地形数据并应用到格子
+    /// </summary>
+    public void ApplySavedGridTerrain(Grids grid, int slotIndex)
+    {
+        var data = ExtraSave.Instance?.GetSavedGridTerrain(slotIndex);
+        if (data == null || data.savedTimestamp == 0) return;
+
+        grid.gridType = data.gridType;
+        grid.canDestroyUnit = data.canDestroyUnit;
+        grid.fixedDamagePerTurn = data.fixedDamagePerTurn;
+        grid.fixedAttackPerTurn = data.fixedAttackPerTurn;
+        grid.canOverMaxHealth = data.canOverMaxHealth;
+        grid.fixedAmmoChangePerTurn = data.fixedAmmoChangePerTurn;
+        grid.ammoCanOverMax = data.ammoCanOverMax;
+        grid.ammoCanReachZero = data.ammoCanReachZero;
+        grid.fixedFuelChangePerTurn = data.fixedFuelChangePerTurn;
+        grid.fuelCanOverMax = data.fuelCanOverMax;
+        grid.fuelCanReachZero = data.fuelCanReachZero;
+        grid.gridVisionRange = data.gridVisionRange;
+        grid.gridVisionMode = (GridVisionMode)data.gridVisionMode;
+        grid.towerDirection = (TowerDirection)data.towerDirection;
+        grid.towerCanRotate = data.towerCanRotate;
+        grid.towerRayAngle = data.towerRayAngle;
+        grid.gridVisionIgnoreTerrain = data.gridVisionIgnoreTerrain;
+        grid.visionBonus = data.visionBonus;
+        grid.requiresAdjacentVision = data.requiresAdjacentVision;
+        grid.isWatchtower = data.isWatchtower;
+
+        // 应用自定义贴图
+        if (data.useCustomTexture && !string.IsNullOrEmpty(data.customTexturePath))
+        {
+            ApplyCustomTextureToGrid(grid, data.customTexturePath);
+        }
+
+        UpdateGridVisual(grid);
+
+        // 更新使用时间
+        ExtraSave.Instance?.UpdateGridLastUsed(slotIndex);
+    }
+
+    // ==================== 辅助方法 ====================
+
+    private void ApplyFieldValues(object target, Dictionary<string, string> fieldValues)
+    {
+        if (target == null || fieldValues == null || fieldValues.Count == 0) return;
+
+        var type = target.GetType();
+        foreach (var kvp in fieldValues)
+        {
+            var field = type.GetField(kvp.Key, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (field != null)
+            {
+                try
+                {
+                    object value = ParseValueFromString(kvp.Value, field.FieldType);
+                    if (value != null) field.SetValue(target, value);
+                }
+                catch { }
+            }
+            else
+            {
+                var prop = type.GetProperty(kvp.Key, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (prop != null && prop.CanWrite)
+                {
+                    try
+                    {
+                        object value = ParseValueFromString(kvp.Value, prop.PropertyType);
+                        if (value != null) prop.SetValue(target, value);
+                    }
+                    catch { }
+                }
+            }
+        }
+    }
+
+    private object ParseValueFromString(string str, Type targetType)
+    {
+        if (targetType == typeof(string)) return str;
+        if (targetType == typeof(int) && int.TryParse(str, out int i)) return i;
+        if (targetType == typeof(float) && float.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float f)) return f;
+        if (targetType == typeof(bool))
+        {
+            if (bool.TryParse(str, out bool b)) return b;
+            if (str == "1" || str.Equals("true", StringComparison.OrdinalIgnoreCase)) return true;
+            if (str == "0" || str.Equals("false", StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        if (targetType.IsEnum && int.TryParse(str, out int e)) return e;
+        if (targetType == typeof(Color)) return new Color(str);
+        return null;
+    }
+
+    private Godot.Collections.Dictionary<string, int> ToGodotDict(Dictionary<string, int> dict)
+    {
+        var result = new Godot.Collections.Dictionary<string, int>();
+        foreach (var kvp in dict) result[kvp.Key] = kvp.Value;
+        return result;
+    }
+
+    private void ApplyCustomTextureToUnit(Infantry unit, string path)
+    {
+        if (unit.sprite != null && Godot.FileAccess.FileExists(path))
+        {
+            var image = new Image();
+            if (image.Load(path) == Error.Ok)
+                unit.sprite.Texture = ImageTexture.CreateFromImage(image);
+        }
+    }
+
+    private void ApplyCustomTextureToWeapon(Weapon weapon, string path)
+    {
+        // 根据 Weapon 的实际贴图组件调整
+        if (weapon.animSprite != null && Godot.FileAccess.FileExists(path))
+        {
+            var image = new Image();
+            if (image.Load(path) == Error.Ok)
+            {
+                // 如果是 GIF 可能需要 AnimatedTexture，这里简化处理
+                // weapon.animSprite.SpriteFrames = ... 
+            }
+        }
+    }
+
+    private void ApplyCustomTextureToFacility(Facility facility, string path)
+    {
+        // 根据 Facility 的实际贴图组件调整
+    }
+
+    private void ApplyCustomTextureToGrid(Grids grid, string path)
+    {
+        if (Godot.FileAccess.FileExists(path))
+        {
+            var image = new Image();
+            if (image.Load(path) == Error.Ok)
+            {
+                var sprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
+                if (sprite != null)
+                    sprite.Texture = ImageTexture.CreateFromImage(image);
+            }
+        }
+    }
+
+
+    // ==================== 保存数据应用方法 ====================
+
+    /// <summary>
+    /// 从 ExtraSave 的保存数据应用到单位实例
+    /// </summary>
+    private void ApplySavedUnitData(Infantry unit)
+    {
+        if (unit == null) return;
+        // 占位实现 - 可根据需要从 ExtraSave 加载数据
+    }
+
+    /// <summary>
+    /// 从 ExtraSave 的保存数据应用到兵器实例
+    /// </summary>
+    private void ApplySavedWeaponData(Weapon weapon)
+    {
+        if (weapon == null) return;
+        // 占位实现 - 可根据需要从 ExtraSave 加载数据
+    }
+
+    /// <summary>
+    /// 从 ExtraSave 的保存数据应用到设施实例
+    /// </summary>
+    private void ApplySavedFacilityData(Facility facility)
+    {
+        if (facility == null) return;
+        // 占位实现 - 可根据需要从 ExtraSave 加载数据
+    }
+
 }
