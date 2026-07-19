@@ -45,6 +45,12 @@ public class SavedWeaponData
     public Dictionary<string, string> fieldValues = new();
     public string customTexturePath = "";
     public bool useCustomTexture = false;
+    
+    // 添加这些缺失的字段
+    public bool isMultiTile = false;
+    public int sizeX = 1;
+    public int sizeY = 1;
+    public int direction = 0;
 }
 
 [Serializable]
@@ -415,6 +421,10 @@ public partial class ExtraSave : Node
             d["fieldValues"] = DictToGodot(item.fieldValues);
             d["customTexturePath"] = item.customTexturePath;
             d["useCustomTexture"] = item.useCustomTexture;
+            d["isMultiTile"] = item.isMultiTile;
+            d["sizeX"] = item.sizeX;
+            d["sizeY"] = item.sizeY;
+            d["direction"] = item.direction;
             arr.Add(d);
         }
         return arr;
@@ -439,7 +449,11 @@ public partial class ExtraSave : Node
                 lastUsedTimestamp = d.GetValueOrDefault("lastUsedTimestamp", 0).AsInt64(),
                 fieldValues = ParseStringDict(d.GetValueOrDefault("fieldValues", new Variant()).AsGodotDictionary()),
                 customTexturePath = d.GetValueOrDefault("customTexturePath", "").AsString(),
-                useCustomTexture = d.GetValueOrDefault("useCustomTexture", false).AsBool()
+                useCustomTexture = d.GetValueOrDefault("useCustomTexture", false).AsBool(),
+                isMultiTile = d.GetValueOrDefault("isMultiTile", false).AsBool(),
+                sizeX = d.GetValueOrDefault("sizeX", 1).AsInt32(),
+                sizeY = d.GetValueOrDefault("sizeY", 1).AsInt32(),
+                direction = d.GetValueOrDefault("direction", 0).AsInt32()
             });
         }
         return list;
@@ -815,6 +829,17 @@ public partial class ExtraSave : Node
             fieldValues = SerializeObjectFields(weapon)
         };
 
+        // 保存多格兵器属性
+        data.isMultiTile = weapon.isMultiTile;
+        data.sizeX = weapon.size.X;
+        data.sizeY = weapon.size.Y;
+        if (weapon is BlackCannon bc)
+            data.direction = (int)bc.direction;
+        else if (weapon is DeathRay dr)
+            data.direction = (int)dr.direction;
+        else if (weapon is LargeCannon lc)
+            data.direction = (int)lc.direction;
+
         Data.savedWeapons[slotIndex] = data;
         SaveAllData();
         return true;
@@ -1126,6 +1151,9 @@ public partial class ExtraSave : Node
     /// <summary>
     /// 处理上传的贴图，验证尺寸并保存
     /// </summary>
+    /// <summary>
+    /// 处理上传的贴图，验证尺寸并自动resize到32x32，非正方形拒绝
+    /// </summary>
     public string ProcessUploadedTexture(string sourcePath, string category, string slotName)
     {
         if (string.IsNullOrEmpty(sourcePath) || !Godot.FileAccess.FileExists(sourcePath))
@@ -1139,16 +1167,28 @@ public partial class ExtraSave : Node
             if (err != Error.Ok)
             {
                 GD.PrintErr($"[ExtraSave] 加载图片失败: {err}");
-                return null;
+                return "ERROR_LOAD_FAILED";
             }
 
-            // 验证尺寸 - 必须是 32x32 的正方形
+            // 验证尺寸 - 必须是正方形才能resize
             int w = image.GetWidth();
             int h = image.GetHeight();
+            if (w != h)
+            {
+                GD.PrintErr($"[ExtraSave] 图片尺寸 {w}×{h} 不是正方形，无法自动resize到 {MAX_TEXTURE_SIZE}×{MAX_TEXTURE_SIZE}");
+                return "ERROR_NOT_SQUARE";
+            }
+
+            // 如果不是32x32，自动resize
             if (w != MAX_TEXTURE_SIZE || h != MAX_TEXTURE_SIZE)
             {
-                GD.PrintErr($"[ExtraSave] 图片尺寸 {w}×{h} 不符合要求，必须是 {MAX_TEXTURE_SIZE}×{MAX_TEXTURE_SIZE}");
-                return null;
+                if (w < 2 || h < 2)
+                {
+                    GD.PrintErr($"[ExtraSave] 图片尺寸 {w}×{h} 过小，无法resize");
+                    return "ERROR_TOO_SMALL";
+                }
+                image.Resize(MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE, Image.Interpolation.Nearest);
+                GD.Print($"[ExtraSave] 图片已自动resize: {w}×{h} -> {MAX_TEXTURE_SIZE}×{MAX_TEXTURE_SIZE}");
             }
 
             // 生成目标路径
@@ -1165,11 +1205,25 @@ public partial class ExtraSave : Node
             string safeSlotName = string.Join("_", slotName.Split(Path.GetInvalidFileNameChars()));
             string targetPath = Path.Combine(targetDir, $"{safeSlotName}{ext}");
 
-            // 复制文件
-            using var sourceFile = Godot.FileAccess.Open(sourcePath, Godot.FileAccess.ModeFlags.Read);
-            using var targetFile = Godot.FileAccess.Open(targetPath, Godot.FileAccess.ModeFlags.Write);
-            var buffer = sourceFile.GetBuffer((long)sourceFile.GetLength());
-            targetFile.StoreBuffer(buffer);
+            // 保存图片（如果是resize后的，保存resize后的版本）
+            if (w != MAX_TEXTURE_SIZE || h != MAX_TEXTURE_SIZE)
+            {
+                // 保存resize后的PNG
+                err = image.SavePng(targetPath);
+                if (err != Error.Ok)
+                {
+                    GD.PrintErr($"[ExtraSave] 保存resize后图片失败: {err}");
+                    return null;
+                }
+            }
+            else
+            {
+                // 原尺寸，直接复制
+                using var sourceFile = Godot.FileAccess.Open(sourcePath, Godot.FileAccess.ModeFlags.Read);
+                using var targetFile = Godot.FileAccess.Open(targetPath, Godot.FileAccess.ModeFlags.Write);
+                var buffer = sourceFile.GetBuffer((long)sourceFile.GetLength());
+                targetFile.StoreBuffer(buffer);
+            }
 
             GD.Print($"[ExtraSave] 贴图已保存: {targetPath}");
             return targetPath;
@@ -1249,6 +1303,8 @@ public partial class ExtraSave : Node
         SaveAllData();
         return true;
     }
+
+
 
     // ==================== 自定义移动方式 ====================
 
@@ -1529,6 +1585,9 @@ public partial class ExtraSave : Node
                     attackMatrix = ToSystemDict(unit.attackMatrix),
                     secondaryAttackMatrix = ToSystemDict(unit.secondaryAttackMatrix)
                 };
+                // 记录格子坐标用于加载
+                uData.fieldValues["gridX"] = unit.grid.GridIndex.X.ToString();
+                uData.fieldValues["gridY"] = unit.grid.GridIndex.Y.ToString();
                 mapData.units.Add(uData);
             }
         }
@@ -1548,6 +1607,9 @@ public partial class ExtraSave : Node
                     team = weapon.team,
                     fieldValues = SerializeObjectFields(weapon)
                 };
+                // 记录格子坐标用于加载
+                wData.fieldValues["gridX"] = weapon.grid.GridIndex.X.ToString();
+                wData.fieldValues["gridY"] = weapon.grid.GridIndex.Y.ToString();
                 mapData.weapons.Add(wData);
             }
         }
@@ -1567,6 +1629,9 @@ public partial class ExtraSave : Node
                     team = grid.city.facilityTeam,
                     fieldValues = SerializeObjectFields(grid.city)
                 };
+                // 记录格子坐标用于加载
+                fData.fieldValues["gridX"] = grid.GridIndex.X.ToString();
+                fData.fieldValues["gridY"] = grid.GridIndex.Y.ToString();
                 mapData.facilities.Add(fData);
             }
         }
@@ -1588,9 +1653,79 @@ public partial class ExtraSave : Node
         // 更新时间戳
         UpdateMapLastUsed(slotIndex);
 
-        // 这里返回数据，由 TerrainEditor 执行实际加载逻辑
-        // 因为加载需要清理现有实体、调整地图大小等复杂操作
+        if (gm == null || gridMgr == null || terrainEditor == null) return false;
+
+        // 1. 清理现有实体
+        terrainEditor.ClearAllMapEntities();
+
+        // 2. 调整地图大小
+        gridMgr.ResizeMap(mapData.width, mapData.height);
+        gridMgr.Init();
+
+        // 3. 加载地形
+        int terrainIdx = 0;
+        for (int y = 0; y < mapData.height; y++)
+        {
+            for (int x = 0; x < mapData.width; x++)
+            {
+                if (terrainIdx < mapData.terrainIds.Count)
+                {
+                    var grid = gridMgr.map[x, y];
+                    if (grid != null)
+                    {
+                        grid.gridType = (GridType)mapData.terrainIds[terrainIdx];
+                        terrainEditor.UpdateGridVisual(grid);
+                    }
+                }
+                terrainIdx++;
+            }
+        }
+
+        // 4. 加载设施
+        foreach (var fData in mapData.facilities)
+        {
+            if (string.IsNullOrEmpty(fData.scenePath)) continue;
+            var grid = FindGridByIndex(gridMgr, fData.fieldValues.GetValueOrDefault("gridX", "0"), fData.fieldValues.GetValueOrDefault("gridY", "0"));
+            if (grid == null) continue;
+            terrainEditor.SpawnSavedFacilityAtGrid(grid, fData);
+        }
+
+        // 5. 加载兵器
+        foreach (var wData in mapData.weapons)
+        {
+            if (string.IsNullOrEmpty(wData.scenePath)) continue;
+            var grid = FindGridByIndex(gridMgr, wData.fieldValues.GetValueOrDefault("gridX", "0"), wData.fieldValues.GetValueOrDefault("gridY", "0"));
+            if (grid == null) continue;
+            terrainEditor.SpawnSavedWeaponAtGrid(grid, wData);
+        }
+
+        // 6. 加载单位
+        foreach (var uData in mapData.units)
+        {
+            if (string.IsNullOrEmpty(uData.scenePath)) continue;
+            var grid = FindGridByIndex(gridMgr, uData.fieldValues.GetValueOrDefault("gridX", "0"), uData.fieldValues.GetValueOrDefault("gridY", "0"));
+            if (grid == null) continue;
+            terrainEditor.SpawnSavedUnitAtGrid(grid, uData);
+        }
+
+        // 7. 加载资金
+        gm.p1Funds = mapData.p1Funds;
+        gm.p2Funds = mapData.p2Funds;
+        gm.fogOfWarManager?.RefreshFog();
+        gm.UpdateUnitLists();
+        gm.RefreshSpecializedUnitLists();
+
         return true;
+    }
+
+    private Grids FindGridByIndex(GridManager gridMgr, string xStr, string yStr)
+    {
+        if (int.TryParse(xStr, out int x) && int.TryParse(yStr, out int y))
+        {
+            if (x >= 0 && x < gridMgr.map.GetLength(0) && y >= 0 && y < gridMgr.map.GetLength(1))
+                return gridMgr.map[x, y];
+        }
+        return null;
     }
 
     public SavedMapData GetMapData(int slotIndex)
@@ -1708,6 +1843,57 @@ public partial class ExtraSave : Node
     public SavedFacilityData GetSavedFacility(int slotIndex) => (slotIndex >= 0 && slotIndex < Data.savedFacilities.Count) ? Data.savedFacilities[slotIndex] : null;
     public SavedGridTerrainData GetSavedGridTerrain(int slotIndex) => (slotIndex >= 0 && slotIndex < Data.savedGridTerrains.Count) ? Data.savedGridTerrains[slotIndex] : null;
     public SavedMapData GetSavedMap(int slotIndex) => (slotIndex >= 0 && slotIndex < Data.savedMaps.Count) ? Data.savedMaps[slotIndex] : null;
+
+    // ==================== 自定义地形颜色和贴图辅助 ====================
+    /// <summary>
+    /// 获取自定义地形的颜色（如果配置了）
+    /// </summary>
+    public Color? GetCustomTerrainColor(string terrainTypeId)
+    {
+        if (CustomTerrainTypes.TryGetValue(terrainTypeId, out var data))
+        {
+            if (!string.IsNullOrEmpty(data.terrainColorHex))
+            {
+                try { return new Color(data.terrainColorHex); } catch { }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 获取自定义地形的贴图路径（如果配置了）
+    /// </summary>
+    public string GetCustomTerrainTexturePath(string terrainTypeId)
+    {
+        if (CustomTerrainTypes.TryGetValue(terrainTypeId, out var data))
+        {
+            if (data.useCustomTexture && !string.IsNullOrEmpty(data.customTexturePath))
+                return data.customTexturePath;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 获取自定义移动方式的贴图路径（如果配置了）
+    /// </summary>
+    public string GetCustomMoveTypeTexturePath(string moveTypeId)
+    {
+        if (CustomMoveTypes.TryGetValue(moveTypeId, out var data))
+        {
+            if (data.useCustomTexture && !string.IsNullOrEmpty(data.customTexturePath))
+                return data.customTexturePath;
+        }
+        return null;
+    }
+
+    // ==================== 保存数据直接获取（供TerrainEditor使用） ====================
+    /// <summary>
+    /// 直接获取单位保存数据（用于TerrainEditor生成）
+    /// </summary>
+    public SavedUnitData GetSavedUnitData(int slotIndex) => GetSavedUnit(slotIndex);
+    public SavedWeaponData GetSavedWeaponData(int slotIndex) => GetSavedWeapon(slotIndex);
+    public SavedFacilityData GetSavedFacilityData(int slotIndex) => GetSavedFacility(slotIndex);
+    public SavedGridTerrainData GetSavedGridData(int slotIndex) => GetSavedGridTerrain(slotIndex);
 
     // ==================== 清空槽位 ====================
     public void ClearUnitSlot(int slotIndex)

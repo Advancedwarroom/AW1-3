@@ -894,23 +894,38 @@ public partial class CustomConfigUI : Control
                 return;
             }
 
-            if (image.GetWidth() != 32 || image.GetHeight() != 32)
+            int w = image.GetWidth();
+            int h = image.GetHeight();
+            if (w != h)
             {
-                ShowToast($"❌ 尺寸 {image.GetWidth()}×{image.GetHeight()} 不符合要求！\n必须 32×32");
+                ShowToast($"❌ 尺寸 {w}×{h} 不是正方形！\n请裁剪为正方形后重新上传");
+                dialog.QueueFree();
+                return;
+            }
+            if (w != 32 || h != 32)
+            {
+                ShowToast($"⚠️ 尺寸 {w}×{h} 非标准，将自动resize到 32×32");
                 dialog.QueueFree();
                 return;
             }
 
             // 保存
             string savedPath = extraSave?.ProcessUploadedTexture(path, category, $"custom_{DateTime.Now:yyyyMMddHHmmss}");
-            if (!string.IsNullOrEmpty(savedPath))
+            if (!string.IsNullOrEmpty(savedPath) && !savedPath.StartsWith("ERROR"))
             {
                 ShowToast($"✅ 贴图上传成功！\n{Path.GetFileName(savedPath)}");
                 RefreshUploadedTextureList();
             }
             else
             {
-                ShowToast("❌ 贴图保存失败");
+                string errorMsg = savedPath switch
+                {
+                    "ERROR_NOT_SQUARE" => "❌ 贴图不是正方形，请裁剪后重新上传",
+                    "ERROR_TOO_SMALL" => "❌ 贴图尺寸过小，无法resize",
+                    "ERROR_LOAD_FAILED" => "❌ 贴图加载失败",
+                    _ => "❌ 贴图保存失败"
+                };
+                ShowToast(errorMsg);
             }
             dialog.QueueFree();
         };
@@ -1046,8 +1061,11 @@ public partial class CustomConfigUI : Control
                     success = extraSave?.ApplyCustomTextureToSavedFacility(fSlot, texturePath) ?? false;
                 break;
             case "地形":
+                // 支持自定义地形（string ID）和保存槽位（int）
                 if (int.TryParse(targetId, out int gSlot))
                     success = extraSave?.ApplyCustomTextureToSavedGrid(gSlot, texturePath) ?? false;
+                else
+                    success = extraSave?.ApplyCustomTextureToTerrainType(targetId, texturePath) ?? false;
                 break;
             case "移动方式":
                 success = extraSave?.ApplyCustomTextureToMoveType(targetId, texturePath) ?? false;
@@ -1469,9 +1487,82 @@ public partial class CustomConfigUI : Control
 
     private void ShowLoadDialog(int slotIndex, string category)
     {
-        // 加载逻辑 - 根据category从extraSave.Data加载并生成到游戏中
         ShowToast($"加载{category}槽位{slotIndex + 1}...");
-        // TODO: 实现具体的加载逻辑（根据保存的数据重新生成对象）
+
+        var te = terrainEditor;
+        if (te == null)
+        {
+            ShowToast("❌ TerrainEditor 未连接");
+            return;
+        }
+
+        switch (category)
+        {
+            case "单位":
+                var unitData = extraSave?.GetSavedUnit(slotIndex);
+                if (unitData != null && !string.IsNullOrEmpty(unitData.scenePath))
+                {
+                    te.SetSpawnMode(SpawnMode.Unit, unitData.scenePath, unitData.team);
+                    ShowToast($"✅ 单位 \"{unitData.displayName}\" 已准备，点击地图格子放置");
+                }
+                else
+                {
+                    ShowToast("❌ 该槽位没有保存的单位");
+                }
+                break;
+
+            case "兵器":
+                var weaponData = extraSave?.GetSavedWeapon(slotIndex);
+                if (weaponData != null && !string.IsNullOrEmpty(weaponData.scenePath))
+                {
+                    te.SetSpawnMode(SpawnMode.Weapon, weaponData.scenePath, weaponData.team);
+                   ShowToast($"✅ 兵器 \"{weaponData.displayName}\" 已准备，点击地图格子放置");
+                }
+                else
+                {
+                    ShowToast("❌ 该槽位没有保存的兵器");
+                }
+                break;
+
+            case "设施":
+                var facilityData = extraSave?.GetSavedFacility(slotIndex);
+                if (facilityData != null && !string.IsNullOrEmpty(facilityData.scenePath))
+                {
+                    te.SetSpawnMode(SpawnMode.Facility, facilityData.scenePath, facilityData.team);
+                    ShowToast($"✅ 设施 \"{facilityData.displayName}\" 已准备，点击地图格子放置");
+                }
+                else
+                {
+                    ShowToast("❌ 该槽位没有保存的设施");
+                }
+                break;
+
+            case "地形":
+                var gridData = extraSave?.GetSavedGridTerrain(slotIndex);
+                if (gridData != null && gridData.savedTimestamp > 0)
+                {
+                    te.SetApplyTerrainMode(gridData);
+                    ShowToast($"✅ 地形 \"{gridData.displayName}\" 已准备，点击地图格子应用");
+                }
+                else
+                {
+                    ShowToast("❌ 该槽位没有保存的地形");
+                }
+                break;
+
+            case "地图":
+                var mapData = extraSave?.GetSavedMap(slotIndex);
+                if (mapData != null && mapData.width > 0)
+                {
+                    bool success = extraSave?.LoadMapToGame(slotIndex, gameManager, te.gridManager, te) ?? false;
+                    ShowToast(success ? $"✅ 地图 \"{mapData.displayName}\" 加载成功！" : "❌ 地图加载失败");
+                }
+                else
+                {
+                    ShowToast("❌ 该槽位没有保存的地图");
+                }
+                break;
+        }
     }
 
     private void ToggleFavorite(int slotIndex, string category)

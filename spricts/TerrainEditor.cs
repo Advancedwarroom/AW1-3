@@ -282,6 +282,13 @@ public override void _Input(InputEvent @event)
             return;
         }
 
+        // ✅ ESC 取消待生成/应用模式
+        if (pendingSpawnMode != SpawnMode.None || pendingTerrainData != null)
+        {
+            CancelPendingMode();
+            return;
+        }
+
         // ✅ ESC 退出批量地形模式
         if (isBatchTerrainMode)
         {
@@ -1249,6 +1256,10 @@ public void OnGridClickedForEdit(Grids grid)
     if (!IsEditMode || grid == null) return;
 
     selectedGrid = grid;
+        // ✅ 优先处理待生成/待应用模式（CustomConfigUI加载保存的对象）
+        if (HandlePendingSpawn(grid))
+            return;
+
 
     // ✅ 批量地形放置模式：直接改地形，不经过选择菜单
     if (isBatchTerrainMode)
@@ -3673,7 +3684,7 @@ private void OnTerrainSelected(GridType newTerrain)
     }
     
 
-}    private void UpdateGridVisual(Grids grid)
+}    public void UpdateGridVisual(Grids grid)
     {
         var sprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
         if (sprite == null) return;
@@ -5311,7 +5322,7 @@ private void OpenWeaponTerrainMatrixEditor()
         t.Start();
     }
 
-    private void ClearAllMapEntities()
+    public void ClearAllMapEntities()
     {
         // ✅ 批量清理，避免逐个调用 gameManager.RemoveUnit 触发胜利检查
         
@@ -7733,6 +7744,15 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         var data = ExtraSave.Instance?.GetSavedUnit(slotIndex);
         if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
+        SpawnSavedUnitAtGrid(grid, data, teamOverride);
+    }
+
+    /// <summary>
+    /// 从SavedUnitData直接生成单位
+    /// </summary>
+    public void SpawnSavedUnitAtGrid(Grids grid, SavedUnitData data, string teamOverride = null)
+    {
+        if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
 
         var scene = GD.Load<PackedScene>(data.scenePath);
         if (scene == null) return;
@@ -7750,7 +7770,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
         unit.Position = grid.Position;
         unit.team = teamOverride ?? data.team;
-        unit.Name = data.displayName ?? $"SavedUnit_{slotIndex}";
+        unit.Name = data.displayName ?? $"SavedUnit";
 
         // 应用字段覆盖
         ApplyFieldValues(unit, data.fieldValues);
@@ -7778,9 +7798,6 @@ private void OpenWeaponTerrainMatrixEditor()
 
         gameManager.UpdateUnitLists();
         gameManager.RefreshSpecializedUnitLists();
-
-        // 更新使用时间
-        ExtraSave.Instance?.UpdateUnitLastUsed(slotIndex);
     }
 
     /// <summary>
@@ -7790,6 +7807,15 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         var data = ExtraSave.Instance?.GetSavedWeapon(slotIndex);
         if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
+        SpawnSavedWeaponAtGrid(grid, data, teamOverride);
+    }
+
+    /// <summary>
+    /// 从SavedWeaponData直接生成兵器（支持多格兵器）
+    /// </summary>
+    public void SpawnSavedWeaponAtGrid(Grids grid, SavedWeaponData data, string teamOverride = null)
+    {
+        if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
 
         var scene = GD.Load<PackedScene>(data.scenePath);
         if (scene == null) return;
@@ -7797,10 +7823,34 @@ private void OpenWeaponTerrainMatrixEditor()
         var weapon = scene.Instantiate<Weapon>();
         if (weapon == null) return;
 
+        // 设置多格属性（在BindWeaponToGrid之前）
+        if (data.isMultiTile)
+        {
+            weapon.isMultiTile = true;
+            weapon.size = new Vector2I(data.sizeX, data.sizeY);
+
+            if (weapon is LargeCannon lc)
+            {
+                lc.multiTileSize = new Vector2I(data.sizeX, data.sizeY);
+            }
+            else if (weapon is DeathRay dr)
+            {
+                dr.multiTileSize = new Vector2I(data.sizeX, data.sizeY);
+            }
+        }
+
+        // 设置方向
+        if (weapon is BlackCannon bc)
+            bc.direction = (BlackCannon.CannonDirection)data.direction;
+        else if (weapon is DeathRay dr2)
+            dr2.direction = (BlackCannon.CannonDirection)data.direction;
+        else if (weapon is LargeCannon lc2)
+            lc2.direction = (BlackCannon.CannonDirection)data.direction;
+
         weapon.hasActed = false;
         weapon.Position = grid.Position;
         weapon.team = teamOverride ?? data.team;
-        weapon.Name = data.displayName ?? $"SavedWeapon_{slotIndex}";
+        weapon.Name = data.displayName ?? $"SavedWeapon";
 
         // 应用字段覆盖
         ApplyFieldValues(weapon, data.fieldValues);
@@ -7812,15 +7862,59 @@ private void OpenWeaponTerrainMatrixEditor()
         }
 
         gameManager.weaponManager.weaponsNode.AddChild(weapon);
-        gameManager.weaponManager.BindWeaponToGrid(weapon, true);
+
+        // 多格兵器需要特殊绑定
+        if (weapon.isMultiTile)
+        {
+            BindMultiTileWeapon(weapon, grid);
+        }
+        else
+        {
+            gameManager.weaponManager.BindWeaponToGrid(weapon, true);
+        }
+
         gameManager.weaponManager.AllWeapons.Add(weapon);
         weapon.OnClickWeapon = gameManager.OnSelectWeapon;
         weapon.UpdateHpLabel();
 
-        gameManager.UpdateUnitLists();
+        // 更新方向视觉
+        if (weapon is BlackCannon bc3) bc3.UpdateDirectionVisual();
+        else if (weapon is DeathRay dr3) dr3.UpdateDirectionVisual();
+        else if (weapon is LargeCannon lc3) lc3.UpdateDirectionVisual();
 
-        // 更新使用时间
-        ExtraSave.Instance?.UpdateWeaponLastUsed(slotIndex);
+        gameManager.UpdateUnitLists();
+    }
+
+    /// <summary>
+    /// 绑定多格兵器到多个格子
+    /// </summary>
+    private void BindMultiTileWeapon(Weapon weapon, Grids anchorGrid)
+    {
+        if (weapon == null || anchorGrid == null || !weapon.isMultiTile) return;
+
+        var gm = gameManager;
+        if (gm?.gridManager == null) return;
+
+        var anchorPos = anchorGrid.GridIndex;
+        var occupied = weapon.GetOccupiedIndices(anchorPos);
+
+        weapon.occupiedGrids.Clear();
+        foreach (var idx in occupied)
+        {
+            if (idx.X >= 0 && idx.X < gm.gridManager.map.GetLength(0) && 
+                idx.Y >= 0 && idx.Y < gm.gridManager.map.GetLength(1))
+            {
+                var g = gm.gridManager.map[idx.X, idx.Y];
+                if (g != null)
+                {
+                    g.weapons.Add(weapon);
+                    g.weapon = weapon;
+                    weapon.occupiedGrids.Add(g);
+                }
+            }
+        }
+
+        weapon.grid = anchorGrid;
     }
 
     /// <summary>
@@ -7829,6 +7923,15 @@ private void OpenWeaponTerrainMatrixEditor()
     public void SpawnSavedFacilityAtGrid(Grids grid, int slotIndex, string teamOverride = null)
     {
         var data = ExtraSave.Instance?.GetSavedFacility(slotIndex);
+        if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
+        SpawnSavedFacilityAtGrid(grid, data, teamOverride);
+    }
+
+    /// <summary>
+    /// 从SavedFacilityData直接生成设施
+    /// </summary>
+    public void SpawnSavedFacilityAtGrid(Grids grid, SavedFacilityData data, string teamOverride = null)
+    {
         if (data == null || string.IsNullOrEmpty(data.scenePath)) return;
 
         var scene = GD.Load<PackedScene>(data.scenePath);
@@ -7856,9 +7959,6 @@ private void OpenWeaponTerrainMatrixEditor()
 
         gameManager.UpdateUnitLists();
         gameManager.RefreshSpecializedUnitLists();
-
-        // 更新使用时间
-        ExtraSave.Instance?.UpdateFacilityLastUsed(slotIndex);
     }
 
     /// <summary>
@@ -7867,6 +7967,15 @@ private void OpenWeaponTerrainMatrixEditor()
     public void ApplySavedGridTerrain(Grids grid, int slotIndex)
     {
         var data = ExtraSave.Instance?.GetSavedGridTerrain(slotIndex);
+        if (data == null || data.savedTimestamp == 0) return;
+        ApplySavedGridTerrain(grid, data);
+    }
+
+    /// <summary>
+    /// 从SavedGridTerrainData直接应用地形
+    /// </summary>
+    public void ApplySavedGridTerrain(Grids grid, SavedGridTerrainData data)
+    {
         if (data == null || data.savedTimestamp == 0) return;
 
         grid.gridType = data.gridType;
@@ -7897,9 +8006,6 @@ private void OpenWeaponTerrainMatrixEditor()
         }
 
         UpdateGridVisual(grid);
-
-        // 更新使用时间
-        ExtraSave.Instance?.UpdateGridLastUsed(slotIndex);
     }
 
     // ==================== 辅助方法 ====================
@@ -8031,6 +8137,167 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         if (facility == null) return;
         // 占位实现 - 可根据需要从 ExtraSave 加载数据
+    }
+
+    // ==================== 自定义配置加载模式 ====================
+
+    private SpawnMode pendingSpawnMode = SpawnMode.None;
+    private string pendingSpawnScenePath = "";
+    private string pendingSpawnTeam = "";
+    private SavedGridTerrainData pendingTerrainData = null;
+
+    /// <summary>
+    /// 设置生成模式（供CustomConfigUI调用，加载保存的单位/兵器/设施）
+    /// </summary>
+    public void SetSpawnMode(SpawnMode mode, string scenePath, string team)
+    {
+        pendingSpawnMode = mode;
+        pendingSpawnScenePath = scenePath;
+        pendingSpawnTeam = team;
+        pendingTerrainData = null;
+
+        // 关闭其他菜单，进入等待点击状态
+        CloseAllMenus();
+
+        string typeName = mode switch
+        {
+            SpawnMode.Unit => "单位",
+            SpawnMode.Weapon => "兵器",
+            SpawnMode.Facility => "设施",
+            _ => "对象"
+        };
+
+        // 显示提示
+        var hint = new Label();
+        hint.Text = $"🖱️ 点击地图格子放置{typeName}...ESC取消";
+        hint.AddThemeFontSizeOverride("font_size", 14);
+        hint.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.7f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.SetAnchorsPreset(LayoutPreset.CenterTop);
+        hint.Position = new Vector2(0, 80);
+        hint.ZIndex = 2000;
+        hint.Name = "SpawnModeHint";
+        AddChild(hint);
+
+        // 3秒后自动消失
+        var timer = new Timer();
+        timer.WaitTime = 3.0f;
+        timer.OneShot = true;
+        timer.Timeout += () => { 
+            var h = GetNodeOrNull<Label>("SpawnModeHint");
+            h?.QueueFree();
+            timer.QueueFree(); 
+        };
+        AddChild(timer);
+        timer.Start();
+    }
+
+    /// <summary>
+    /// 设置地形应用模式（供CustomConfigUI调用，加载保存的地形）
+    /// </summary>
+    public void SetApplyTerrainMode(SavedGridTerrainData data)
+    {
+        pendingTerrainData = data;
+        pendingSpawnMode = SpawnMode.None;
+        pendingSpawnScenePath = "";
+
+        CloseAllMenus();
+
+        var hint = new Label();
+        hint.Text = $"🖱️ 点击地图格子应用地形 \"{data.displayName}\"...\nESC取消";
+        hint.AddThemeFontSizeOverride("font_size", 14);
+        hint.AddThemeColorOverride("font_color", new Color(0.7f, 1f, 0.4f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.SetAnchorsPreset(LayoutPreset.CenterTop);
+        hint.Position = new Vector2(0, 80);
+        hint.ZIndex = 2000;
+        hint.Name = "TerrainModeHint";
+        AddChild(hint);
+
+        var timer = new Timer();
+        timer.WaitTime = 3.0f;
+        timer.OneShot = true;
+        timer.Timeout += () => { 
+            var h = GetNodeOrNull<Label>("TerrainModeHint");
+            h?.QueueFree();
+            timer.QueueFree(); 
+        };
+        AddChild(timer);
+        timer.Start();
+    }
+
+    /// <summary>
+    /// 取消待处理的生成/应用模式
+    /// </summary>
+    public void CancelPendingMode()
+    {
+        pendingSpawnMode = SpawnMode.None;
+        pendingSpawnScenePath = "";
+        pendingSpawnTeam = "";
+        pendingTerrainData = null;
+
+        var h1 = GetNodeOrNull<Label>("SpawnModeHint");
+        h1?.QueueFree();
+        var h2 = GetNodeOrNull<Label>("TerrainModeHint");
+        h2?.QueueFree();
+    }
+
+    /// <summary>
+    /// 处理待生成模式的格子点击
+    /// </summary>
+    private bool HandlePendingSpawn(Grids grid)
+    {
+        if (pendingSpawnMode == SpawnMode.None && pendingTerrainData == null) return false;
+
+        if (pendingTerrainData != null)
+        {
+            ApplySavedGridTerrain(grid, pendingTerrainData);
+            pendingTerrainData = null;
+            var h = GetNodeOrNull<Label>("TerrainModeHint");
+            h?.QueueFree();
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(pendingSpawnScenePath)) return false;
+
+        switch (pendingSpawnMode)
+        {
+            case SpawnMode.Unit:
+                SpawnUnitAtGrid(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                break;
+            case SpawnMode.Weapon:
+                // 检查是否多格兵器
+                var scene = GD.Load<PackedScene>(pendingSpawnScenePath);
+                if (scene != null)
+                {
+                    var temp = scene.Instantiate<Weapon>();
+                    if (temp != null)
+                    {
+                        bool isMulti = temp.isMultiTile;
+                        temp.QueueFree();
+
+                        if (isMulti)
+                        {
+                            TryPreviewMultiTileWeapon(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                        }
+                        else
+                        {
+                            SpawnWeaponAtGrid(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                        }
+                    }
+                }
+                break;
+            case SpawnMode.Facility:
+                SpawnFacilityAtGrid(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                break;
+        }
+
+        pendingSpawnMode = SpawnMode.None;
+        pendingSpawnScenePath = "";
+        var hint = GetNodeOrNull<Label>("SpawnModeHint");
+        hint?.QueueFree();
+
+        return true;
     }
 
 }

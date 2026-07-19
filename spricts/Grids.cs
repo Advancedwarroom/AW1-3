@@ -649,6 +649,44 @@ public partial class Grids : Node2D
         {
             _lastGridType = gridType;
             UpdateTerrainIcon();
+            ApplyCustomTerrainVisual();
+        }
+    }
+
+    /// <summary>
+    /// 应用自定义地形颜色和贴图（如果配置了）
+    /// </summary>
+    public void ApplyCustomTerrainVisual()
+    {
+        var extraSave = ExtraSave.Instance;
+        if (extraSave == null) return;
+
+        string terrainKey = gridType.ToString();
+
+        // 应用自定义颜色
+        var customColor = extraSave.GetCustomTerrainColor(terrainKey);
+        if (customColor.HasValue)
+        {
+            var sprite = GetNodeOrNull<Sprite2D>("Sprite2D");
+            if (sprite != null)
+            {
+                sprite.Modulate = customColor.Value;
+            }
+        }
+
+        // 应用自定义贴图
+        var texturePath = extraSave.GetCustomTerrainTexturePath(terrainKey);
+        if (!string.IsNullOrEmpty(texturePath) && Godot.FileAccess.FileExists(texturePath))
+        {
+            var image = new Image();
+            if (image.Load(texturePath) == Error.Ok)
+            {
+                var sprite = GetNodeOrNull<Sprite2D>("Sprite2D");
+                if (sprite != null)
+                {
+                    sprite.Texture = ImageTexture.CreateFromImage(image);
+                }
+            }
         }
     }
 }
