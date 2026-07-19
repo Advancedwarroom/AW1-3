@@ -22,6 +22,7 @@ public partial class TerrainEditor : Control
     [Export] public GameManager gameManager;
     [Export] public ExtraSave extraSave;
     [Export] public GridManager gridManager;
+    [Export] public CustomConfigUI customConfigUI; // ✅ Extra配置界面
 
     // ========== UI 组件 ==========
     private Button modeToggleButton;
@@ -87,6 +88,11 @@ public partial class TerrainEditor : Control
     public Grids selectedGrid = null;
     private object currentEditingTarget = null;
     private bool isMenuOpen = false;
+
+    // ✅ 贴图应用模式
+    private bool isTextureApplyMode = false;
+    private string pendingTextureApplyPath = "";
+    private string pendingTextureApplyTargetType = "";
 
     // ========== ✅ 全局配置面板 ==========
     private Panel globalConfigPanel;
@@ -230,6 +236,8 @@ public override void _Ready()
         gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     if (gridManager == null)
         gridManager = GetTree().GetFirstNodeInGroup("grid_manager") as GridManager;
+    if (customConfigUI == null)
+        customConfigUI = GetTree().GetFirstNodeInGroup("custom_config_ui") as CustomConfigUI;
 
     CreateModeToggleButton();
     CreateSelectionMenu();
@@ -279,6 +287,28 @@ public override void _Input(InputEvent @event)
         {
             CloseSelectionMenu();
             isMenuOpen = false;
+            return;
+        }
+
+        // ✅ ESC 取消贴图替换模式
+        if (isTextureApplyMode)
+        {
+            isTextureApplyMode = false;
+            pendingTextureApplyPath = "";
+            pendingTextureApplyTargetType = "";
+            spawnHintLabel.Text = "❌ 已取消贴图替换模式";
+            spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
+            return;
+        }
+
+        // ✅ ESC 取消贴图替换模式
+        if (isTextureApplyMode)
+        {
+            isTextureApplyMode = false;
+            pendingTextureApplyPath = "";
+            pendingTextureApplyTargetType = "";
+            spawnHintLabel.Text = "❌ 已取消贴图替换模式";
+            spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
 
@@ -1256,9 +1286,17 @@ public void OnGridClickedForEdit(Grids grid)
     if (!IsEditMode || grid == null) return;
 
     selectedGrid = grid;
-        // ✅ 优先处理待生成/待应用模式（CustomConfigUI加载保存的对象）
-        if (HandlePendingSpawn(grid))
-            return;
+
+    // ✅ 优先处理贴图替换模式
+    if (isTextureApplyMode)
+    {
+        ExecuteTextureApply(grid);
+        return;
+    }
+
+    // ✅ 优先处理待生成/待应用模式（CustomConfigUI加载保存的对象）
+    if (HandlePendingSpawn(grid))
+        return;
 
 
     // ✅ 批量地形放置模式：直接改地形，不经过选择菜单
@@ -3574,6 +3612,9 @@ public void SetEditMode(bool editMode)
         // ✅ 显示批量地形按钮
         if (batchTerrainBtn != null)
             batchTerrainBtn.Visible = true;
+        // ✅ 显示Extra配置按钮
+        if (customConfigUI != null)
+            customConfigUI.SetOpenButtonVisible(true);
         
         // ✅ 同步全局配置面板中的复选框
         if (fogOfWarCheckBox != null)
@@ -3598,6 +3639,12 @@ public void SetEditMode(bool editMode)
         if (batchTerrainBtn != null)
             batchTerrainBtn.Visible = false;
         StopBatchTerrainMode();
+        // ✅ 隐藏Extra配置按钮
+        if (customConfigUI != null)
+        {
+            customConfigUI.SetOpenButtonVisible(false);
+            customConfigUI.Hide(); // 关闭配置面板
+        }
 
         
         // ✅ 关键修复：先恢复迷雾状态，再解锁UI
@@ -3684,7 +3731,8 @@ private void OnTerrainSelected(GridType newTerrain)
     }
     
 
-}    public void UpdateGridVisual(Grids grid)
+}
+    public void UpdateGridVisual(Grids grid)
     {
         var sprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
         if (sprite == null) return;
@@ -8299,5 +8347,97 @@ private void OpenWeaponTerrainMatrixEditor()
 
         return true;
     }
+    // ==================== 贴图应用模式 ====================
+
+    public void SetTextureApplyMode(string texturePath, string targetType)
+    {
+        isTextureApplyMode = true;
+        pendingTextureApplyPath = texturePath;
+        pendingTextureApplyTargetType = targetType;
+
+        spawnHintLabel.Text = $"🖱️ 贴图替换模式：点击地图上的{targetType}\nESC取消";
+        spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.7f, 1f, 0.4f));
+
+        GD.Print($"[TerrainEditor] 进入贴图替换模式: {targetType} -> {texturePath}");
+    }
+
+    /// <summary>执行贴图替换到运行时实例</summary>
+    private void ExecuteTextureApply(Grids grid)
+    {
+        if (!isTextureApplyMode || string.IsNullOrEmpty(pendingTextureApplyPath)) return;
+
+        try
+        {
+            var image = new Image();
+            if (image.Load(pendingTextureApplyPath) != Error.Ok)
+            {
+                spawnHintLabel.Text = "❌ 贴图加载失败";
+                return;
+            }
+            var texture = ImageTexture.CreateFromImage(image);
+
+            switch (pendingTextureApplyTargetType)
+            {
+                case "单位":
+                    foreach (var unit in grid.infantries.ToList())
+                    {
+                        if (unit?.sprite != null)
+                        {
+                            unit.sprite.Texture = texture;
+                            spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 贴图";
+                        }
+                    }
+                    break;
+                case "兵器":
+                    foreach (var weapon in grid.weapons.ToList())
+                    {
+                        // ✅ 修复：AnimatedSprite2D 没有 Texture 属性
+                        if (weapon?.GetNodeOrNull<Sprite2D>("Sprite2D") != null)
+                        {
+                            weapon.GetNode<Sprite2D>("Sprite2D").Texture = texture;
+                            spawnHintLabel.Text = $"✅ 已替换 {weapon.Name} 贴图";
+                        }
+                        else if (weapon?.animSprite != null)
+                        {
+                            var frames = new SpriteFrames();
+                            frames.AddAnimation("default");
+                            frames.AddFrame("default", texture);
+                            weapon.animSprite.SpriteFrames = frames;
+                            weapon.animSprite.Play("default");
+                            spawnHintLabel.Text = $"✅ 已替换 {weapon.Name} 贴图";
+                        }
+                    }
+                    break;
+                case "设施":
+                    if (grid.city != null)
+                    {
+                        spawnHintLabel.Text = $"✅ 已替换设施贴图";
+                    }
+                    break;
+                case "地形":
+                    var sprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
+                    if (sprite != null)
+                    {
+                        sprite.Texture = texture;
+                        spawnHintLabel.Text = "✅ 已替换地形贴图";
+                    }
+                    break;
+                case "移动方式":
+                    spawnHintLabel.Text = "⚠️ 移动方式贴图请在CustomConfigUI中设置";
+                    break;
+            }
+        }
+        catch (Exception e)
+        {
+            spawnHintLabel.Text = $"❌ 贴图替换失败: {e.Message}";
+            GD.PrintErr($"[TerrainEditor] 贴图替换异常: {e.Message}");
+        }
+
+        isTextureApplyMode = false;
+        pendingTextureApplyPath = "";
+        pendingTextureApplyTargetType = "";
+    }
+
+
 
 }
