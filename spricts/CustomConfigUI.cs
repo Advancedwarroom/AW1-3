@@ -77,7 +77,7 @@ public partial class CustomConfigUI : Control
 
         var viewportSize = GetViewport().GetVisibleRect().Size;
         openConfigBtn.SetAnchorsPreset(LayoutPreset.TopLeft);
-        openConfigBtn.Position = new Vector2(viewportSize.X - 290, viewportSize.Y - 70);
+        openConfigBtn.Position = new Vector2(viewportSize.X - 290, viewportSize.Y - 130);
         openConfigBtn.Visible = false; // 初始隐藏，编辑模式时显示
     }
 

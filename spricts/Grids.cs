@@ -634,7 +634,7 @@ public partial class Grids : Node2D
         }
     }
 
-    private void UpdateTerrainIcon()
+    public void UpdateTerrainIcon()
     {
         foreach (var kvp in terrainIconSprites)
         {

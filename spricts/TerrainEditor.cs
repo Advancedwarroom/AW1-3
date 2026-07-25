@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Linq;
 using System.IO;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -225,7 +226,7 @@ private Button spawnModeUnitBtn;
 private Button spawnModeWeaponBtn;
 private Button spawnModeFacilityBtn;
 private Button destroyModeBtn;
-private Label spawnHintLabel;
+public Label spawnHintLabel;
 private HBoxContainer spawnModeSelector;
 private HBoxContainer directionSelector; // ✅ 黑炮/大型黑炮 方向选择器
 public override void _Ready()
@@ -255,6 +256,44 @@ public override void _Ready()
     batchTerrainBtn.SetAnchorsPreset(LayoutPreset.TopLeft);
     batchTerrainBtn.Position = new Vector2(viewportSize.X - 160, viewportSize.Y - 130);
     batchTerrainBtn.Visible = false; // 初始隐藏，进入编辑模式时显示
+
+    // ✅ 实例化编辑器助手组件
+    var mapHelper = new MapEditorHelper();
+    mapHelper.Name = "MapEditorHelper";
+    mapHelper.gridManager = gridManager;
+    mapHelper.gameManager = gameManager;
+    mapHelper.terrainEditor = this;
+    mapHelper.extraSave = extraSave;
+    AddChild(mapHelper);
+
+    var saveSlots = new EditorSaveSlots();
+    saveSlots.Name = "EditorSaveSlots";
+    saveSlots.extraSave = extraSave;
+    saveSlots.terrainEditor = this;
+    saveSlots.gridManager = gridManager;
+    saveSlots.gameManager = gameManager;
+    AddChild(saveSlots);
+
+    var panelDragger = new EditorPanelDragger();
+    panelDragger.Name = "EditorPanelDragger";
+    panelDragger.terrainEditor = this;
+    AddChild(panelDragger);
+
+    // ✅ 订阅格子悬停事件（供 MapEditorHelper 图形填充预览用）
+    if (gridManager?.grids != null)
+    {
+        foreach (var grid in gridManager.grids)
+        {
+            if (grid != null)
+            {
+                grid.OnHoverGrid += (g) => {
+                    var helper = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+                    if (helper != null && helper.IsShapeFillMode)
+                        helper.OnGridHoverForShapeFill(g);
+                };
+            }
+        }
+    }
 }
 
 // ========== 修改 _Input 添加 ESC 关闭生成菜单 ==========
@@ -335,6 +374,18 @@ public override void _Input(InputEvent @event)
         if (batchTerrainPanel?.Visible == true)
         {
             CloseBatchTerrainPanel();
+            return;
+        }
+
+        // ✅ ESC 取消 MapEditorHelper 的所有模式
+        var mapHelper = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+        if (mapHelper != null && (
+            mapHelper.IsShapeFillMode || mapHelper.IsAreaFillMode || mapHelper.IsTerrainFillMode ||
+            mapHelper.IsSelectMode || mapHelper.IsPasteMode || mapHelper.IsSymmetryMode))
+        {
+            mapHelper.CancelAllModes();
+            spawnHintLabel.Text = "❌ 已取消编辑器助手模式";
+            spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
 
@@ -814,6 +865,64 @@ private void HighlightTemplateButton(Button btn, Color color)
     btn.AddThemeStyleboxOverride("normal", style);
 }
 
+// ========== ✅ 撤销系统辅助 ==========
+private void PushEditorAction(EditorActionType type, Grids grid, GridType oldTerrain = GridType.GROUND)
+{
+    var helper = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+    if (helper == null) return;
+    var record = new EditorActionRecord
+    {
+        actionType = type,
+        position = grid.GridIndex,
+        oldTerrain = oldTerrain,
+        newTerrain = grid.gridType
+    };
+    if (grid.infantry != null) record.oldUnitData = SerializeUnitForUndo(grid.infantry);
+    if (grid.weapon != null) record.oldWeaponData = SerializeWeaponForUndo(grid.weapon);
+    if (grid.city != null) record.oldFacilityData = SerializeFacilityForUndo(grid.city);
+    helper.PushAction(record);
+}
+
+private SavedUnitData SerializeUnitForUndo(Infantry unit)
+{
+    if (unit == null) return null;
+    return new SavedUnitData
+    {
+        scenePath = unit.SceneFilePath,
+        typeName = unit.GetType().Name,
+        team = unit.team
+    };
+}
+
+private SavedWeaponData SerializeWeaponForUndo(Weapon weapon)
+{
+    if (weapon == null) return null;
+    var data = new SavedWeaponData
+    {
+        scenePath = weapon.SceneFilePath,
+        typeName = weapon.GetType().Name,
+        team = weapon.team,
+        isMultiTile = weapon.isMultiTile,
+        sizeX = weapon.size.X,
+        sizeY = weapon.size.Y
+    };
+    if (weapon is BlackCannon bc) data.direction = (int)bc.direction;
+    else if (weapon is DeathRay dr) data.direction = (int)dr.direction;
+    else if (weapon is LargeCannon lc) data.direction = (int)lc.direction;
+    return data;
+}
+
+private SavedFacilityData SerializeFacilityForUndo(Facility facility)
+{
+    if (facility == null) return null;
+    return new SavedFacilityData
+    {
+        scenePath = facility.SceneFilePath,
+        typeName = facility.GetType().Name,
+        team = facility.facilityTeam
+    };
+}
+
 private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
 {
     if (string.IsNullOrEmpty(scenePath) || grid == null) return;
@@ -886,6 +995,9 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
 
         spawnHintLabel.Text = $"✅ 生成成功: {unit.Name}";
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+
+        // ✅ 推送到撤销历史
+        PushEditorAction(EditorActionType.PlaceUnit, grid);
 
     }
     catch (Exception e)
@@ -980,6 +1092,9 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
 
         spawnHintLabel.Text = $"✅ 生成兵器: {weapon.Name}";
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+
+        // ✅ 推送到撤销历史
+        PushEditorAction(EditorActionType.PlaceWeapon, grid);
 
     }
     catch (Exception e)
@@ -1110,6 +1225,9 @@ private void ExecuteDestroy(object target)
         if (target is Infantry unit)
         {
             string name = unit.Name;
+            var grid = unit.grid;
+            if (grid != null)
+                PushEditorAction(EditorActionType.DeleteUnit, grid);
             gameManager.RemoveUnit(unit);
             spawnHintLabel.Text = $"💀 已销毁单位: {name}";
         }
@@ -1118,16 +1236,31 @@ private void ExecuteDestroy(object target)
             string name = weapon.Name;
             if (weapon.isMultiTile)
             {
-                // ✅ 多格兵器：彻底清理所有占据格子的引用
+                // ✅ 多格兵器：记录所有占据格子的撤销
+                var batchRecord = new EditorActionRecord
+                {
+                    actionType = EditorActionType.DeleteWeapon,
+                    subActions = new List<EditorActionRecord>()
+                };
                 foreach (var og in weapon.occupiedGrids.ToList())
                 {
                     if (og != null && IsInstanceValid(og))
                     {
+                        var sub = new EditorActionRecord
+                        {
+                            actionType = EditorActionType.DeleteWeapon,
+                            position = og.GridIndex,
+                            oldTerrain = og.gridType
+                        };
+                        if (og.weapon == weapon) sub.oldWeaponData = SerializeWeaponForUndo(weapon);
+                        batchRecord.subActions.Add(sub);
                         og.weapons.Remove(weapon);
                         if (og.weapon == weapon)
                             og.weapon = og.weapons.Count > 0 ? og.weapons[0] : null;
                     }
                 }
+                var helper = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+                helper?.PushAction(batchRecord);
                 weapon.occupiedGrids.Clear();
                 
                 // 从 GameManager 清理引用
@@ -1145,7 +1278,9 @@ private void ExecuteDestroy(object target)
             }
             else
             {
-                // 单格兵器走原有路径
+                var grid = weapon.grid;
+                if (grid != null)
+                    PushEditorAction(EditorActionType.DeleteWeapon, grid);
                 gameManager.RemoveWeapon(weapon);
                 spawnHintLabel.Text = $"💀 已销毁兵器: {name}";
             }
@@ -1153,9 +1288,12 @@ private void ExecuteDestroy(object target)
         else if (target is Facility facility)
         {
             string name = facility.Name;
-            if (facility.ParentGrid != null)
+            var grid = facility.ParentGrid;
+            if (grid != null)
+                PushEditorAction(EditorActionType.DeleteFacility, grid);
+            if (grid != null)
             {
-                facility.ParentGrid.city = null;
+                grid.city = null;
             }
             facility.QueueFree();
             spawnHintLabel.Text = $"💀 已销毁设施: {name}";
@@ -1287,7 +1425,33 @@ public void OnGridClickedForEdit(Grids grid)
 
     selectedGrid = grid;
 
-    // ✅ 优先处理贴图替换模式
+    // ✅ MapEditorHelper 模式优先处理
+    var mapHelper = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+    if (mapHelper != null)
+    {
+        if (mapHelper.IsShapeFillMode) { mapHelper.OnGridClickForShapeFill(grid); return; }
+        if (mapHelper.IsAreaFillMode || mapHelper.IsTerrainFillMode) { mapHelper.OnGridClickForAreaFill(grid); return; }
+        if (mapHelper.IsSelectMode) { mapHelper.OnGridClickForSelect(grid); return; }
+        if (mapHelper.IsPasteMode) { mapHelper.OnGridClickForPaste(grid); return; }
+        if (mapHelper.IsSymmetryMode) { mapHelper.OnGridClickForSymmetry(grid); return; }
+        // ✅ 贴图替换模式（MapEditorHelper启动的）
+        if (!string.IsNullOrEmpty(mapHelper.pendingTexturePath))
+        {
+            if (grid.infantry != null) { mapHelper.OnEntityClickForTextureReplace(grid.infantry); return; }
+            if (grid.weapon != null) { mapHelper.OnEntityClickForTextureReplace(grid.weapon); return; }
+            if (grid.city != null) { mapHelper.OnEntityClickForTextureReplace(grid.city); return; }
+        }
+    }
+
+    // ✅ EditorSaveSlots 等待保存目标
+    var saveSlots = GetTree()?.GetFirstNodeInGroup("editor_save_slots") as EditorSaveSlots;
+    if (saveSlots != null && saveSlots.IsWaitingForSaveTarget)
+    {
+        saveSlots.OnGridClickedForSave(grid);
+        return;
+    }
+
+    // ✅ 优先处理贴图替换模式（TerrainEditor自己的）
     if (isTextureApplyMode)
     {
         ExecuteTextureApply(grid);
@@ -1302,8 +1466,10 @@ public void OnGridClickedForEdit(Grids grid)
     // ✅ 批量地形放置模式：直接改地形，不经过选择菜单
     if (isBatchTerrainMode)
     {
+        var oldTerrain = grid.gridType;
         grid.gridType = batchTerrainType;
         UpdateGridVisual(grid);
+        PushEditorAction(EditorActionType.PlaceTerrain, grid, oldTerrain);
         return;
     }
 
@@ -1311,7 +1477,11 @@ public void OnGridClickedForEdit(Grids grid)
     if (currentSpawnMode != SpawnMode.None && !string.IsNullOrEmpty(selectedTemplatePath))
     {
         if (currentSpawnMode == SpawnMode.Unit)
+        {
             SpawnUnitAtGrid(grid, selectedTemplatePath, unitTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
+            // ✅ 对称放置：在镜像位置也生成单位
+            TrySpawnSymmetric(grid, selectedTemplatePath, unitTemplates.First(t => t.ScenePath == selectedTemplatePath).Team, SpawnMode.Unit);
+        }
         else if (currentSpawnMode == SpawnMode.Weapon)
         {
             // 检查是否多格兵器预览模式
@@ -1321,6 +1491,8 @@ public void OnGridClickedForEdit(Grids grid)
                 if (previewMultiTileGrids.Contains(grid))
                 {
                     ConfirmMultiTilePlacement();
+                    // ✅ 对称放置：在镜像位置也确认多格兵器
+                    TrySpawnSymmetric(grid, pendingMultiTileScenePath, pendingMultiTileTeam, SpawnMode.Weapon);
                 }
                 else
                 {
@@ -1339,7 +1511,11 @@ public void OnGridClickedForEdit(Grids grid)
             }
         }
         else if (currentSpawnMode == SpawnMode.Facility)
+        {
             SpawnFacilityAtGrid(grid, selectedTemplatePath, facilityTemplates.First(t => t.ScenePath == selectedTemplatePath).Team);
+            // ✅ 对称放置：在镜像位置也生成设施
+            TrySpawnSymmetric(grid, selectedTemplatePath, facilityTemplates.First(t => t.ScenePath == selectedTemplatePath).Team, SpawnMode.Facility);
+        }
         return;
     }
 
@@ -3301,8 +3477,45 @@ private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
     spawnHintLabel.Text = $"✅ 生成设施: {facility.GetType().Name} ({team})";
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
     
+    // ✅ 推送到撤销历史
+    PushEditorAction(EditorActionType.PlaceFacility, grid);
+    
     gameManager?.UpdateUnitLists();
     gameManager?.RefreshSpecializedUnitLists();
+}
+
+// ✅ 对称放置：在镜像位置生成相同实体
+private void TrySpawnSymmetric(Grids originGrid, string scenePath, string team, SpawnMode mode)
+{
+    var mapHelper = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+    if (mapHelper == null || !mapHelper.IsSymmetryMode || mapHelper.symmetryAxisLine < 0)
+        return;
+
+    var mirroredPos = mapHelper.GetMirroredPosition(originGrid.GridIndex);
+    if (mirroredPos == originGrid.GridIndex)
+        return;
+
+    int w = gridManager?.map?.GetLength(0) ?? 0;
+    int h = gridManager?.map?.GetLength(1) ?? 0;
+    if (mirroredPos.X < 0 || mirroredPos.X >= w || mirroredPos.Y < 0 || mirroredPos.Y >= h)
+        return;
+
+    var mirroredGrid = gridManager.map[mirroredPos.X, mirroredPos.Y];
+    if (mirroredGrid == null)
+        return;
+
+    switch (mode)
+    {
+        case SpawnMode.Unit:
+            SpawnUnitAtGrid(mirroredGrid, scenePath, team);
+            break;
+        case SpawnMode.Weapon:
+            SpawnWeaponAtGrid(mirroredGrid, scenePath, team);
+            break;
+        case SpawnMode.Facility:
+            SpawnFacilityAtGrid(mirroredGrid, scenePath, team);
+            break;
+    }
 }
 
 // ✅ 摧毁格子上的设施
@@ -3615,6 +3828,19 @@ public void SetEditMode(bool editMode)
         // ✅ 显示Extra配置按钮
         if (customConfigUI != null)
             customConfigUI.SetOpenButtonVisible(true);
+        // ✅ 显示编辑器助手和保存槽按钮
+        var helper = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+        if (helper != null)
+        {
+            var hBtn = helper.GetNodeOrNull<Button>("HelperToggleBtn");
+            if (hBtn != null) hBtn.Visible = true;
+        }
+        var slots = GetTree()?.GetFirstNodeInGroup("editor_save_slots") as EditorSaveSlots;
+        if (slots != null)
+        {
+            var sBtn = slots.GetNodeOrNull<Button>("SlotsToggleBtn");
+            if (sBtn != null) sBtn.Visible = true;
+        }
         
         // ✅ 同步全局配置面板中的复选框
         if (fogOfWarCheckBox != null)
@@ -3644,6 +3870,21 @@ public void SetEditMode(bool editMode)
         {
             customConfigUI.SetOpenButtonVisible(false);
             customConfigUI.Hide(); // 关闭配置面板
+        }
+        // ✅ 隐藏编辑器助手和保存槽按钮
+        var helperOff = GetTree()?.GetFirstNodeInGroup("map_editor_helper") as MapEditorHelper;
+        if (helperOff != null)
+        {
+            var hBtn = helperOff.GetNodeOrNull<Button>("HelperToggleBtn");
+            if (hBtn != null) hBtn.Visible = false;
+            helperOff.GetNodeOrNull<Panel>("HelperPanel")?.Hide();
+        }
+        var slotsOff = GetTree()?.GetFirstNodeInGroup("editor_save_slots") as EditorSaveSlots;
+        if (slotsOff != null)
+        {
+            var sBtn = slotsOff.GetNodeOrNull<Button>("SlotsToggleBtn");
+            if (sBtn != null) sBtn.Visible = false;
+            slotsOff.GetNodeOrNull<Panel>("SlotsPanel")?.Hide();
         }
 
         
@@ -3850,8 +4091,10 @@ private void OnTerrainSelected(GridType newTerrain)
                     if (grid != null && grid != lastBatchGrid)
                     {
                         lastBatchGrid = grid;
+                        var oldTerrain = grid.gridType;
                         grid.gridType = batchTerrainType;
                         UpdateGridVisual(grid);
+                        PushEditorAction(EditorActionType.PlaceTerrain, grid, oldTerrain);
                     }
                 }
             }
@@ -5023,7 +5266,7 @@ private void OpenWeaponTerrainMatrixEditor()
                 savedToDownloads = true;
             }
         }
-        catch (Exception ex)
+        catch (Exception )
         {
         }
 
@@ -5036,7 +5279,7 @@ private void OpenWeaponTerrainMatrixEditor()
                 File.WriteAllText(userPath, content);
                 savedPath = userPath;
             }
-            catch (Exception ex)
+            catch (Exception )
             {
             }
         }
@@ -5045,7 +5288,7 @@ private void OpenWeaponTerrainMatrixEditor()
         {
             DisplayServer.ClipboardSet(content);
         }
-        catch (Exception ex)
+        catch (Exception )
         {
         }
 
@@ -8361,20 +8604,29 @@ private void OpenWeaponTerrainMatrixEditor()
         GD.Print($"[TerrainEditor] 进入贴图替换模式: {targetType} -> {texturePath}");
     }
 
-    /// <summary>执行贴图替换到运行时实例</summary>
+    /// <summary>执行贴图替换到运行时实例（支持GIF/PNG/JPG/WebP）</summary>
     private void ExecuteTextureApply(Grids grid)
     {
         if (!isTextureApplyMode || string.IsNullOrEmpty(pendingTextureApplyPath)) return;
 
         try
         {
-            var image = new Image();
-            if (image.Load(pendingTextureApplyPath) != Error.Ok)
+            var texture = LoadTextureFromPath(pendingTextureApplyPath);
+            if (texture == null)
             {
-                spawnHintLabel.Text = "❌ 贴图加载失败";
+                spawnHintLabel.Text = "❌ 贴图加载失败（格式不支持或文件损坏）";
                 return;
             }
-            var texture = ImageTexture.CreateFromImage(image);
+
+            bool isGif = pendingTextureApplyPath.ToLower().EndsWith(".gif");
+            List<Texture2D> gifFrames = null;
+            if (isGif)
+            {
+                gifFrames = TryExtractGifFrames(pendingTextureApplyPath);
+                spawnHintLabel.Text = gifFrames != null && gifFrames.Count > 1
+                    ? $"🎞️ GIF已加载 {gifFrames.Count} 帧"
+                    : "⚠️ GIF只加载了第一帧（建议预转为PNG序列）";
+            }
 
             switch (pendingTextureApplyTargetType)
             {
@@ -8386,12 +8638,22 @@ private void OpenWeaponTerrainMatrixEditor()
                             unit.sprite.Texture = texture;
                             spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 贴图";
                         }
+                        // ✅ 同时支持AnimatedSprite2D的单位（如Mech/Flare）
+                        if (unit is Mech mech && mech.animSprite != null)
+                        {
+                            ApplyFramesToAnimSprite(mech.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "mech2" : "mech1");
+                            spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 动画贴图";
+                        }
+                        else if (unit is Flare flare && flare.animSprite != null)
+                        {
+                            ApplyFramesToAnimSprite(flare.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "Flare2" : "Flare1");
+                            spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 动画贴图";
+                        }
                     }
                     break;
                 case "兵器":
                     foreach (var weapon in grid.weapons.ToList())
                     {
-                        // ✅ 修复：AnimatedSprite2D 没有 Texture 属性
                         if (weapon?.GetNodeOrNull<Sprite2D>("Sprite2D") != null)
                         {
                             weapon.GetNode<Sprite2D>("Sprite2D").Texture = texture;
@@ -8411,14 +8673,16 @@ private void OpenWeaponTerrainMatrixEditor()
                 case "设施":
                     if (grid.city != null)
                     {
+                        var facSprite = grid.city.GetNodeOrNull<Sprite2D>("Sprite2D");
+                        if (facSprite != null) facSprite.Texture = texture;
                         spawnHintLabel.Text = $"✅ 已替换设施贴图";
                     }
                     break;
                 case "地形":
-                    var sprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
-                    if (sprite != null)
+                    var terrainSprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
+                    if (terrainSprite != null)
                     {
-                        sprite.Texture = texture;
+                        terrainSprite.Texture = texture;
                         spawnHintLabel.Text = "✅ 已替换地形贴图";
                     }
                     break;
@@ -8436,6 +8700,81 @@ private void OpenWeaponTerrainMatrixEditor()
         isTextureApplyMode = false;
         pendingTextureApplyPath = "";
         pendingTextureApplyTargetType = "";
+    }
+
+    // ========== ✅ GIF/图片加载辅助方法 ==========
+    public Texture2D LoadTextureFromPath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return null;
+        var image = new Image();
+        if (image.Load(path) == Error.Ok)
+            return ImageTexture.CreateFromImage(image);
+        return null;
+    }
+
+    /// <summary>尝试用ImageMagick或FFmpeg提取GIF所有帧</summary>
+    public List<Texture2D> TryExtractGifFrames(string gifPath)
+    {
+        var frames = new List<Texture2D>();
+        try
+        {
+            var tempDir = Path.Combine(OS.GetUserDataDir(), "temp_gif_frames");
+            System.IO.Directory.CreateDirectory(tempDir);
+            foreach (var f in System.IO.Directory.GetFiles(tempDir, "gif_frame_*.png"))
+                System.IO.File.Delete(f);
+
+            // 尝试ImageMagick (magick convert)
+            var proc = new System.Diagnostics.Process();
+            proc.StartInfo.FileName = "magick";
+            proc.StartInfo.Arguments = $"convert \"{gifPath}\" \"{tempDir}/gif_frame_%03d.png\"";
+            proc.StartInfo.UseShellExecute = false;
+            proc.StartInfo.RedirectStandardError = true;
+            proc.StartInfo.CreateNoWindow = true;
+            proc.Start();
+            proc.WaitForExit(5000);
+
+            if (proc.ExitCode != 0)
+            {
+                // 尝试FFmpeg
+                proc = new System.Diagnostics.Process();
+                proc.StartInfo.FileName = "ffmpeg";
+                proc.StartInfo.Arguments = $"-i \"{gifPath}\" -vsync 0 \"{tempDir}/gif_frame_%03d.png\"";
+                proc.StartInfo.UseShellExecute = false;
+                proc.StartInfo.RedirectStandardError = true;
+                proc.StartInfo.CreateNoWindow = true;
+                proc.Start();
+                proc.WaitForExit(5000);
+            }
+
+            var frameFiles = System.IO.Directory.GetFiles(tempDir, "gif_frame_*.png").OrderBy(f => f).ToArray();
+            foreach (var ff in frameFiles)
+            {
+                var img = new Image();
+                if (img.Load(ff) == Error.Ok)
+                    frames.Add(ImageTexture.CreateFromImage(img));
+            }
+        }
+        catch (Exception e)
+        {
+            GD.PrintErr($"[TerrainEditor] GIF提取失败: {e.Message}");
+        }
+        return frames.Count > 0 ? frames : null;
+    }
+
+    /// <summary>将帧列表应用到AnimatedSprite2D，创建default动画</summary>
+    public void ApplyFramesToAnimSprite(AnimatedSprite2D animSprite, List<Texture2D> frames, string animName = "default")
+    {
+        if (animSprite == null || frames == null || frames.Count == 0) return;
+var sf = new SpriteFrames();
+sf.AddAnimation(animName);
+#pragma warning disable CS0618
+sf.SetAnimationLoop(animName, true);
+#pragma warning restore CS0618
+sf.SetAnimationSpeed(animName, 5.0);
+        foreach (var tex in frames)
+            sf.AddFrame(animName, tex);
+        animSprite.SpriteFrames = sf;
+        animSprite.Play(animName);
     }
 
 
