@@ -121,104 +121,104 @@ private bool fogStateBeforeEdit = false;
 private readonly List<UnitTemplate> unitTemplates = new()
 {
     // 步兵类
-    new UnitTemplate { DisplayName = "🚶 步兵", ScenePath = "res://Prefabs/infantry(1).tscn", 
-        Category = "步兵", Team = "Player1", DisplayColor = new Color(0.4f, 0.7f, 0.4f), 
-        Description = "基础步兵单位，可占领城市" },
-    new UnitTemplate { DisplayName = "🦾 机甲", ScenePath = "res://Prefabs/mech.tscn", 
-        Category = "步兵", Team = "Player1", DisplayColor = new Color(0.5f, 0.6f, 0.4f), 
-        Description = "反装甲步兵，移动力较低" },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚶 步兵"), ScenePath = "res://Prefabs/infantry(1).tscn", 
+        Category = TranslateGroup.T("步兵"), Team = "Player1", DisplayColor = new Color(0.4f, 0.7f, 0.4f), 
+        Description = TranslateGroup.T("基础步兵单位，可占领城市") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🦾 机甲"), ScenePath = "res://Prefabs/mech.tscn", 
+        Category = TranslateGroup.T("步兵"), Team = "Player1", DisplayColor = new Color(0.5f, 0.6f, 0.4f), 
+        Description = TranslateGroup.T("反装甲步兵，移动力较低") },
 
     // 装甲类
-    new UnitTemplate { DisplayName = "🚗 轻型坦克", ScenePath = "res://Prefabs/light_tank.tscn", 
-        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.6f, 0.5f, 0.3f), 
-        Description = "快速装甲单位，攻防均衡" },
-    new UnitTemplate { DisplayName = "🚙 重型坦克", ScenePath = "res://Prefabs/Md_Tank.tscn", 
-        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.55f, 0.45f, 0.25f), 
-        Description = "重火力履带单位，对轻甲毁灭性，移动力5" },
-    new UnitTemplate { DisplayName = "🚀 火箭炮", ScenePath = "res://Prefabs/Rocket.tscn", 
-        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.7f, 0.4f, 0.3f), 
-        Description = "远程间接火力，射程3-5格" },
-    new UnitTemplate { DisplayName = "🔫 自行火炮", ScenePath = "res://Prefabs/Artillery.tscn", 
-        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.6f, 0.45f, 0.35f), 
-        Description = "中程火力支援，射程2-3格" },
-    new UnitTemplate { DisplayName = "🚛 运输车", ScenePath = "res://Prefabs/apc.tscn", 
-        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.5f, 0.55f, 0.4f), 
-        Description = "运输单位，可搭载步兵" },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚗 轻型坦克"), ScenePath = "res://Prefabs/light_tank.tscn", 
+        Category = TranslateGroup.T("装甲"), Team = "Player1", DisplayColor = new Color(0.6f, 0.5f, 0.3f), 
+        Description = TranslateGroup.T("快速装甲单位，攻防均衡") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚙 重型坦克"), ScenePath = "res://Prefabs/Md_Tank.tscn", 
+        Category = TranslateGroup.T("装甲"), Team = "Player1", DisplayColor = new Color(0.55f, 0.45f, 0.25f), 
+        Description = TranslateGroup.T("重火力履带单位，对轻甲毁灭性，移动力5") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚀 火箭炮"), ScenePath = "res://Prefabs/Rocket.tscn", 
+        Category = TranslateGroup.T("装甲"), Team = "Player1", DisplayColor = new Color(0.7f, 0.4f, 0.3f), 
+        Description = TranslateGroup.T("远程间接火力，射程3-5格") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🔫 自行火炮"), ScenePath = "res://Prefabs/Artillery.tscn", 
+        Category = TranslateGroup.T("装甲"), Team = "Player1", DisplayColor = new Color(0.6f, 0.45f, 0.35f), 
+        Description = TranslateGroup.T("中程火力支援，射程2-3格") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚛 运输车"), ScenePath = "res://Prefabs/apc.tscn", 
+        Category = TranslateGroup.T("装甲"), Team = "Player1", DisplayColor = new Color(0.5f, 0.55f, 0.4f), 
+        Description = TranslateGroup.T("运输单位，可搭载步兵") },
         new UnitTemplate { 
-    DisplayName = "🛡️ 防空高炮", 
+    DisplayName = TranslateGroup.T("🛡️ 防空高炮"), 
     ScenePath = "res://Prefabs/AntiAir.tscn", 
-    Category = "装甲", 
+    Category = TranslateGroup.T("装甲"), 
     Team = "Player1", 
     DisplayColor = new Color(0.5f, 0.7f, 0.3f),  
-    Description = "对步兵/机甲毁灭性，移动力6，弹药9发，无副武器" 
+    Description = TranslateGroup.T("对步兵/机甲毁灭性，移动力6，弹药9发，无副武器") 
 },
     new UnitTemplate { 
-    DisplayName = "🚙 侦察车", 
+    DisplayName = TranslateGroup.T("🚙 侦察车"), 
     ScenePath = "res://Prefabs/Recon.tscn", 
-    Category = "装甲", 
+    Category = TranslateGroup.T("装甲"), 
     Team = "Player1", 
     DisplayColor = new Color(0.5f, 0.6f, 0.3f),  
-    Description = "高视野侦察单位，移动力8，仅副武器，视野5" 
+    Description = TranslateGroup.T("高视野侦察单位，移动力8，仅副武器，视野5") 
 },
     new UnitTemplate { 
-    DisplayName = "🎯 反坦克炮", 
+    DisplayName = TranslateGroup.T("🎯 反坦克炮"), 
     ScenePath = "res://Prefabs/Anti_Tank.tscn", 
-    Category = "装甲", 
+    Category = TranslateGroup.T("装甲"), 
     Team = "Player1", 
     DisplayColor = new Color(0.55f, 0.5f, 0.3f),  
-    Description = "射程1-3反装甲单位，可近战反击，对地高伤害，弹药6发" 
+    Description = TranslateGroup.T("射程1-3反装甲单位，可近战反击，对地高伤害，弹药6发") 
 },
 
 
-    new UnitTemplate { DisplayName = "🔦 照明车", ScenePath = "res://Prefabs/Flare.tscn", 
-        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.6f, 0.55f, 0.3f), 
-        Description = "可发射照明弹驱散战争迷雾，移动力5，履带移动，仅副武器" },
-    new UnitTemplate { DisplayName = "🏍️ 摩托兵", ScenePath = "res://Prefabs/Bike.tscn", 
-        Category = "步兵", Team = "Player1", DisplayColor = new Color(0.5f, 0.5f, 0.35f), 
-        Description = "快速步兵单位，可占领城市，移动力5，轮胎移动" },
-    new UnitTemplate { DisplayName = "🚀 管道炮", ScenePath = "res://Prefabs/PipeRunner.tscn", 
-        Category = "装甲", Team = "Player1", DisplayColor = new Color(0.5f, 0.4f, 0.6f), 
-        Description = "仅限管道移动，远程间接火力，射程2-5" },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🔦 照明车"), ScenePath = "res://Prefabs/Flare.tscn", 
+        Category = TranslateGroup.T("装甲"), Team = "Player1", DisplayColor = new Color(0.6f, 0.55f, 0.3f), 
+        Description = TranslateGroup.T("可发射照明弹驱散战争迷雾，移动力5，履带移动，仅副武器") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🏍️ 摩托兵"), ScenePath = "res://Prefabs/Bike.tscn", 
+        Category = TranslateGroup.T("步兵"), Team = "Player1", DisplayColor = new Color(0.5f, 0.5f, 0.35f), 
+        Description = TranslateGroup.T("快速步兵单位，可占领城市，移动力5，轮胎移动") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚀 管道炮"), ScenePath = "res://Prefabs/PipeRunner.tscn", 
+        Category = TranslateGroup.T("装甲"), Team = "Player1", DisplayColor = new Color(0.5f, 0.4f, 0.6f), 
+        Description = TranslateGroup.T("仅限管道移动，远程间接火力，射程2-5") },
 
     // 特殊单位
-    new UnitTemplate { DisplayName = "🦠 史莱姆", ScenePath = "res://Prefabs/oozium.tscn", 
-        Category = "特殊", Team = "Player1", DisplayColor = new Color(0.4f, 0.3f, 0.6f), 
-        Description = "吞噬型单位，可消灭任何敌人" },
-    new UnitTemplate { DisplayName = "💣 飞弹", ScenePath = "res://Prefabs/FlyBomb.tscn", 
-        Category = "特殊", Team = "Player1", DisplayColor = new Color(0.9f, 0.3f, 0.1f), 
-        Description = "自爆单位，3格范围50%HP伤害，空军移动力9" },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🦠 史莱姆"), ScenePath = "res://Prefabs/oozium.tscn", 
+        Category = TranslateGroup.T("特殊"), Team = "Player1", DisplayColor = new Color(0.4f, 0.3f, 0.6f), 
+        Description = TranslateGroup.T("吞噬型单位，可消灭任何敌人") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("💣 飞弹"), ScenePath = "res://Prefabs/FlyBomb.tscn", 
+        Category = TranslateGroup.T("特殊"), Team = "Player1", DisplayColor = new Color(0.9f, 0.3f, 0.1f), 
+        Description = TranslateGroup.T("自爆单位，3格范围50%HP伤害，空军移动力9") },
 };
 
 private readonly List<UnitTemplate> weaponTemplates = new()
 {
-    new UnitTemplate { DisplayName = "⚫ 黑炮", ScenePath = "res://Prefabs/black_cannon.tscn", 
-        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.3f, 0.3f, 0.3f), 
-        Description = "三角形范围兵器，固定百分比伤害" },
-    new UnitTemplate { DisplayName = "🔴 激光炮", ScenePath = "res://Prefabs/Laser.tscn", 
-        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.9f, 0.2f, 0.2f), 
-        Description = "直线激光兵器，穿透攻击，可配置角度/射程/冷却" },
-    new UnitTemplate { DisplayName = "💎 黑水晶", ScenePath = "res://Prefabs/crystal.tscn", 
-        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.6f, 0.2f, 0.9f), 
-        Description = "环形范围治疗+补给兵器，还原原版AW黑水晶机制" },
-    new UnitTemplate { DisplayName = "🖤 大型黑炮", ScenePath = "res://Prefabs/large_cannon.tscn", 
-        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.2f, 0.2f, 0.2f), 
-        Description = "3×3多格占据兵器，仅弱点可攻击，摧毁后仍不可通行" },
-    new UnitTemplate { DisplayName = "☠️ 死光炮", ScenePath = "res://Prefabs/death_ray.tscn", 
-        Category = "兵器", Team = "Player1", DisplayColor = new Color(0.8f, 0.1f, 0.8f), 
-        Description = "3×3多格死光炮，四方向3格宽激光，摧毁后仍不可通行" },
+    new UnitTemplate { DisplayName = TranslateGroup.T("⚫ 黑炮"), ScenePath = "res://Prefabs/black_cannon.tscn", 
+        Category = TranslateGroup.T("兵器"), Team = "Player1", DisplayColor = new Color(0.3f, 0.3f, 0.3f), 
+        Description = TranslateGroup.T("三角形范围兵器，固定百分比伤害") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🔴 激光炮"), ScenePath = "res://Prefabs/Laser.tscn", 
+        Category = TranslateGroup.T("兵器"), Team = "Player1", DisplayColor = new Color(0.9f, 0.2f, 0.2f), 
+        Description = TranslateGroup.T("直线激光兵器，穿透攻击，可配置角度/射程/冷却") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("💎 黑水晶"), ScenePath = "res://Prefabs/crystal.tscn", 
+        Category = TranslateGroup.T("兵器"), Team = "Player1", DisplayColor = new Color(0.6f, 0.2f, 0.9f), 
+        Description = TranslateGroup.T("环形范围治疗+补给兵器，还原原版AW黑水晶机制") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🖤 大型黑炮"), ScenePath = "res://Prefabs/large_cannon.tscn", 
+        Category = TranslateGroup.T("兵器"), Team = "Player1", DisplayColor = new Color(0.2f, 0.2f, 0.2f), 
+        Description = TranslateGroup.T("3×3多格占据兵器，仅弱点可攻击，摧毁后仍不可通行") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("☠️ 死光炮"), ScenePath = "res://Prefabs/death_ray.tscn", 
+        Category = TranslateGroup.T("兵器"), Team = "Player1", DisplayColor = new Color(0.8f, 0.1f, 0.8f), 
+        Description = TranslateGroup.T("3×3多格死光炮，四方向3格宽激光，摧毁后仍不可通行") },
 };
 
 private readonly List<UnitTemplate> facilityTemplates = new()
 {
     new UnitTemplate { DisplayName = "🏙️ City", ScenePath = "res://Prefabs/City.tscn", 
-        Category = "设施", Team = "Player0", DisplayColor = new Color(0.8f, 0.6f, 0.2f), 
-        Description = "城市设施，可占领并提供补给" },
+        Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.8f, 0.6f, 0.2f), 
+        Description = TranslateGroup.T("城市设施，可占领并提供补给") },
     new UnitTemplate { DisplayName = "🏭 Base", ScenePath = "res://Prefabs/Base.tscn", 
-        Category = "设施", Team = "Player0", DisplayColor = new Color(0.7f, 0.5f, 0.3f), 
-        Description = "基地设施，可占领、补给并生产地面单位" },
+        Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.7f, 0.5f, 0.3f), 
+        Description = TranslateGroup.T("基地设施，可占领、补给并生产地面单位") },
     new UnitTemplate { DisplayName = "✈️ Airport", ScenePath = "res://Prefabs/AirPort.tscn", 
-        Category = "设施", Team = "Player0", DisplayColor = new Color(0.4f, 0.6f, 0.8f), 
-        Description = "机场设施，可占领、补给并生产空军单位" },
+        Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.4f, 0.6f, 0.8f), 
+        Description = TranslateGroup.T("机场设施，可占领、补给并生产空军单位") },
 };
 
 // UI 引用
@@ -338,7 +338,7 @@ public override void _Input(InputEvent @event)
             isTextureApplyMode = false;
             pendingTextureApplyPath = "";
             pendingTextureApplyTargetType = "";
-            spawnHintLabel.Text = "❌ 已取消贴图替换模式";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 已取消贴图替换模式");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
@@ -348,14 +348,14 @@ public override void _Input(InputEvent @event)
         if (saveSlotsEsc != null && saveSlotsEsc.IsWaitingForSaveTarget)
         {
             saveSlotsEsc.CancelPendingSave();
-            spawnHintLabel.Text = "❌ 已取消保存操作";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 已取消保存操作");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
         if (saveSlotsEsc != null && saveSlotsEsc.IsWaitingForLoadTarget)
         {
             saveSlotsEsc.CancelPendingLoad();
-            spawnHintLabel.Text = "❌ 已取消加载操作";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 已取消加载操作");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
@@ -376,7 +376,7 @@ public override void _Input(InputEvent @event)
         if (isMultiTilePreviewMode)
         {
             ClearMultiTilePreview();
-            spawnHintLabel.Text = "取消多格兵器放置";
+            TranslateGroup.SetText(spawnHintLabel, "取消多格兵器放置");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
@@ -393,7 +393,7 @@ public override void _Input(InputEvent @event)
             mapHelper.IsSelectMode || mapHelper.IsPasteMode || mapHelper.IsSymmetryMode))
         {
             mapHelper.CancelAllModes();
-            spawnHintLabel.Text = "❌ 已取消编辑器助手模式";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 已取消编辑器助手模式");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             return;
         }
@@ -421,7 +421,7 @@ private void CreateSpawnMenu()
 
     // 标题
     spawnTitleLabel = new Label();
-    spawnTitleLabel.Text = "🎮 单位/兵器/设施生成器";
+    TranslateGroup.SetText(spawnTitleLabel, "🎮 单位/兵器/设施生成器");
     spawnTitleLabel.HorizontalAlignment = HorizontalAlignment.Center;
     spawnTitleLabel.AddThemeFontSizeOverride("font_size", 20);
     spawnTitleLabel.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
@@ -438,28 +438,28 @@ private void CreateSpawnMenu()
     spawnModeSelector.AddThemeConstantOverride("separation", 8);
 
     spawnModeUnitBtn = new Button();
-    spawnModeUnitBtn.Text = "🚶 生成单位";
+    TranslateGroup.SetText(spawnModeUnitBtn, "🚶 生成单位");
     spawnModeUnitBtn.CustomMinimumSize = new Vector2(90, 36);
     spawnModeUnitBtn.AddThemeFontSizeOverride("font_size", 12);
     spawnModeUnitBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Unit);
     spawnModeSelector.AddChild(spawnModeUnitBtn);
 
     spawnModeWeaponBtn = new Button();
-    spawnModeWeaponBtn.Text = "⚔️ 生成兵器";
+    TranslateGroup.SetText(spawnModeWeaponBtn, "⚔️ 生成兵器");
     spawnModeWeaponBtn.CustomMinimumSize = new Vector2(90, 36);
     spawnModeWeaponBtn.AddThemeFontSizeOverride("font_size", 12);
     spawnModeWeaponBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Weapon);
     spawnModeSelector.AddChild(spawnModeWeaponBtn);
 
     spawnModeFacilityBtn = new Button();
-    spawnModeFacilityBtn.Text = "🏙️ 生成设施";
+    TranslateGroup.SetText(spawnModeFacilityBtn, "🏙️ 生成设施");
     spawnModeFacilityBtn.CustomMinimumSize = new Vector2(90, 36);
     spawnModeFacilityBtn.AddThemeFontSizeOverride("font_size", 12);
     spawnModeFacilityBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Facility);
     spawnModeSelector.AddChild(spawnModeFacilityBtn);
 
     destroyModeBtn = new Button();
-    destroyModeBtn.Text = "💀 销毁模式";
+    TranslateGroup.SetText(destroyModeBtn, "💀 销毁模式");
     destroyModeBtn.CustomMinimumSize = new Vector2(90, 36);
     destroyModeBtn.AddThemeFontSizeOverride("font_size", 12);
     destroyModeBtn.Pressed += ToggleDestroyMode;
@@ -475,13 +475,13 @@ private void CreateSpawnMenu()
     directionSelector.Visible = false;
 
     var dirLabel = new Label();
-    dirLabel.Text = "朝向:";
+    TranslateGroup.SetText(dirLabel, "朝向:");
     dirLabel.AddThemeFontSizeOverride("font_size", 12);
     dirLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
     dirLabel.CustomMinimumSize = new Vector2(40, 24);
     directionSelector.AddChild(dirLabel);
 
-    string[] dirLabels = { "⬆️ 上", "➡️ 右", "⬇️ 下", "⬅️ 左" };
+    string[] dirLabels = { TranslateGroup.T("⬆️ 上"), TranslateGroup.T("➡️ 右"), TranslateGroup.T("⬇️ 下"), TranslateGroup.T("⬅️ 左") };
     for (int i = 0; i < 4; i++)
     {
         int dirIndex = i; // 闭包捕获
@@ -501,7 +501,7 @@ private void CreateSpawnMenu()
 
     // 提示标签
     spawnHintLabel = new Label();
-    spawnHintLabel.Text = "选择模式开始...";
+    TranslateGroup.SetText(spawnHintLabel, "选择模式开始...");
     spawnHintLabel.HorizontalAlignment = HorizontalAlignment.Center;
     spawnHintLabel.AddThemeFontSizeOverride("font_size", 12);
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
@@ -552,11 +552,11 @@ private bool isDestroyMode = false;
 private void ToggleDestroyMode()
 {
     isDestroyMode = !isDestroyMode;
-    destroyModeBtn.Text = isDestroyMode ? "❌ 退出销毁" : "💀 销毁模式";
+    destroyModeBtn.Text = isDestroyMode ? TranslateGroup.T("❌ 退出销毁") : TranslateGroup.T("💀 销毁模式");
 
     if (isDestroyMode)
     {
-        spawnHintLabel.Text = "💀 销毁模式：点击格子上的单位/兵器即可销毁";
+        TranslateGroup.SetText(spawnHintLabel, "💀 销毁模式：点击格子上的单位/兵器即可销毁");
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(1f, 0.3f, 0.3f));
         currentSpawnMode = SpawnMode.None;
         selectedTemplatePath = "";
@@ -565,7 +565,7 @@ private void ToggleDestroyMode()
     }
     else
     {
-        spawnHintLabel.Text = "选择模式开始...";
+        TranslateGroup.SetText(spawnHintLabel, "选择模式开始...");
         spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
     }
 }
@@ -574,21 +574,21 @@ private string GetFriendlyTypeName(Infantry unit)
 {
     return unit switch
     {
-        Mech => "机甲",
-        MdTank => "重坦",
-        LightTank => "轻坦",
-        Recon => "侦察车",
-        Artillery => "火炮",
-        Rocket => "火箭",
-        AntiAir => "防空高炮",
-        APC => "运输",
-        Flare => "照明车",
-        Bike => "摩托兵",
-        PipeRunner => "管道炮",
-        Oozium => "史莱姆",
-                AntiTank => "反坦克炮",
-        FlyBomb => "飞弹",
-        Infantry => "步兵",
+        Mech => TranslateGroup.T("机甲"),
+        MdTank => TranslateGroup.T("重坦"),
+        LightTank => TranslateGroup.T("轻坦"),
+        Recon => TranslateGroup.T("侦察车"),
+        Artillery => TranslateGroup.T("火炮"),
+        Rocket => TranslateGroup.T("火箭"),
+        AntiAir => TranslateGroup.T("防空高炮"),
+        APC => TranslateGroup.T("运输"),
+        Flare => TranslateGroup.T("照明车"),
+        Bike => TranslateGroup.T("摩托兵"),
+        PipeRunner => TranslateGroup.T("管道炮"),
+        Oozium => TranslateGroup.T("史莱姆"),
+                AntiTank => TranslateGroup.T("反坦克炮"),
+        FlyBomb => TranslateGroup.T("飞弹"),
+        Infantry => TranslateGroup.T("步兵"),
         _ => unit.GetType().Name
     };
 }
@@ -597,10 +597,10 @@ private string GetFriendlyWeaponName(Weapon weapon)
 {
     return weapon switch
     {
-        DeathRay => "死光炮",
-        BlackCannon => "黑炮",
-        Laser => "激光炮",
-        Crystal => "黑水晶",
+        DeathRay => TranslateGroup.T("死光炮"),
+        BlackCannon => TranslateGroup.T("黑炮"),
+        Laser => TranslateGroup.T("激光炮"),
+        Crystal => TranslateGroup.T("黑水晶"),
         _ => weapon.GetType().Name
     };
 }
@@ -610,7 +610,7 @@ private void SwitchSpawnMode(SpawnMode mode)
 {
     currentSpawnMode = mode;
     isDestroyMode = false;
-    destroyModeBtn.Text = "💀 销毁模式";
+    TranslateGroup.SetText(destroyModeBtn, "💀 销毁模式");
 
     UpdateModeButtonStyles();
     RefreshSpawnButtons();
@@ -715,10 +715,10 @@ private void RefreshSpawnButtons()
 
     spawnHintLabel.Text = currentSpawnMode switch
     {
-        SpawnMode.Unit => "🚶 选择单位模板，然后点击地图格子生成",
-        SpawnMode.Weapon => "⚔️ 选择兵器模板，然后点击地图格子生成",
-        SpawnMode.Facility => "🏙️ 选择设施模板，然后点击地图格子生成",
-        _ => "选择模式开始..."
+        SpawnMode.Unit => TranslateGroup.T("🚶 选择单位模板，然后点击地图格子生成"),
+        SpawnMode.Weapon => TranslateGroup.T("⚔️ 选择兵器模板，然后点击地图格子生成"),
+        SpawnMode.Facility => TranslateGroup.T("🏙️ 选择设施模板，然后点击地图格子生成"),
+        _ => TranslateGroup.T("选择模式开始...")
     };
     spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.9f, 0.6f));
 }
@@ -953,7 +953,7 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
     {
         if (grid.weapon != null)
         {
-            spawnHintLabel.Text = "❌ 该格子已有兵器，不能放置单位";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 该格子已有兵器，不能放置单位");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
             return;
         }
@@ -966,7 +966,7 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
         var unit = scene.Instantiate<Infantry>();
         if (unit == null)
         {
-            spawnHintLabel.Text = "❌ 实例化失败";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 实例化失败");
             return;
         }
 
@@ -995,7 +995,7 @@ private void SpawnUnitAtGrid(Grids grid, string scenePath, string team)
             {
                 gameManager.unitManager.units.RemoveChild(unit);
             }
-            spawnHintLabel.Text = "❌ 绑定格子失败";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 绑定格子失败");
             return;
         }
 
@@ -1043,7 +1043,7 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
     {
         if (grid.weapon != null)
         {
-            spawnHintLabel.Text = "❌ 该格子已有兵器";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 该格子已有兵器");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
             return;
         }
@@ -1065,7 +1065,7 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
         var weapon = scene.Instantiate<Weapon>();
         if (weapon == null)
         {
-            spawnHintLabel.Text = "❌ 兵器实例化失败";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 兵器实例化失败");
             return;
         }
 
@@ -1099,7 +1099,7 @@ private void SpawnWeaponAtGrid(Grids grid, string scenePath, string team)
             {
                 gameManager.weaponManager.weaponsNode.RemoveChild(weapon);
             }
-            spawnHintLabel.Text = "❌ 兵器绑定格子失败";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 兵器绑定格子失败");
             return;
         }
         gameManager.weaponManager.AllWeapons.Add(weapon);
@@ -1162,7 +1162,7 @@ private void DestroyTargetAtGrid(Grids grid)
 
     if (allTargets.Count == 0)
     {
-        spawnHintLabel.Text = "⚠️ 该格子没有可销毁的目标";
+        TranslateGroup.SetText(spawnHintLabel, "⚠️ 该格子没有可销毁的目标");
         return;
     }
 
@@ -1224,7 +1224,7 @@ private void DestroyTargetAtGrid(Grids grid)
         hbox.AddThemeConstantOverride("separation", 20);
 
         var confirmBtn = new Button();
-        confirmBtn.Text = "💀 确认销毁";
+        TranslateGroup.SetText(confirmBtn, "💀 确认销毁");
         confirmBtn.CustomMinimumSize = new Vector2(100, 36);
         confirmBtn.Pressed += () => {
             dialog.QueueFree();
@@ -1233,7 +1233,7 @@ private void DestroyTargetAtGrid(Grids grid)
         hbox.AddChild(confirmBtn);
 
         var cancelBtn = new Button();
-        cancelBtn.Text = "❌ 取消";
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
         cancelBtn.CustomMinimumSize = new Vector2(100, 36);
         cancelBtn.Pressed += () => dialog.QueueFree();
         hbox.AddChild(cancelBtn);
@@ -1394,7 +1394,7 @@ private void ShowDestroySelectionMenu(Grids grid, List<object> targets)
         selectionButtonContainer.AddChild(btn);
     }
 
-    var cancelBtn = CreateSelectionButton("❌ 取消", new Color(0.5f, 0.5f, 0.5f), CloseSelectionMenu);
+    var cancelBtn = CreateSelectionButton(TranslateGroup.T("❌ 取消"), new Color(0.5f, 0.5f, 0.5f), CloseSelectionMenu);
     selectionButtonContainer.AddChild(cancelBtn);
 
     var viewportSize = GetViewport().GetVisibleRect().Size;
@@ -1442,7 +1442,7 @@ private void OpenSpawnMenu()
     foreach (var child in spawnButtonContainer.GetChildren())
         child.QueueFree();
 
-    spawnHintLabel.Text = "选择生成模式...";
+    TranslateGroup.SetText(spawnHintLabel, "选择生成模式...");
 }
 
 private void CloseSpawnMenu()
@@ -1485,7 +1485,7 @@ public void OnGridClickedForEdit(Grids grid)
         else
         {
             ClearMultiTilePreview();
-            spawnHintLabel.Text = "❌ 已取消预览（点击范围外）";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 已取消预览（点击范围外）");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             if (pendingSpawnMode != SpawnMode.None)
             {
@@ -1650,7 +1650,7 @@ public void OnGridClickedForEdit(Grids grid)
     allTargets.Add(new EditTarget
     {
         TargetType = "grid",
-        DisplayName = "🟫 修改格子地形/属性",
+        DisplayName = TranslateGroup.T("🟫 修改格子地形/属性"),
         TargetObject = grid,
         Color = new Color(0.4f, 0.7f, 0.4f)
     });
@@ -1658,7 +1658,7 @@ public void OnGridClickedForEdit(Grids grid)
     allTargets.Add(new EditTarget
     {
         TargetType = "spawn",
-        DisplayName = "🎮 生成新单位/兵器...",
+        DisplayName = TranslateGroup.T("🎮 生成新单位/兵器..."),
         TargetObject = null,
         Color = new Color(0.4f, 0.6f, 0.9f)
     });
@@ -1941,7 +1941,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
         {
             var dictin = value as Godot.Collections.Dictionary<string, int>;
             bool isPrimary = (currentEditingTarget as Infantry)?.attackMatrix == dict;
-            string title = isPrimary ? "主武器" : "副武器";
+            string title = isPrimary ? TranslateGroup.T("主武器") : TranslateGroup.T("副武器");
             Color color = isPrimary ? Colors.Red : Colors.Blue;
             return CreateAttackMatrixEditor(dictin, title, color, (newDict) => onChanged(newDict));
         }
@@ -2016,13 +2016,13 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
         mainVbox.AddThemeConstantOverride("separation", 6);
 
         var titleLabel = new Label();
-        titleLabel.Text = "角度配置 (°)";
+        TranslateGroup.SetText(titleLabel, "角度配置 (°)");
         titleLabel.AddThemeFontSizeOverride("font_size", 13);
         titleLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         mainVbox.AddChild(titleLabel);
 
         var hintLabel = new Label();
-        hintLabel.Text = "勾选=启用该角度发射";
+        TranslateGroup.SetText(hintLabel, "勾选=启用该角度发射");
         hintLabel.AddThemeFontSizeOverride("font_size", 10);
         hintLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.6f));
         mainVbox.AddChild(hintLabel);
@@ -2040,7 +2040,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
             if (dict == null || dict.Count == 0)
             {
                 var emptyLabel = new Label();
-                emptyLabel.Text = "(无配置)";
+                TranslateGroup.SetText(emptyLabel, "(无配置)");
                 emptyLabel.AddThemeFontSizeOverride("font_size", 11);
                 emptyLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
                 anglesContainer.AddChild(emptyLabel);
@@ -2078,13 +2078,13 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
                 row.AddChild(checkBox);
 
                 var statusLabel = new Label();
-                statusLabel.Text = currentValue ? "✓ 启用" : "✗ 禁用";
+                statusLabel.Text = currentValue ? TranslateGroup.T("✓ 启用") : TranslateGroup.T("✗ 禁用");
                 statusLabel.AddThemeFontSizeOverride("font_size", 10);
                 statusLabel.AddThemeColorOverride("font_color", currentValue ? new Color(0.3f, 1, 0.3f) : new Color(1, 0.3f, 0.3f));
                 row.AddChild(statusLabel);
 
                 var deleteBtn = new Button();
-                deleteBtn.Text = "删除";
+                TranslateGroup.SetText(deleteBtn, "删除");
                 deleteBtn.CustomMinimumSize = new Vector2(50, 22);
                 deleteBtn.AddThemeFontSizeOverride("font_size", 10);
                 float deleteAngle = kvp.Key;
@@ -2108,7 +2108,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
         mainVbox.AddChild(addSeparator);
 
         var addTitle = new Label();
-        addTitle.Text = "添加新角度:";
+        TranslateGroup.SetText(addTitle, "添加新角度:");
         addTitle.AddThemeFontSizeOverride("font_size", 12);
         addTitle.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.3f));
         mainVbox.AddChild(addTitle);
@@ -2126,7 +2126,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
         addRow.AddChild(angleSpin);
 
         var addBtn = new Button();
-        addBtn.Text = "添加";
+        TranslateGroup.SetText(addBtn, "添加");
         addBtn.CustomMinimumSize = new Vector2(60, 28);
         addBtn.AddThemeFontSizeOverride("font_size", 11);
         addBtn.Pressed += () => {
@@ -2150,7 +2150,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
         var presetRow = new HBoxContainer();
         presetRow.AddThemeConstantOverride("separation", 4);
         var presetLabel = new Label();
-        presetLabel.Text = "快速添加:";
+        TranslateGroup.SetText(presetLabel, "快速添加:");
         presetLabel.AddThemeFontSizeOverride("font_size", 10);
         presetRow.AddChild(presetLabel);
 
@@ -2179,7 +2179,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
         if (currentEditingTarget is Laser)
         {
             var applyBtn = new Button();
-            applyBtn.Text = "🔄 应用角度配置到激光炮";
+            TranslateGroup.SetText(applyBtn, "🔄 应用角度配置到激光炮");
             applyBtn.CustomMinimumSize = new Vector2(200, 32);
             applyBtn.AddThemeFontSizeOverride("font_size", 12);
             applyBtn.AddThemeColorOverride("font_color", Colors.Yellow);
@@ -2214,7 +2214,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
     titleLabel.AddThemeColorOverride("font_color", titleColor);
     mainVbox.AddChild(titleLabel);
 
-    if (title == "主武器")
+    if (title == TranslateGroup.T("主武器"))
     {
         var mulLabel = new Label();
         mulLabel.Text = $"反击系数: {((Infantry)currentEditingTarget).counterMul:F1}";
@@ -2262,7 +2262,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
             hintLabel.AddThemeColorOverride("font_color", Colors.Red);
             hbox.AddChild(hintLabel);
         }
-        else if (title == "主武器")
+        else if (title == TranslateGroup.T("主武器"))
         {
             float mul = ((Infantry)currentEditingTarget).counterMul;
             int counterVal = Mathf.RoundToInt(currentValue * mul);
@@ -2321,7 +2321,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
 
         selectionTitleLabel = new Label();
         selectionTitleLabel.Name = "SelectionTitle";
-        selectionTitleLabel.Text = "选择编辑目标";
+        TranslateGroup.SetText(selectionTitleLabel, "选择编辑目标");
         selectionTitleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         selectionTitleLabel.AddThemeFontSizeOverride("font_size", 20);
         selectionTitleLabel.AddThemeColorOverride("font_color", Colors.Yellow);
@@ -2361,7 +2361,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
     dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
 
     var dragHint = new Label();
-    dragHint.Text = "⋮⋮ 拖拽移动";
+    TranslateGroup.SetText(dragHint, "⋮⋮ 拖拽移动");
     dragHint.AddThemeFontSizeOverride("font_size", 10);
     dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
     dragHint.Position = new Vector2(8, 2);
@@ -2395,7 +2395,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         handleStyle.SetCornerRadiusAll(8);
         dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
         var dragHint = new Label();
-        dragHint.Text = "⋮⋮ 拖拽移动";
+        TranslateGroup.SetText(dragHint, "⋮⋮ 拖拽移动");
         dragHint.AddThemeFontSizeOverride("font_size", 10);
         dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
         dragHint.Position = new Vector2(8, 2);
@@ -2409,7 +2409,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
 
         propertyEditorTitle = new Label();
         propertyEditorTitle.Name = "PropertyEditorTitle";
-        propertyEditorTitle.Text = "属性编辑器";
+        TranslateGroup.SetText(propertyEditorTitle, "属性编辑器");
         propertyEditorTitle.AddThemeFontSizeOverride("font_size", 18);
         propertyEditorTitle.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
         propertyEditorTitle.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -2437,7 +2437,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         propertyEditorPanel.AddChild(propertyScrollContainer);
 
         propertyEditorSaveBtn = new Button();
-        propertyEditorSaveBtn.Text = "💾 保存修改";
+        TranslateGroup.SetText(propertyEditorSaveBtn, "💾 保存修改");
         propertyEditorSaveBtn.CustomMinimumSize = new Vector2(200, 40);
         propertyEditorSaveBtn.Position = new Vector2(90, 580);
         propertyEditorSaveBtn.AddThemeFontSizeOverride("font_size", 16);
@@ -2459,7 +2459,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
     {
         modeToggleButton = new Button();
         modeToggleButton.Name = "ModeToggleButton";
-        modeToggleButton.Text = "🛠️ 编辑模式";
+        TranslateGroup.SetText(modeToggleButton, "🛠️ 编辑模式");
         modeToggleButton.CustomMinimumSize = new Vector2(140, 50);
 
         var style = new StyleBoxFlat();
@@ -2497,7 +2497,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         terrainMenuPanel.AddThemeStyleboxOverride("panel", panelStyle);
 
         terrainTitleLabel = new Label();
-        terrainTitleLabel.Text = "选择地形类型";
+        TranslateGroup.SetText(terrainTitleLabel, "选择地形类型");
         terrainTitleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         terrainTitleLabel.AddThemeFontSizeOverride("font_size", 18);
         terrainTitleLabel.AddThemeColorOverride("font_color", Colors.Yellow);
@@ -2545,7 +2545,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
     dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
     
     var dragHint = new Label();
-    dragHint.Text = "⋮⋮ 拖拽移动";
+    TranslateGroup.SetText(dragHint, "⋮⋮ 拖拽移动");
     dragHint.AddThemeFontSizeOverride("font_size", 10);
     dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
     dragHint.Position = new Vector2(8, 2);
@@ -2595,7 +2595,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
         }
 
         var gridBtn = CreateSelectionButton(
-            "🟫 修改格子地形/属性",
+            TranslateGroup.T("🟫 修改格子地形/属性"),
             new Color(0.4f, 0.7f, 0.4f),
             () => OpenTerrainMenu(grid)
         );
@@ -2604,7 +2604,7 @@ private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string 
 
         // ✅ 设施更改按钮
         var facilityBtn = CreateSelectionButton(
-            "🏙️ 设施更改",
+            TranslateGroup.T("🏙️ 设施更改"),
             new Color(0.8f, 0.6f, 0.2f),
             () => OpenFacilityMenu(grid)
         );
@@ -2795,7 +2795,7 @@ private void BuildGridPropertyEditor(Grids grid)
 {
     // 基础属性
     var basicLabel = new Label();
-    basicLabel.Text = "=== 基础属性 ===";
+    TranslateGroup.SetText(basicLabel, "=== 基础属性 ===");
     basicLabel.AddThemeFontSizeOverride("font_size", 14);
     basicLabel.AddThemeColorOverride("font_color", Colors.Yellow);
     propertyContainer.AddChild(basicLabel);
@@ -2806,7 +2806,7 @@ private void BuildGridPropertyEditor(Grids grid)
     if (grid.city != null)
     {
         var cityLabel = new Label();
-        cityLabel.Text = "=== City 属性 ===";
+        TranslateGroup.SetText(cityLabel, "=== City 属性 ===");
         cityLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         propertyContainer.AddChild(cityLabel);
 
@@ -2834,7 +2834,7 @@ private void BuildGridPropertyEditor(Grids grid)
 
         // ✅ 生产模块
         var prodLabel = new Label();
-        prodLabel.Text = "=== 生产模块 ===";
+        TranslateGroup.SetText(prodLabel, "=== 生产模块 ===");
         prodLabel.AddThemeFontSizeOverride("font_size", 14);
         prodLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
         propertyContainer.AddChild(prodLabel);
@@ -2854,7 +2854,7 @@ private void BuildGridPropertyEditor(Grids grid)
 
     // ✅ 格子视野系统
     var visionLabel = new Label();
-    visionLabel.Text = "=== 格子视野系统 ===";
+    TranslateGroup.SetText(visionLabel, "=== 格子视野系统 ===");
     visionLabel.AddThemeFontSizeOverride("font_size", 14);
     visionLabel.AddThemeColorOverride("font_color", new Color(1f, 0.6f, 0.2f));
     propertyContainer.AddChild(visionLabel);
@@ -2884,7 +2884,7 @@ private void BuildGridPropertyEditor(Grids grid)
 
     // 自定义伤害
     var damageLabel = new Label();
-    damageLabel.Text = "=== 自定义伤害 ===";
+    TranslateGroup.SetText(damageLabel, "=== 自定义伤害 ===");
     damageLabel.AddThemeFontSizeOverride("font_size", 14);
     damageLabel.AddThemeColorOverride("font_color", new Color(1f, 0.3f, 0.3f));
     propertyContainer.AddChild(damageLabel);
@@ -2900,7 +2900,7 @@ private void BuildGridPropertyEditor(Grids grid)
 
     // 弹药/燃料
     var ammoLabel = new Label();
-    ammoLabel.Text = "=== 弹药/燃料 ===";
+    TranslateGroup.SetText(ammoLabel, "=== 弹药/燃料 ===");
     ammoLabel.AddThemeFontSizeOverride("font_size", 14);
     ammoLabel.AddThemeColorOverride("font_color", new Color(0.3f, 0.7f, 1f));
     propertyContainer.AddChild(ammoLabel);
@@ -2920,7 +2920,7 @@ private void BuildGridPropertyEditor(Grids grid)
     
     // ✅ 新增：格子上的单位/兵器列表（只读）
     var unitsLabel = new Label();
-    unitsLabel.Text = "=== 当前格子内容 ===";
+    TranslateGroup.SetText(unitsLabel, "=== 当前格子内容 ===");
     unitsLabel.AddThemeFontSizeOverride("font_size", 14);
     unitsLabel.AddThemeColorOverride("font_color", new Color(0.4f, 0.8f, 1f));
     propertyContainer.AddChild(unitsLabel);
@@ -2934,7 +2934,7 @@ private void BuildGridPropertyEditor(Grids grid)
     private void AddUnitVisionFields(Infantry unit)
     {
         var visionLabel = new Label();
-        visionLabel.Text = "=== 战争迷雾视野 ===";
+        TranslateGroup.SetText(visionLabel, "=== 战争迷雾视野 ===");
         visionLabel.AddThemeFontSizeOverride("font_size", 14);
         visionLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
         propertyContainer.AddChild(visionLabel);
@@ -2950,7 +2950,7 @@ private void BuildGridPropertyEditor(Grids grid)
         if (unit.overrideGlobalTerrainBonus)
         {
             var matrixLabel = new Label();
-            matrixLabel.Text = "--- 单位专属地形视野加成 ---";
+            TranslateGroup.SetText(matrixLabel, "--- 单位专属地形视野加成 ---");
             matrixLabel.AddThemeFontSizeOverride("font_size", 12);
             matrixLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             propertyContainer.AddChild(matrixLabel);
@@ -2967,7 +2967,7 @@ private void BuildGridPropertyEditor(Grids grid)
     private void AddWeaponVisionFields(Weapon weapon)
     {
         var visionLabel = new Label();
-        visionLabel.Text = "=== 战争迷雾视野 ===";
+        TranslateGroup.SetText(visionLabel, "=== 战争迷雾视野 ===");
         visionLabel.AddThemeFontSizeOverride("font_size", 14);
         visionLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
         propertyContainer.AddChild(visionLabel);
@@ -2984,7 +2984,7 @@ private void BuildGridPropertyEditor(Grids grid)
         if (weapon.overrideGlobalTerrainBonus)
         {
             var matrixLabel = new Label();
-            matrixLabel.Text = "--- 兵器专属地形视野加成 ---";
+            TranslateGroup.SetText(matrixLabel, "--- 兵器专属地形视野加成 ---");
             matrixLabel.AddThemeFontSizeOverride("font_size", 12);
             matrixLabel.AddThemeColorOverride("font_color", Colors.Yellow);
             propertyContainer.AddChild(matrixLabel);
@@ -3001,7 +3001,7 @@ private void BuildGridPropertyEditor(Grids grid)
     private void AddLargeCannonFields(LargeCannon lc)
     {
         var sectionLabel = new Label();
-        sectionLabel.Text = "=== 大型黑炮专属 ===";
+        TranslateGroup.SetText(sectionLabel, "=== 大型黑炮专属 ===");
         sectionLabel.AddThemeFontSizeOverride("font_size", 14);
         sectionLabel.AddThemeColorOverride("font_color", new Color(1f, 0.6f, 0.2f));
         sectionLabel.CustomMinimumSize = new Vector2(0, 28);
@@ -3009,7 +3009,7 @@ private void BuildGridPropertyEditor(Grids grid)
 
         // 方向旋转按钮
         var dirLabel = new Label();
-        dirLabel.Text = "🧭 方向:";
+        TranslateGroup.SetText(dirLabel, "🧭 方向:");
         dirLabel.AddThemeFontSizeOverride("font_size", 12);
         dirLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
         propertyContainer.AddChild(dirLabel);
@@ -3018,7 +3018,7 @@ private void BuildGridPropertyEditor(Grids grid)
         dirHBox.AddThemeConstantOverride("separation", 6);
         dirHBox.CustomMinimumSize = new Vector2(0, 36);
 
-        string[] dirNames = { "⬆️上", "➡️右", "⬇️下", "⬅️左" };
+        string[] dirNames = { TranslateGroup.T("⬆️上"), TranslateGroup.T("➡️右"), TranslateGroup.T("⬇️下"), TranslateGroup.T("⬅️左") };
         var dirValues = new[] { BlackCannon.CannonDirection.Up, BlackCannon.CannonDirection.Right, BlackCannon.CannonDirection.Down, BlackCannon.CannonDirection.Left };
 
         for (int i = 0; i < 4; i++)
@@ -3044,7 +3044,7 @@ private void BuildGridPropertyEditor(Grids grid)
         rotateHBox.AddThemeConstantOverride("separation", 8);
         rotateHBox.CustomMinimumSize = new Vector2(0, 32);
         var rotateLabel = new Label();
-        rotateLabel.Text = "🔁 允许旋转:";
+        TranslateGroup.SetText(rotateLabel, "🔁 允许旋转:");
         rotateLabel.CustomMinimumSize = new Vector2(120, 28);
         rotateLabel.AddThemeFontSizeOverride("font_size", 12);
         rotateLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
@@ -3062,7 +3062,7 @@ private void BuildGridPropertyEditor(Grids grid)
         victoryHBox.AddThemeConstantOverride("separation", 8);
         victoryHBox.CustomMinimumSize = new Vector2(0, 32);
         var victoryLabel = new Label();
-        victoryLabel.Text = "🏆 介入胜利判定:";
+        TranslateGroup.SetText(victoryLabel, "🏆 介入胜利判定:");
         victoryLabel.CustomMinimumSize = new Vector2(120, 28);
         victoryLabel.AddThemeFontSizeOverride("font_size", 12);
         victoryLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
@@ -3080,7 +3080,7 @@ private void BuildGridPropertyEditor(Grids grid)
         countHBox.AddThemeConstantOverride("separation", 8);
         countHBox.CustomMinimumSize = new Vector2(0, 32);
         var countLabel = new Label();
-        countLabel.Text = "📊 需摧毁数量:";
+        TranslateGroup.SetText(countLabel, "📊 需摧毁数量:");
         countLabel.CustomMinimumSize = new Vector2(120, 28);
         countLabel.AddThemeFontSizeOverride("font_size", 12);
         countLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
@@ -3125,7 +3125,7 @@ private void BuildGridPropertyEditor(Grids grid)
         mainVbox.AddThemeConstantOverride("separation", 4);
 
         var hintLabel = new Label();
-        hintLabel.Text = "每个地形的视野加成（可正可负）";
+        TranslateGroup.SetText(hintLabel, "每个地形的视野加成（可正可负）");
         hintLabel.AddThemeFontSizeOverride("font_size", 10);
         hintLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.6f));
         mainVbox.AddChild(hintLabel);
@@ -3449,13 +3449,13 @@ private void OpenFacilityMenu(Grids grid)
     {
         // 没有设施：显示生成按钮
         var noFacilityLabel = new Label();
-        noFacilityLabel.Text = "当前格子没有设施";
+        TranslateGroup.SetText(noFacilityLabel, "当前格子没有设施");
         noFacilityLabel.AddThemeFontSizeOverride("font_size", 14);
         noFacilityLabel.AddThemeColorOverride("font_color", Colors.Gray);
         propertyContainer.AddChild(noFacilityLabel);
         
         var spawnBtn = new Button();
-        spawnBtn.Text = "🏙️ 生成 City 设施";
+        TranslateGroup.SetText(spawnBtn, "🏙️ 生成 City 设施");
         spawnBtn.CustomMinimumSize = new Vector2(200, 40);
         spawnBtn.Pressed += () => SpawnFacilityAtGrid(grid);
         propertyContainer.AddChild(spawnBtn);
@@ -3474,7 +3474,7 @@ private void OpenFacilityMenu(Grids grid)
         
         // 摧毁按钮
         var destroyBtn = new Button();
-        destroyBtn.Text = "💥 摧毁设施";
+        TranslateGroup.SetText(destroyBtn, "💥 摧毁设施");
         destroyBtn.CustomMinimumSize = new Vector2(200, 40);
         destroyBtn.AddThemeColorOverride("font_color", Colors.Red);
         destroyBtn.Pressed += () => DestroyFacilityAtGrid(grid);
@@ -3496,14 +3496,14 @@ private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
 {
     if (grid.city != null)
     {
-        spawnHintLabel.Text = "❌ 该格子已有设施";
+        TranslateGroup.SetText(spawnHintLabel, "❌ 该格子已有设施");
         spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
         return;
     }
     
     if (string.IsNullOrEmpty(scenePath))
     {
-        spawnHintLabel.Text = "❌ 场景路径为空";
+        TranslateGroup.SetText(spawnHintLabel, "❌ 场景路径为空");
         spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
         return;
     }
@@ -3525,7 +3525,7 @@ private void SpawnFacilityAtGrid(Grids grid, string scenePath, string team)
     var facility = scene.Instantiate<Facility>();
     if (facility == null)
     {
-        spawnHintLabel.Text = "❌ 设施实例化失败";
+        TranslateGroup.SetText(spawnHintLabel, "❌ 设施实例化失败");
         spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
         return;
     }
@@ -3630,13 +3630,13 @@ private void CloseTerrainMenu()
         customDamageContainer.AddThemeConstantOverride("separation", 5);
 
         var sectionTitle = new Label();
-        sectionTitle.Text = "=== 格子自定义伤害 ===";
+        TranslateGroup.SetText(sectionTitle, "=== 格子自定义伤害 ===");
         sectionTitle.AddThemeFontSizeOverride("font_size", 13);
         sectionTitle.AddThemeColorOverride("font_color", Colors.Yellow);
         customDamageContainer.AddChild(sectionTitle);
 
         var destroyHBox = new HBoxContainer();
-        var destroyLabel = new Label { Text = "可摧毁单位:", CustomMinimumSize = new Vector2(100, 22) };
+        var destroyLabel = new Label { Text = TranslateGroup.T("可摧毁单位:"), CustomMinimumSize = new Vector2(100, 22) };
         destroyLabel.AddThemeFontSizeOverride("font_size", 11);
         canDestroyCheckBox = new CheckBox { ButtonPressed = true };
         destroyHBox.AddChild(destroyLabel);
@@ -3644,7 +3644,7 @@ private void CloseTerrainMenu()
         customDamageContainer.AddChild(destroyHBox);
 
         var damageHBox = new HBoxContainer();
-        var damageLabel = new Label { Text = "固定伤害/回合:", CustomMinimumSize = new Vector2(100, 22) };
+        var damageLabel = new Label { Text = TranslateGroup.T("固定伤害/回合:"), CustomMinimumSize = new Vector2(100, 22) };
         damageLabel.AddThemeFontSizeOverride("font_size", 11);
         fixedDamageSpinBox = new SpinBox { MinValue = -999, MaxValue = 999, Value = 0, CustomMinimumSize = new Vector2(80, 22) };
         fixedDamageSpinBox.AddThemeFontSizeOverride("font_size", 11);
@@ -3653,7 +3653,7 @@ private void CloseTerrainMenu()
         customDamageContainer.AddChild(damageHBox);
 
         var attackHBox = new HBoxContainer();
-        var attackLabel = new Label { Text = "固定攻击/回合:", CustomMinimumSize = new Vector2(100, 22) };
+        var attackLabel = new Label { Text = TranslateGroup.T("固定攻击/回合:"), CustomMinimumSize = new Vector2(100, 22) };
         attackLabel.AddThemeFontSizeOverride("font_size", 11);
         fixedAttackSpinBox = new SpinBox { MinValue = -999, MaxValue = 999, Value = 0, CustomMinimumSize = new Vector2(80, 22) };
         fixedAttackSpinBox.AddThemeFontSizeOverride("font_size", 11);
@@ -3662,7 +3662,7 @@ private void CloseTerrainMenu()
         customDamageContainer.AddChild(attackHBox);
 
         var overMaxHBox = new HBoxContainer();
-        var overMaxLabel = new Label { Text = "可超最大血量:", CustomMinimumSize = new Vector2(100, 22) };
+        var overMaxLabel = new Label { Text = TranslateGroup.T("可超最大血量:"), CustomMinimumSize = new Vector2(100, 22) };
         overMaxLabel.AddThemeFontSizeOverride("font_size", 11);
         canOverMaxCheckBox = new CheckBox { ButtonPressed = false };
         overMaxHBox.AddChild(overMaxLabel);
@@ -3680,19 +3680,19 @@ private void CloseTerrainMenu()
         ammoFuelContainer.AddThemeConstantOverride("separation", 5);
 
         var sectionTitle = new Label();
-        sectionTitle.Text = "=== 弹药/燃料系统 ===";
+        TranslateGroup.SetText(sectionTitle, "=== 弹药/燃料系统 ===");
         sectionTitle.AddThemeFontSizeOverride("font_size", 13);
         sectionTitle.AddThemeColorOverride("font_color", new Color(1f, 0.6f, 0.2f));
         ammoFuelContainer.AddChild(sectionTitle);
 
         var ammoTitle = new Label();
-        ammoTitle.Text = "【弹药】";
+        TranslateGroup.SetText(ammoTitle, "【弹药】");
         ammoTitle.AddThemeFontSizeOverride("font_size", 12);
         ammoTitle.AddThemeColorOverride("font_color", new Color(0.9f, 0.7f, 0.2f));
         ammoFuelContainer.AddChild(ammoTitle);
 
         var ammoHBox = new HBoxContainer();
-        var ammoLabel = new Label { Text = "弹药变化/回合:", CustomMinimumSize = new Vector2(100, 22) };
+        var ammoLabel = new Label { Text = TranslateGroup.T("弹药变化/回合:"), CustomMinimumSize = new Vector2(100, 22) };
         ammoLabel.AddThemeFontSizeOverride("font_size", 11);
         fixedAmmoSpinBox = new SpinBox { MinValue = -999, MaxValue = 999, Value = 0, CustomMinimumSize = new Vector2(80, 22) };
         fixedAmmoSpinBox.AddThemeFontSizeOverride("font_size", 11);
@@ -3701,7 +3701,7 @@ private void CloseTerrainMenu()
         ammoFuelContainer.AddChild(ammoHBox);
 
         var ammoOverHBox = new HBoxContainer();
-        var ammoOverLabel = new Label { Text = "可超弹药上限:", CustomMinimumSize = new Vector2(100, 22) };
+        var ammoOverLabel = new Label { Text = TranslateGroup.T("可超弹药上限:"), CustomMinimumSize = new Vector2(100, 22) };
         ammoOverLabel.AddThemeFontSizeOverride("font_size", 11);
         ammoCanOverMaxCheckBox = new CheckBox { ButtonPressed = false };
         ammoOverHBox.AddChild(ammoOverLabel);
@@ -3709,7 +3709,7 @@ private void CloseTerrainMenu()
         ammoFuelContainer.AddChild(ammoOverHBox);
 
         var ammoZeroHBox = new HBoxContainer();
-        var ammoZeroLabel = new Label { Text = "可归零:", CustomMinimumSize = new Vector2(100, 22) };
+        var ammoZeroLabel = new Label { Text = TranslateGroup.T("可归零:"), CustomMinimumSize = new Vector2(100, 22) };
         ammoZeroLabel.AddThemeFontSizeOverride("font_size", 11);
         ammoCanReachZeroCheckBox = new CheckBox { ButtonPressed = true };
         ammoZeroHBox.AddChild(ammoZeroLabel);
@@ -3721,13 +3721,13 @@ private void CloseTerrainMenu()
         ammoFuelContainer.AddChild(separator);
 
         var fuelTitle = new Label();
-        fuelTitle.Text = "【燃料】";
+        TranslateGroup.SetText(fuelTitle, "【燃料】");
         fuelTitle.AddThemeFontSizeOverride("font_size", 12);
         fuelTitle.AddThemeColorOverride("font_color", new Color(0.2f, 0.7f, 0.9f));
         ammoFuelContainer.AddChild(fuelTitle);
 
         var fuelHBox = new HBoxContainer();
-        var fuelLabel = new Label { Text = "燃料变化/回合:", CustomMinimumSize = new Vector2(100, 22) };
+        var fuelLabel = new Label { Text = TranslateGroup.T("燃料变化/回合:"), CustomMinimumSize = new Vector2(100, 22) };
         fuelLabel.AddThemeFontSizeOverride("font_size", 11);
         fixedFuelSpinBox = new SpinBox { MinValue = -999, MaxValue = 999, Value = 0, CustomMinimumSize = new Vector2(80, 22) };
         fixedFuelSpinBox.AddThemeFontSizeOverride("font_size", 11);
@@ -3736,7 +3736,7 @@ private void CloseTerrainMenu()
         ammoFuelContainer.AddChild(fuelHBox);
 
         var fuelOverHBox = new HBoxContainer();
-        var fuelOverLabel = new Label { Text = "可超燃料上限:", CustomMinimumSize = new Vector2(100, 22) };
+        var fuelOverLabel = new Label { Text = TranslateGroup.T("可超燃料上限:"), CustomMinimumSize = new Vector2(100, 22) };
         fuelOverLabel.AddThemeFontSizeOverride("font_size", 11);
         fuelCanOverMaxCheckBox = new CheckBox { ButtonPressed = false };
         fuelOverHBox.AddChild(fuelOverLabel);
@@ -3744,7 +3744,7 @@ private void CloseTerrainMenu()
         ammoFuelContainer.AddChild(fuelOverHBox);
 
         var fuelZeroHBox = new HBoxContainer();
-        var fuelZeroLabel = new Label { Text = "可归零:", CustomMinimumSize = new Vector2(100, 22) };
+        var fuelZeroLabel = new Label { Text = TranslateGroup.T("可归零:"), CustomMinimumSize = new Vector2(100, 22) };
         fuelZeroLabel.AddThemeFontSizeOverride("font_size", 11);
         fuelCanReachZeroCheckBox = new CheckBox { ButtonPressed = true };
         fuelZeroHBox.AddChild(fuelZeroLabel);
@@ -3799,39 +3799,39 @@ private void CloseTerrainMenu()
     {
         return type switch
         {
-            GridType.GROUND => "🟫 平原",
-            GridType.FOREST => "🌲 森林",
-            GridType.ROAD => "🛣️ 公路",
-            GridType.SEA => "🌊 海洋",
-            GridType.RIVER => "🏞️ 河流",
-            GridType.HILL => "⛰️ 山地",
-            GridType.METEORITE => "☄️ 陨石(兵器设施)",
-            GridType.PIPE => "🔧 管道",
-            GridType.LAVA => "🌋 岩浆",
-            GridType.BEACH => "🏖️ 沙滩",
-            GridType.TP => "✨ 传送点",
-            GridType.REEF => "🪸 珊瑚礁",
-            GridType.WHIRLPOOL => "🌀 漩涡",
-            GridType.LAVASIDE => "🔥 岩浆滩",
-            GridType.SEAFOG => "🌫️ 海上迷雾",
-            GridType.LANDFOG => "🌫️ 陆上迷雾",
-            GridType.WATERFALL => "💧 瀑布",
-            GridType.CLIFF => "🪨 悬崖",
-            GridType.SLOPE => "📐 斜坡",
-            GridType.CAVE => "🕳️ 塌方穴",
-            GridType.HOLE => "🕳️ 人工洞",
-            GridType.PIPESEAM => "⚙️ 管道接缝(兵器设施)",
-            GridType.TRACK => "🛤️ 铁轨",
-            GridType.STATION => "🚉 站台",
-            GridType.BRIDGE => "🌉 桥梁",
-            GridType.LAVABRIDGE => "🔥🌉 岩浆桥梁",
-            GridType.PASSABLEPIPE => "🔧空心管道",
-            GridType.SHIPGATE => "⚓ 船闸",
-            GridType.OVERPASS => "🌉 立交桥",
-            GridType.BROKENPIPE => "💥 破碎管道",
-            GridType.RUINS => "🏚️ 废墟",
-            GridType.BROKENTRACK => "💥🛤️ 破碎铁路",
-            GridType.LAVAFOG => "🌋🌫️ 岩浆迷雾",
+            GridType.GROUND => TranslateGroup.T("🟫 平原"),
+            GridType.FOREST => TranslateGroup.T("🌲 森林"),
+            GridType.ROAD => TranslateGroup.T("🛣️ 公路"),
+            GridType.SEA => TranslateGroup.T("🌊 海洋"),
+            GridType.RIVER => TranslateGroup.T("🏞️ 河流"),
+            GridType.HILL => TranslateGroup.T("⛰️ 山地"),
+            GridType.METEORITE => TranslateGroup.T("☄️ 陨石(兵器设施)"),
+            GridType.PIPE => TranslateGroup.T("🔧 管道"),
+            GridType.LAVA => TranslateGroup.T("🌋 岩浆"),
+            GridType.BEACH => TranslateGroup.T("🏖️ 沙滩"),
+            GridType.TP => TranslateGroup.T("✨ 传送点"),
+            GridType.REEF => TranslateGroup.T("🪸 珊瑚礁"),
+            GridType.WHIRLPOOL => TranslateGroup.T("🌀 漩涡"),
+            GridType.LAVASIDE => TranslateGroup.T("🔥 岩浆滩"),
+            GridType.SEAFOG => TranslateGroup.T("🌫️ 海上迷雾"),
+            GridType.LANDFOG => TranslateGroup.T("🌫️ 陆上迷雾"),
+            GridType.WATERFALL => TranslateGroup.T("💧 瀑布"),
+            GridType.CLIFF => TranslateGroup.T("🪨 悬崖"),
+            GridType.SLOPE => TranslateGroup.T("📐 斜坡"),
+            GridType.CAVE => TranslateGroup.T("🕳️ 塌方穴"),
+            GridType.HOLE => TranslateGroup.T("🕳️ 人工洞"),
+            GridType.PIPESEAM => TranslateGroup.T("⚙️ 管道接缝(兵器设施)"),
+            GridType.TRACK => TranslateGroup.T("🛤️ 铁轨"),
+            GridType.STATION => TranslateGroup.T("🚉 站台"),
+            GridType.BRIDGE => TranslateGroup.T("🌉 桥梁"),
+            GridType.LAVABRIDGE => TranslateGroup.T("🔥🌉 岩浆桥梁"),
+            GridType.PASSABLEPIPE => TranslateGroup.T("🔧空心管道"),
+            GridType.SHIPGATE => TranslateGroup.T("⚓ 船闸"),
+            GridType.OVERPASS => TranslateGroup.T("🌉 立交桥"),
+            GridType.BROKENPIPE => TranslateGroup.T("💥 破碎管道"),
+            GridType.RUINS => TranslateGroup.T("🏚️ 废墟"),
+            GridType.BROKENTRACK => TranslateGroup.T("💥🛤️ 破碎铁路"),
+            GridType.LAVAFOG => TranslateGroup.T("🌋🌫️ 岩浆迷雾"),
             _ => type.ToString()
         };
     }
@@ -3853,7 +3853,7 @@ private void CloseTerrainMenu()
             GridType.BROKENTRACK => 0.20f, GridType.LAVAFOG => 0.50f,
             _ => 0.0f
         };
-        return bonus > 0 ? $"[防御{bonus * 100:F0}%]" : "[无防御]";
+        return bonus > 0 ? $"[防御{bonus * 100:F0}%]" : TranslateGroup.T("[无防御]");
     }
 
     private void OnModeTogglePressed() => SetEditMode(!IsEditMode);
@@ -3867,7 +3867,7 @@ public void SetEditMode(bool editMode)
 
     if (IsEditMode)
     {
-        modeToggleButton.Text = "🎮 游玩模式";
+        TranslateGroup.SetText(modeToggleButton, "🎮 游玩模式");
         var style = new StyleBoxFlat { BgColor = new Color(0.5f, 0.3f, 0.3f, 0.9f) };
         style.SetCornerRadiusAll(8);
         modeToggleButton.AddThemeStyleboxOverride("normal", style);
@@ -3926,7 +3926,7 @@ public void SetEditMode(bool editMode)
     }
     else
     {
-        modeToggleButton.Text = "🛠️ 编辑模式";
+        TranslateGroup.SetText(modeToggleButton, "🛠️ 编辑模式");
         var style = new StyleBoxFlat { BgColor = new Color(0.3f, 0.5f, 0.3f, 0.9f) };
         style.SetCornerRadiusAll(8);
         modeToggleButton.AddThemeStyleboxOverride("normal", style);
@@ -4181,7 +4181,7 @@ private void OnTerrainSelected(GridType newTerrain)
     {
         openGlobalConfigBtn = new Button();
         openGlobalConfigBtn.Name = "OpenGlobalConfigBtn";
-        openGlobalConfigBtn.Text = "⚙️ 全局配置";
+        TranslateGroup.SetText(openGlobalConfigBtn, "⚙️ 全局配置");
         openGlobalConfigBtn.CustomMinimumSize = new Vector2(120, 40);
         openGlobalConfigBtn.AddThemeFontSizeOverride("font_size", 14);
 
@@ -4212,7 +4212,7 @@ private void OnTerrainSelected(GridType newTerrain)
         globalConfigPanel.AddThemeStyleboxOverride("panel", panelStyle);
 
         var titleLabel = new Label();
-        titleLabel.Text = "⚙️ 全局配置面板";
+        TranslateGroup.SetText(titleLabel, "⚙️ 全局配置面板");
         titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         titleLabel.AddThemeFontSizeOverride("font_size", 22);
         titleLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f));
@@ -4277,7 +4277,7 @@ private HBoxContainer CreateVisionConfigRow(string name, int currentValue, Actio
     hbox.AddChild(spinBox);
 
     var hint = new Label();
-    hint.Text = "格";
+    TranslateGroup.SetText(hint, "格");
     hint.AddThemeFontSizeOverride("font_size", 11);
     hint.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
     hbox.AddChild(hint);
@@ -4314,14 +4314,14 @@ private VBoxContainer CreateWeaponVisionConfigRow(string name, int currentRange,
     hbox2.AddThemeConstantOverride("separation", 8);
 
     var modeLabel = new Label();
-    modeLabel.Text = "  模式:";
+    TranslateGroup.SetText(modeLabel, "  模式:");
     modeLabel.CustomMinimumSize = new Vector2(50, 24);
     modeLabel.AddThemeFontSizeOverride("font_size", 11);
     hbox2.AddChild(modeLabel);
 
     var modeOption = new OptionButton();
-    modeOption.AddItem("正常(菱形)", 0);
-    modeOption.AddItem("独立(攻击范围)", 1);
+    modeOption.AddItem(TranslateGroup.T("正常(菱形)"), 0);
+    modeOption.AddItem(TranslateGroup.T("独立(攻击范围)"), 1);
     modeOption.Selected = isIndependent ? 1 : 0;
     modeOption.CustomMinimumSize = new Vector2(140, 28);
     modeOption.AddThemeFontSizeOverride("font_size", 11);
@@ -4433,14 +4433,14 @@ private void RefreshAllUnitVision()
         foreach (var child in globalConfigContainer.GetChildren())
             child.QueueFree();
 
-        var fogSection = CreateConfigSectionTitle("🌫️ 战争迷雾");
+        var fogSection = CreateConfigSectionTitle(TranslateGroup.T("🌫️ 战争迷雾"));
         globalConfigContainer.AddChild(fogSection);
 
         var fogHBox = new HBoxContainer();
         fogHBox.AddThemeConstantOverride("separation", 10);
 
         var fogLabel = new Label();
-        fogLabel.Text = "启用战争迷雾:";
+        TranslateGroup.SetText(fogLabel, "启用战争迷雾:");
         fogLabel.CustomMinimumSize = new Vector2(120, 28);
         fogLabel.AddThemeFontSizeOverride("font_size", 13);
         fogHBox.AddChild(fogLabel);
@@ -4452,14 +4452,14 @@ private void RefreshAllUnitVision()
         fogHBox.AddChild(fogOfWarCheckBox);
 
         var fogHint = new Label();
-        fogHint.Text = "(编辑模式自动关闭)";
+        TranslateGroup.SetText(fogHint, "(编辑模式自动关闭)");
         fogHint.AddThemeFontSizeOverride("font_size", 10);
         fogHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
         fogHBox.AddChild(fogHint);
 
         globalConfigContainer.AddChild(fogHBox);
 
-        var unitSection = CreateConfigSectionTitle("👁️ 单位基础视野配置");
+        var unitSection = CreateConfigSectionTitle(TranslateGroup.T("👁️ 单位基础视野配置"));
         globalConfigContainer.AddChild(unitSection);
 
         var unitConfigs = VisionConfig.GetAllUnitVisionConfigs();
@@ -4472,7 +4472,7 @@ private void RefreshAllUnitVision()
             globalConfigContainer.AddChild(row);
         }
 
-        var weaponSection = CreateConfigSectionTitle("⚔️ 兵器基础视野配置");
+        var weaponSection = CreateConfigSectionTitle(TranslateGroup.T("⚔️ 兵器基础视野配置"));
         globalConfigContainer.AddChild(weaponSection);
 
         var weaponConfigs = VisionConfig.GetAllWeaponVisionConfigs();
@@ -4489,7 +4489,7 @@ private void RefreshAllUnitVision()
         }
 
         // ✅ 全局默认地形加成
-        var terrainSection = CreateConfigSectionTitle("🗺️ 全局默认地形视野加成");
+        var terrainSection = CreateConfigSectionTitle(TranslateGroup.T("🗺️ 全局默认地形视野加成"));
         globalConfigContainer.AddChild(terrainSection);
 
         var terrainConfigs = VisionConfig.GetAllTerrainVisionConfigs();
@@ -4503,29 +4503,29 @@ private void RefreshAllUnitVision()
         }
 
         // ✅ 新增：单位类型×地形 专属加成矩阵配置
-        var unitMatrixSection = CreateConfigSectionTitle("👁️ 单位类型×地形 专属加成矩阵");
+        var unitMatrixSection = CreateConfigSectionTitle(TranslateGroup.T("👁️ 单位类型×地形 专属加成矩阵"));
         globalConfigContainer.AddChild(unitMatrixSection);
 
         var unitMatrixBtn = new Button();
-        unitMatrixBtn.Text = "📊 打开单位地形加成矩阵编辑器";
+        TranslateGroup.SetText(unitMatrixBtn, "📊 打开单位地形加成矩阵编辑器");
         unitMatrixBtn.CustomMinimumSize = new Vector2(300, 40);
         unitMatrixBtn.AddThemeFontSizeOverride("font_size", 13);
         unitMatrixBtn.Pressed += OpenUnitTerrainMatrixEditor;
         globalConfigContainer.AddChild(unitMatrixBtn);
 
         // ✅ 新增：兵器类型×地形 专属加成矩阵配置
-        var weaponMatrixSection = CreateConfigSectionTitle("⚔️ 兵器类型×地形 专属加成矩阵");
+        var weaponMatrixSection = CreateConfigSectionTitle(TranslateGroup.T("⚔️ 兵器类型×地形 专属加成矩阵"));
         globalConfigContainer.AddChild(weaponMatrixSection);
 
         var weaponMatrixBtn = new Button();
-        weaponMatrixBtn.Text = "📊 打开兵器地形加成矩阵编辑器";
+        TranslateGroup.SetText(weaponMatrixBtn, "📊 打开兵器地形加成矩阵编辑器");
         weaponMatrixBtn.CustomMinimumSize = new Vector2(300, 40);
         weaponMatrixBtn.AddThemeFontSizeOverride("font_size", 13);
         weaponMatrixBtn.Pressed += OpenWeaponTerrainMatrixEditor;
         globalConfigContainer.AddChild(weaponMatrixBtn);
 
         // ✅ 资金系统配置
-        var fundsSection = CreateConfigSectionTitle("💰 资金系统配置");
+        var fundsSection = CreateConfigSectionTitle(TranslateGroup.T("💰 资金系统配置"));
         globalConfigContainer.AddChild(fundsSection);
 
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
@@ -4534,7 +4534,7 @@ private void RefreshAllUnitVision()
         var p1FundsHBox = new HBoxContainer();
         p1FundsHBox.AddThemeConstantOverride("separation", 10);
         var p1FundsLabel = new Label();
-        p1FundsLabel.Text = "P1 现有资金:";
+        TranslateGroup.SetText(p1FundsLabel, "P1 现有资金:");
         p1FundsLabel.CustomMinimumSize = new Vector2(120, 28);
         p1FundsLabel.AddThemeFontSizeOverride("font_size", 13);
         p1FundsHBox.AddChild(p1FundsLabel);
@@ -4554,7 +4554,7 @@ private void RefreshAllUnitVision()
         var p1MaxHBox = new HBoxContainer();
         p1MaxHBox.AddThemeConstantOverride("separation", 10);
         var p1MaxLabel = new Label();
-        p1MaxLabel.Text = "P1 资金上限:";
+        TranslateGroup.SetText(p1MaxLabel, "P1 资金上限:");
         p1MaxLabel.CustomMinimumSize = new Vector2(120, 28);
         p1MaxLabel.AddThemeFontSizeOverride("font_size", 13);
         p1MaxHBox.AddChild(p1MaxLabel);
@@ -4574,7 +4574,7 @@ private void RefreshAllUnitVision()
         var p2FundsHBox = new HBoxContainer();
         p2FundsHBox.AddThemeConstantOverride("separation", 10);
         var p2FundsLabel = new Label();
-        p2FundsLabel.Text = "P2 现有资金:";
+        TranslateGroup.SetText(p2FundsLabel, "P2 现有资金:");
         p2FundsLabel.CustomMinimumSize = new Vector2(120, 28);
         p2FundsLabel.AddThemeFontSizeOverride("font_size", 13);
         p2FundsHBox.AddChild(p2FundsLabel);
@@ -4594,7 +4594,7 @@ private void RefreshAllUnitVision()
         var p2MaxHBox = new HBoxContainer();
         p2MaxHBox.AddThemeConstantOverride("separation", 10);
         var p2MaxLabel = new Label();
-        p2MaxLabel.Text = "P2 资金上限:";
+        TranslateGroup.SetText(p2MaxLabel, "P2 资金上限:");
         p2MaxLabel.CustomMinimumSize = new Vector2(120, 28);
         p2MaxLabel.AddThemeFontSizeOverride("font_size", 13);
         p2MaxHBox.AddChild(p2MaxLabel);
@@ -4611,7 +4611,7 @@ private void RefreshAllUnitVision()
         globalConfigContainer.AddChild(p2MaxHBox);
 
         // ✅ AI 与地图导出配置
-        var aiSection = CreateConfigSectionTitle("🤖 AI 控制与地图导出");
+        var aiSection = CreateConfigSectionTitle(TranslateGroup.T("🤖 AI 控制与地图导出"));
         globalConfigContainer.AddChild(aiSection);
 
         var aiMgr = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
@@ -4619,7 +4619,7 @@ private void RefreshAllUnitVision()
         var p1AiHBox = new HBoxContainer();
         p1AiHBox.AddThemeConstantOverride("separation", 10);
         var p1AiLabel = new Label();
-        p1AiLabel.Text = "P1 AI 操控:";
+        TranslateGroup.SetText(p1AiLabel, "P1 AI 操控:");
         p1AiLabel.CustomMinimumSize = new Vector2(120, 28);
         p1AiLabel.AddThemeFontSizeOverride("font_size", 13);
         p1AiHBox.AddChild(p1AiLabel);
@@ -4635,7 +4635,7 @@ private void RefreshAllUnitVision()
         var p2AiHBox = new HBoxContainer();
         p2AiHBox.AddThemeConstantOverride("separation", 10);
         var p2AiLabel = new Label();
-        p2AiLabel.Text = "P2 AI 操控:";
+        TranslateGroup.SetText(p2AiLabel, "P2 AI 操控:");
         p2AiLabel.CustomMinimumSize = new Vector2(120, 28);
         p2AiLabel.AddThemeFontSizeOverride("font_size", 13);
         p2AiHBox.AddChild(p2AiLabel);
@@ -4651,7 +4651,7 @@ private void RefreshAllUnitVision()
         var autoEndHBox = new HBoxContainer();
         autoEndHBox.AddThemeConstantOverride("separation", 10);
         var autoEndLabel = new Label();
-        autoEndLabel.Text = "自动切换回合:";
+        TranslateGroup.SetText(autoEndLabel, "自动切换回合:");
         autoEndLabel.CustomMinimumSize = new Vector2(120, 28);
         autoEndLabel.AddThemeFontSizeOverride("font_size", 13);
         autoEndHBox.AddChild(autoEndLabel);
@@ -4665,14 +4665,14 @@ private void RefreshAllUnitVision()
         globalConfigContainer.AddChild(autoEndHBox);
 
         var exportMapBtn = new Button();
-        exportMapBtn.Text = "📤 导出地图配置为 txt";
+        TranslateGroup.SetText(exportMapBtn, "📤 导出地图配置为 txt");
         exportMapBtn.CustomMinimumSize = new Vector2(300, 40);
         exportMapBtn.AddThemeFontSizeOverride("font_size", 13);
         exportMapBtn.Pressed += ExportMapToTxt;
         globalConfigContainer.AddChild(exportMapBtn);
 
         var importMapBtn = new Button();
-        importMapBtn.Text = "📥 导入地图配置";
+        TranslateGroup.SetText(importMapBtn, "📥 导入地图配置");
         importMapBtn.CustomMinimumSize = new Vector2(300, 40);
         importMapBtn.AddThemeFontSizeOverride("font_size", 13);
         importMapBtn.Pressed += OpenImportDialog;
@@ -4680,7 +4680,7 @@ private void RefreshAllUnitVision()
 
         // ✅ 极简导出/导入按钮
         var compactExportBtn = new Button();
-        compactExportBtn.Text = "📤 极简导出";
+        TranslateGroup.SetText(compactExportBtn, "📤 极简导出");
         compactExportBtn.CustomMinimumSize = new Vector2(300, 40);
         compactExportBtn.AddThemeFontSizeOverride("font_size", 13);
         compactExportBtn.Pressed += ExportCompactMap;
@@ -4689,13 +4689,13 @@ private void RefreshAllUnitVision()
         var compactImportBtn = new Button();
 
         // ✅ 胜利判定配置
-        var victorySection = CreateConfigSectionTitle("🏆 胜利判定配置");
+        var victorySection = CreateConfigSectionTitle(TranslateGroup.T("🏆 胜利判定配置"));
         globalConfigContainer.AddChild(victorySection);
 
         var p1AnnihHBox = new HBoxContainer();
         p1AnnihHBox.AddThemeConstantOverride("separation", 10);
         var p1AnnihLabel = new Label();
-        p1AnnihLabel.Text = "P1 全灭胜利判定:";
+        TranslateGroup.SetText(p1AnnihLabel, "P1 全灭胜利判定:");
         p1AnnihLabel.CustomMinimumSize = new Vector2(150, 28);
         p1AnnihLabel.AddThemeFontSizeOverride("font_size", 13);
         p1AnnihHBox.AddChild(p1AnnihLabel);
@@ -4711,7 +4711,7 @@ private void RefreshAllUnitVision()
         var p2AnnihHBox = new HBoxContainer();
         p2AnnihHBox.AddThemeConstantOverride("separation", 10);
         var p2AnnihLabel = new Label();
-        p2AnnihLabel.Text = "P2 全灭胜利判定:";
+        TranslateGroup.SetText(p2AnnihLabel, "P2 全灭胜利判定:");
         p2AnnihLabel.CustomMinimumSize = new Vector2(150, 28);
         p2AnnihLabel.AddThemeFontSizeOverride("font_size", 13);
         p2AnnihHBox.AddChild(p2AnnihLabel);
@@ -4727,7 +4727,7 @@ private void RefreshAllUnitVision()
         var weaponVictoryHBox = new HBoxContainer();
         weaponVictoryHBox.AddThemeConstantOverride("separation", 10);
         var weaponVictoryLabel = new Label();
-        weaponVictoryLabel.Text = "兵器摧毁胜利判定:";
+        TranslateGroup.SetText(weaponVictoryLabel, "兵器摧毁胜利判定:");
         weaponVictoryLabel.CustomMinimumSize = new Vector2(150, 28);
         weaponVictoryLabel.AddThemeFontSizeOverride("font_size", 13);
         weaponVictoryHBox.AddChild(weaponVictoryLabel);
@@ -4739,21 +4739,21 @@ private void RefreshAllUnitVision()
         };
         weaponVictoryHBox.AddChild(weaponVictoryCheck);
         globalConfigContainer.AddChild(weaponVictoryHBox);
-        compactImportBtn.Text = "📥 极简导入";
+        TranslateGroup.SetText(compactImportBtn, "📥 极简导入");
         compactImportBtn.CustomMinimumSize = new Vector2(300, 40);
         compactImportBtn.AddThemeFontSizeOverride("font_size", 13);
         compactImportBtn.Pressed += OpenCompactImportDialog;
         globalConfigContainer.AddChild(compactImportBtn);
 
         var awbwImportBtn = new Button();
-        awbwImportBtn.Text = "🌐 导入 AWBW 地图";
+        TranslateGroup.SetText(awbwImportBtn, "🌐 导入 AWBW 地图");
         awbwImportBtn.CustomMinimumSize = new Vector2(300, 40);
         awbwImportBtn.AddThemeFontSizeOverride("font_size", 13);
         awbwImportBtn.Pressed += OpenAWBWImportDialog;
         globalConfigContainer.AddChild(awbwImportBtn);
 
         var awmeImportBtn = new Button();
-        awmeImportBtn.Text = "🗺️ 导入 AW 地图 (.aws/.aw2/.awm/.awd)";
+        TranslateGroup.SetText(awmeImportBtn, "🗺️ 导入 AW 地图 (.aws/.aw2/.awm/.awd)");
         awmeImportBtn.CustomMinimumSize = new Vector2(300, 40);
         awmeImportBtn.AddThemeFontSizeOverride("font_size", 13);
         awmeImportBtn.Pressed += OpenAWMEImportDialog;
@@ -4764,14 +4764,14 @@ private void RefreshAllUnitVision()
         globalConfigContainer.AddChild(btnSeparator);
 
         // ✅ 新增：地图生成配置
-        var mapGenSection = CreateConfigSectionTitle("🗺️ 生成地图");
+        var mapGenSection = CreateConfigSectionTitle(TranslateGroup.T("🗺️ 生成地图"));
         globalConfigContainer.AddChild(mapGenSection);
 
         var mapGenHBox = new HBoxContainer();
         mapGenHBox.AddThemeConstantOverride("separation", 10);
 
         var widthLabel = new Label();
-        widthLabel.Text = "宽:";
+        TranslateGroup.SetText(widthLabel, "宽:");
         widthLabel.CustomMinimumSize = new Vector2(40, 28);
         widthLabel.AddThemeFontSizeOverride("font_size", 13);
         mapGenHBox.AddChild(widthLabel);
@@ -4786,7 +4786,7 @@ private void RefreshAllUnitVision()
         mapGenHBox.AddChild(widthSpin);
 
         var heightLabel = new Label();
-        heightLabel.Text = "高:";
+        TranslateGroup.SetText(heightLabel, "高:");
         heightLabel.CustomMinimumSize = new Vector2(40, 28);
         heightLabel.AddThemeFontSizeOverride("font_size", 13);
         mapGenHBox.AddChild(heightLabel);
@@ -4801,7 +4801,7 @@ private void RefreshAllUnitVision()
         mapGenHBox.AddChild(heightSpin);
 
         var genMapBtn = new Button();
-        genMapBtn.Text = "🗺️ 生成新地图";
+        TranslateGroup.SetText(genMapBtn, "🗺️ 生成新地图");
         genMapBtn.CustomMinimumSize = new Vector2(140, 36);
         genMapBtn.AddThemeFontSizeOverride("font_size", 13);
         var genStyle = new StyleBoxFlat();
@@ -4821,7 +4821,7 @@ private void RefreshAllUnitVision()
         btnHBox.AddThemeConstantOverride("separation", 10);
 
         var resetBtn = new Button();
-        resetBtn.Text = "🔄 重置默认";
+        TranslateGroup.SetText(resetBtn, "🔄 重置默认");
         resetBtn.CustomMinimumSize = new Vector2(150, 36);
         resetBtn.AddThemeFontSizeOverride("font_size", 13);
         resetBtn.Pressed += () => {
@@ -4832,7 +4832,7 @@ private void RefreshAllUnitVision()
         btnHBox.AddChild(resetBtn);
 
         var exportBtn = new Button();
-        exportBtn.Text = "📋 导出配置";
+        TranslateGroup.SetText(exportBtn, "📋 导出配置");
         exportBtn.CustomMinimumSize = new Vector2(150, 36);
         exportBtn.AddThemeFontSizeOverride("font_size", 13);
         exportBtn.Pressed += () => {
@@ -4863,7 +4863,7 @@ private void OpenUnitTerrainMatrixEditor()
         if (allUnitTypes.Count == 0)
         {
             var emptyLabel = new Label();
-            emptyLabel.Text = "⚠️ 无单位类型配置";
+            TranslateGroup.SetText(emptyLabel, "⚠️ 无单位类型配置");
             emptyLabel.AddThemeFontSizeOverride("font_size", 14);
             emptyLabel.AddThemeColorOverride("font_color", Colors.Red);
             container.AddChild(emptyLabel);
@@ -4946,7 +4946,7 @@ private void OpenWeaponTerrainMatrixEditor()
         if (allWeaponTypes.Count == 0)
         {
             var emptyLabel = new Label();
-            emptyLabel.Text = "⚠️ 无兵器类型配置";
+            TranslateGroup.SetText(emptyLabel, "⚠️ 无兵器类型配置");
             emptyLabel.AddThemeFontSizeOverride("font_size", 14);
             emptyLabel.AddThemeColorOverride("font_color", Colors.Red);
             container.AddChild(emptyLabel);
@@ -5017,7 +5017,7 @@ private void OpenWeaponTerrainMatrixEditor()
         unitMatrixEditorPanel.AddThemeStyleboxOverride("panel", panelStyle);
 
         var titleLabel = new Label();
-        titleLabel.Text = "📊 单位类型×地形 视野加成矩阵";
+        TranslateGroup.SetText(titleLabel, "📊 单位类型×地形 视野加成矩阵");
         titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         titleLabel.AddThemeFontSizeOverride("font_size", 20);
         titleLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f));
@@ -5069,7 +5069,7 @@ private void OpenWeaponTerrainMatrixEditor()
         weaponMatrixEditorPanel.AddThemeStyleboxOverride("panel", panelStyle);
 
         var titleLabel = new Label();
-        titleLabel.Text = "📊 兵器类型×地形 视野加成矩阵";
+        TranslateGroup.SetText(titleLabel, "📊 兵器类型×地形 视野加成矩阵");
         titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         titleLabel.AddThemeFontSizeOverride("font_size", 20);
         titleLabel.AddThemeColorOverride("font_color", new Color(0.9f, 0.5f, 1f));
@@ -5373,7 +5373,7 @@ private void OpenWeaponTerrainMatrixEditor()
         else if (!string.IsNullOrEmpty(savedPath))
             hintText = $"⚠️ 已保存到应用目录:\n{savedPath}\n📋 内容已复制到剪贴板\n(手机可在剪贴板粘贴分享)";
         else
-            hintText = "❌ 文件保存失败\n📋 但内容已复制到剪贴板\n请手动粘贴保存";
+            hintText = TranslateGroup.T("❌ 文件保存失败\n📋 但内容已复制到剪贴板\n请手动粘贴保存");
 
         var hintLabel = new Label();
         hintLabel.Text = hintText;
@@ -5565,7 +5565,7 @@ private void OpenWeaponTerrainMatrixEditor()
         dialog.AddThemeStyleboxOverride("panel", panelStyle);
 
         var title = new Label();
-        title.Text = "📥 导入地图配置";
+        TranslateGroup.SetText(title, "📥 导入地图配置");
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 20);
         title.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
@@ -5587,7 +5587,7 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddThemeConstantOverride("separation", 12);
 
         var fileBtn = new Button();
-        fileBtn.Text = "📁 选择 txt 文件导入";
+        TranslateGroup.SetText(fileBtn, "📁 选择 txt 文件导入");
         fileBtn.CustomMinimumSize = new Vector2(360, 45);
         fileBtn.AddThemeFontSizeOverride("font_size", 14);
         fileBtn.Pressed += () => {
@@ -5597,7 +5597,7 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddChild(fileBtn);
 
         var clipBtn = new Button();
-        clipBtn.Text = "📋 从剪贴板导入";
+        TranslateGroup.SetText(clipBtn, "📋 从剪贴板导入");
         clipBtn.CustomMinimumSize = new Vector2(360, 45);
         clipBtn.AddThemeFontSizeOverride("font_size", 14);
         clipBtn.Pressed += () => {
@@ -5607,7 +5607,7 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddChild(clipBtn);
 
         var hint = new Label();
-        hint.Text = "提示：导入会清空当前所有单位、兵器和设施，\n并重建地图。请确保已导出备份！";
+        TranslateGroup.SetText(hint, "提示：导入会清空当前所有单位、兵器和设施，\n并重建地图。请确保已导出备份！");
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 0.3f));
         hint.HorizontalAlignment = HorizontalAlignment.Center;
@@ -5624,7 +5624,7 @@ private void OpenWeaponTerrainMatrixEditor()
         fd.FileMode = FileDialog.FileModeEnum.OpenFile;
         fd.Access = FileDialog.AccessEnum.Filesystem;
         fd.Filters = new string[] { "*.txt ; Text Files" };
-        fd.Title = "选择地图导出文件";
+        fd.Title = TranslateGroup.T("选择地图导出文件");
         fd.Size = new Vector2I(800, 600);
         fd.FileSelected += (path) => {
             try
@@ -5648,7 +5648,7 @@ private void OpenWeaponTerrainMatrixEditor()
         string content = DisplayServer.ClipboardGet();
         if (string.IsNullOrWhiteSpace(content))
         {
-            ShowImportHint("❌ 剪贴板为空或无法读取");
+            ShowImportHint(TranslateGroup.T("❌ 剪贴板为空或无法读取"));
             return;
         }
         ShowImportConfirmDialog(content);
@@ -5657,8 +5657,8 @@ private void OpenWeaponTerrainMatrixEditor()
     private void ShowImportConfirmDialog(string content)
     {
         var confirm = new ConfirmationDialog();
-        confirm.Title = "⚠️ 确认导入";
-        confirm.DialogText = "导入将清空当前所有单位、兵器和设施，\n并用文件内容重建地图。\n\n是否继续？";
+        confirm.Title = TranslateGroup.T("⚠️ 确认导入");
+        confirm.DialogText = TranslateGroup.T("导入将清空当前所有单位、兵器和设施，\n并用文件内容重建地图。\n\n是否继续？");
         confirm.Size = new Vector2I(400, 180);
         confirm.Confirmed += () => {
             ParseAndImportMap(content);
@@ -5983,7 +5983,7 @@ private void OpenWeaponTerrainMatrixEditor()
             gameManager?.RefreshSpecializedUnitLists();
             gameManager?.fogOfWarManager?.RefreshFog();
             gameManager?.ResetGameState(); // ✅ 重置游戏状态，防止胜利面板残留
-            ShowImportHint("✅ 地图导入成功！");
+            ShowImportHint(TranslateGroup.T("✅ 地图导入成功！"));
         }
         catch (Exception ex)
         {
@@ -6280,7 +6280,7 @@ private void OpenWeaponTerrainMatrixEditor()
     // ✅ 极简导出
     private void ExportCompactMap()
     {
-        if (gridManager?.map == null) { ShowImportHint("❌ GridManager 未初始化"); return; }
+        if (gridManager?.map == null) { ShowImportHint(TranslateGroup.T("❌ GridManager 未初始化")); return; }
 
         int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
         foreach (var grid in gridManager.grids)
@@ -6600,7 +6600,7 @@ private void OpenWeaponTerrainMatrixEditor()
             gameManager?.RefreshSpecializedUnitLists();
             gameManager?.fogOfWarManager?.RefreshFog();
             gameManager?.ResetGameState();
-            ShowImportHint("✅ 极简导入成功！");
+            ShowImportHint(TranslateGroup.T("✅ 极简导入成功！"));
         }
         catch (Exception ex)
         {
@@ -6613,7 +6613,7 @@ private void OpenWeaponTerrainMatrixEditor()
             // 因为 GameManager.ResetForMapImport() 已经设置了3秒保护计时器
             // 这里立即重置会导致保护失效，触发延迟判定
             // 保护计时器会在3秒后自动解除并调用 CheckVictoryCondition
-            GD.Print("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理");
+            GD.Print(TranslateGroup.T("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理"));
         }
     }
 
@@ -6640,14 +6640,14 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddThemeConstantOverride("separation", 12);
 
         var title = new Label();
-        title.Text = "📥 极简导入";
+        TranslateGroup.SetText(title, "📥 极简导入");
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 20);
         title.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
         vbox.AddChild(title);
 
         var fileBtn = new Button();
-        fileBtn.Text = "📁 选择 txt 文件";
+        TranslateGroup.SetText(fileBtn, "📁 选择 txt 文件");
         fileBtn.CustomMinimumSize = new Vector2(360, 45);
         fileBtn.AddThemeFontSizeOverride("font_size", 14);
         fileBtn.Pressed += () => {
@@ -6656,7 +6656,7 @@ private void OpenWeaponTerrainMatrixEditor()
             fd.FileMode = FileDialog.FileModeEnum.OpenFile;
             fd.Access = FileDialog.AccessEnum.Filesystem;
             fd.Filters = new string[] { "*.txt ; Text Files" };
-            fd.Title = "选择极简导出文件";
+            fd.Title = TranslateGroup.T("选择极简导出文件");
             fd.Size = new Vector2I(800, 600);
             fd.FileSelected += (path) => {
                 try { ParseCompactMap(File.ReadAllText(path)); } catch (Exception ex) { ShowImportHint($"❌ 读取失败: {ex.Message}"); }
@@ -6668,19 +6668,19 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddChild(fileBtn);
 
         var clipBtn = new Button();
-        clipBtn.Text = "📋 从剪贴板导入";
+        TranslateGroup.SetText(clipBtn, "📋 从剪贴板导入");
         clipBtn.CustomMinimumSize = new Vector2(360, 45);
         clipBtn.AddThemeFontSizeOverride("font_size", 14);
         clipBtn.Pressed += () => {
             dialog.QueueFree();
             string content = DisplayServer.ClipboardGet();
-            if (string.IsNullOrWhiteSpace(content)) { ShowImportHint("❌ 剪贴板为空"); return; }
+            if (string.IsNullOrWhiteSpace(content)) { ShowImportHint(TranslateGroup.T("❌ 剪贴板为空")); return; }
             ParseCompactMap(content);
         };
         vbox.AddChild(clipBtn);
 
         var hint = new Label();
-        hint.Text = "极简格式：每行一个对象，无复杂Test块\n更可靠、更紧凑";
+        TranslateGroup.SetText(hint, "极简格式：每行一个对象，无复杂Test块\n更可靠、更紧凑");
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 0.3f));
         hint.HorizontalAlignment = HorizontalAlignment.Center;
@@ -6713,21 +6713,21 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddThemeConstantOverride("separation", 12);
 
         var title = new Label();
-        title.Text = "🌐 导入 AWBW 地图";
+        TranslateGroup.SetText(title, "🌐 导入 AWBW 地图");
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 20);
         title.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
         vbox.AddChild(title);
 
         var fileBtn = new Button();
-        fileBtn.Text = "📁 选择 AWBW 导出 txt 文件";
+        TranslateGroup.SetText(fileBtn, "📁 选择 AWBW 导出 txt 文件");
         fileBtn.CustomMinimumSize = new Vector2(360, 45);
         fileBtn.AddThemeFontSizeOverride("font_size", 14);
         fileBtn.Pressed += () => {
             // ✅ Android：无存储权限则先发起请求并提示授权后重试
             if (!GameManager.EnsureStoragePermission())
             {
-                ShowImportHint("⚠️ 需要存储权限才能导入文件\n请在系统设置中允许「所有文件访问」后重试");
+                ShowImportHint(TranslateGroup.T("⚠️ 需要存储权限才能导入文件\n请在系统设置中允许「所有文件访问」后重试"));
                 return;
             }
             dialog.QueueFree();
@@ -6735,7 +6735,7 @@ private void OpenWeaponTerrainMatrixEditor()
             fd.FileMode = FileDialog.FileModeEnum.OpenFile;
             fd.Access = FileDialog.AccessEnum.Filesystem;
             fd.Filters = new string[] { "*.txt ; Text Files" };
-            fd.Title = "选择 AWBW 地图导出文件";
+            fd.Title = TranslateGroup.T("选择 AWBW 地图导出文件");
             fd.Size = new Vector2I(800, 600);
             // ✅ Android：默认打开下载目录，方便找到手机下载的文件
             if (OS.GetName() == "Android")
@@ -6751,19 +6751,19 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddChild(fileBtn);
 
         var clipBtn = new Button();
-        clipBtn.Text = "📋 从剪贴板导入 AWBW 地图";
+        TranslateGroup.SetText(clipBtn, "📋 从剪贴板导入 AWBW 地图");
         clipBtn.CustomMinimumSize = new Vector2(360, 45);
         clipBtn.AddThemeFontSizeOverride("font_size", 14);
         clipBtn.Pressed += () => {
             dialog.QueueFree();
             string content = DisplayServer.ClipboardGet();
-            if (string.IsNullOrWhiteSpace(content)) { ShowImportHint("❌ 剪贴板为空"); return; }
+            if (string.IsNullOrWhiteSpace(content)) { ShowImportHint(TranslateGroup.T("❌ 剪贴板为空")); return; }
             ParseAWBWMap(content);
         };
         vbox.AddChild(clipBtn);
 
         var hint = new Label();
-        hint.Text = "AWBW 格式：每行逗号分隔的地形ID\n不支持的地形将智能平替为最接近类型\n完全不支持的将保留为 GROUND";
+        TranslateGroup.SetText(hint, "AWBW 格式：每行逗号分隔的地形ID\n不支持的地形将智能平替为最接近类型\n完全不支持的将保留为 GROUND");
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 0.3f));
         hint.HorizontalAlignment = HorizontalAlignment.Center;
@@ -6771,7 +6771,7 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddChild(hint);
 
         var closeBtn = new Button();
-        closeBtn.Text = "❌ 关闭";
+        TranslateGroup.SetText(closeBtn, "❌ 关闭");
         closeBtn.CustomMinimumSize = new Vector2(360, 40);
         closeBtn.AddThemeFontSizeOverride("font_size", 14);
         closeBtn.AddThemeColorOverride("font_color", new Color(1, 0.5f, 0.5f));
@@ -7049,7 +7049,7 @@ private void OpenWeaponTerrainMatrixEditor()
             // 因为 GameManager.ResetForMapImport() 已经设置了3秒保护计时器
             // 这里立即重置会导致保护失效，触发延迟判定
             // 保护计时器会在3秒后自动解除并调用 CheckVictoryCondition
-            GD.Print("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理");
+            GD.Print(TranslateGroup.T("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理"));
         }
     }
 
@@ -7058,7 +7058,7 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         batchTerrainBtn = new Button();
         batchTerrainBtn.Name = "BatchTerrainBtn";
-        batchTerrainBtn.Text = "🗺️ 批量地形";
+        TranslateGroup.SetText(batchTerrainBtn, "🗺️ 批量地形");
         batchTerrainBtn.CustomMinimumSize = new Vector2(140, 50);
 
         var style = new StyleBoxFlat();
@@ -7108,7 +7108,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
         // 标题
         batchTerrainTitleLabel = new Label();
-        batchTerrainTitleLabel.Text = "🗺️ 批量地形放置";
+        TranslateGroup.SetText(batchTerrainTitleLabel, "🗺️ 批量地形放置");
         batchTerrainTitleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         batchTerrainTitleLabel.AddThemeFontSizeOverride("font_size", 20);
         batchTerrainTitleLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 0.7f));
@@ -7127,7 +7127,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
         // 提示
         var hint = new Label();
-        hint.Text = "🖱️ 点击地形选择，在地图滑动铺设\nESC 结束批量放置";
+        TranslateGroup.SetText(hint, "🖱️ 点击地形选择，在地图滑动铺设\nESC 结束批量放置");
         hint.HorizontalAlignment = HorizontalAlignment.Center;
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.7f, 0.8f, 0.6f));
@@ -7156,7 +7156,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
         // 提取当前地形按钮
         var extractBtn = new Button();
-        extractBtn.Text = "📋 提取当前选中地形";
+        TranslateGroup.SetText(extractBtn, "📋 提取当前选中地形");
         extractBtn.CustomMinimumSize = new Vector2(300, 36);
         extractBtn.Position = new Vector2(20, 525);
         extractBtn.AddThemeFontSizeOverride("font_size", 12);
@@ -7168,13 +7168,13 @@ private void OpenWeaponTerrainMatrixEditor()
             if (selectedGrid != null)
                 ExtractTerrainFromGrid(selectedGrid);
             else
-                spawnHintLabel.Text = "❌ 请先点击地图选择一个格子";
+                TranslateGroup.SetText(spawnHintLabel, "❌ 请先点击地图选择一个格子");
         };
         batchTerrainPanel.AddChild(extractBtn);
 
         // 结束放置按钮
         var endBtn = new Button();
-        endBtn.Text = "❌ 结束放置";
+        TranslateGroup.SetText(endBtn, "❌ 结束放置");
         endBtn.CustomMinimumSize = new Vector2(300, 40);
         endBtn.Position = new Vector2(20, 565);
         endBtn.AddThemeFontSizeOverride("font_size", 14);
@@ -7197,7 +7197,7 @@ private void OpenWeaponTerrainMatrixEditor()
         handleStyle.SetCornerRadiusAll(16);
         dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
         var dragHint = new Label();
-        dragHint.Text = "⋮⋮ 拖拽移动";
+        TranslateGroup.SetText(dragHint, "⋮⋮ 拖拽移动");
         dragHint.AddThemeFontSizeOverride("font_size", 10);
         dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
         dragHint.Position = new Vector2(8, 2);
@@ -7263,7 +7263,7 @@ private void OpenWeaponTerrainMatrixEditor()
         }
         else
         {
-            batchTerrainTitleLabel.Text = "🗺️ 批量地形放置";
+            TranslateGroup.SetText(batchTerrainTitleLabel, "🗺️ 批量地形放置");
         }
     }
 
@@ -7329,7 +7329,7 @@ private void OpenWeaponTerrainMatrixEditor()
         }
         else
         {
-            batchTerrainBtn.Text = "🗺️ 批量地形";
+            TranslateGroup.SetText(batchTerrainBtn, "🗺️ 批量地形");
             var style = new StyleBoxFlat();
             style.BgColor = new Color(0.3f, 0.5f, 0.5f, 0.9f);
             style.SetCornerRadiusAll(8);
@@ -7362,21 +7362,21 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddThemeConstantOverride("separation", 12);
 
         var title = new Label();
-        title.Text = "🗺️ 导入 AW 地图";
+        TranslateGroup.SetText(title, "🗺️ 导入 AW 地图");
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 20);
         title.AddThemeColorOverride("font_color", new Color(0.5f, 0.95f, 0.4f));
         vbox.AddChild(title);
 
         var fileBtn = new Button();
-        fileBtn.Text = "📁 选择 AW 地图文件";
+        TranslateGroup.SetText(fileBtn, "📁 选择 AW 地图文件");
         fileBtn.CustomMinimumSize = new Vector2(360, 45);
         fileBtn.AddThemeFontSizeOverride("font_size", 14);
         fileBtn.Pressed += () => {
             // ✅ Android：无存储权限则先发起请求并提示授权后重试
             if (!GameManager.EnsureStoragePermission())
             {
-                ShowImportHint("⚠️ 需要存储权限才能导入文件\n请在系统设置中允许「所有文件访问」后重试");
+                ShowImportHint(TranslateGroup.T("⚠️ 需要存储权限才能导入文件\n请在系统设置中允许「所有文件访问」后重试"));
                 return;
             }
             dialog.QueueFree();
@@ -7384,7 +7384,7 @@ private void OpenWeaponTerrainMatrixEditor()
             fd.FileMode = FileDialog.FileModeEnum.OpenFile;
             fd.Access = FileDialog.AccessEnum.Filesystem;
             fd.Filters = new string[] { "*.aws ; AW Advance Wars", "*.aw2 ; AW2 Black Hole Rising", "*.awm ; AWM Advance Wars Map", "*.awd ; AWDS Dual Strike" };
-            fd.Title = "选择 AW 地图文件";
+            fd.Title = TranslateGroup.T("选择 AW 地图文件");
             fd.Size = new Vector2I(800, 600);
             // ✅ Android：默认打开下载目录，方便找到手机下载的文件
             if (OS.GetName() == "Android")
@@ -7404,7 +7404,7 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddChild(fileBtn);
 
         var hint = new Label();
-        hint.Text = "支持 .aws / .aw2 / .awm / .awd 格式\n未知地形将保留为 GROUND\n不支持的单位/设施/兵器将自动跳过";
+        TranslateGroup.SetText(hint, "支持 .aws / .aw2 / .awm / .awd 格式\n未知地形将保留为 GROUND\n不支持的单位/设施/兵器将自动跳过");
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.8f, 0.6f, 0.3f));
         hint.HorizontalAlignment = HorizontalAlignment.Center;
@@ -7412,7 +7412,7 @@ private void OpenWeaponTerrainMatrixEditor()
         vbox.AddChild(hint);
 
         var closeBtn = new Button();
-        closeBtn.Text = "❌ 关闭";
+        TranslateGroup.SetText(closeBtn, "❌ 关闭");
         closeBtn.CustomMinimumSize = new Vector2(360, 40);
         closeBtn.AddThemeFontSizeOverride("font_size", 13);
         closeBtn.Pressed += () => dialog.QueueFree();
@@ -7428,7 +7428,7 @@ private void OpenWeaponTerrainMatrixEditor()
         {
             if (fileData == null || fileData.Length < 10)
             {
-                ShowImportHint("❌ 文件过短，无法解析");
+                ShowImportHint(TranslateGroup.T("❌ 文件过短，无法解析"));
                 return;
             }
 
@@ -7441,7 +7441,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
             if (header == "AWSMap001")
             {
-                if (fileData.Length < 13) { ShowImportHint("❌ AWS 文件过短"); return; }
+                if (fileData.Length < 13) { ShowImportHint(TranslateGroup.T("❌ AWS 文件过短")); return; }
                 width = fileData[10];
                 height = fileData[11]; 
                 offset = 13;
@@ -7454,14 +7454,14 @@ private void OpenWeaponTerrainMatrixEditor()
             }
             else if (header == "AWDMap001")
             {
-                if (fileData.Length < 11) { ShowImportHint("❌ AWD 文件过短"); return; }
+                if (fileData.Length < 11) { ShowImportHint(TranslateGroup.T("❌ AWD 文件过短")); return; }
                 width = 30;
                 height = 20;
                 offset = 11;
             }
             else
             {
-                ShowImportHint("❌ 不支持的文件格式");
+                ShowImportHint(TranslateGroup.T("❌ 不支持的文件格式"));
                 return;
             }
 
@@ -7474,7 +7474,7 @@ private void OpenWeaponTerrainMatrixEditor()
 
             if (fileData.Length < offset + terrainDataSize + unitDataSize)
             {
-                ShowImportHint("❌ 文件数据不完整");
+                ShowImportHint(TranslateGroup.T("❌ 文件数据不完整"));
                 return;
             }
 
@@ -7682,7 +7682,7 @@ private void OpenWeaponTerrainMatrixEditor()
             // 因为 GameManager.ResetForMapImport() 已经设置了3秒保护计时器
             // 这里立即重置会导致保护失效，触发延迟判定
             // 保护计时器会在3秒后自动解除并调用 CheckVictoryCondition
-            GD.Print("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理");
+            GD.Print(TranslateGroup.T("[Import] ParseAndImportMap 完成，保护计时器由 GameManager 管理"));
         }
     }
 
@@ -7904,7 +7904,7 @@ private void OpenWeaponTerrainMatrixEditor()
             if (idx.X < 0 || idx.X >= gm.gridManager.searchRange.X ||
                 idx.Y < 0 || idx.Y >= gm.gridManager.searchRange.Y)
             {
-                spawnHintLabel.Text = "❌ 超出地图范围，无法放置";
+                TranslateGroup.SetText(spawnHintLabel, "❌ 超出地图范围，无法放置");
                 spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
                 return;
             }
@@ -7918,7 +7918,7 @@ private void OpenWeaponTerrainMatrixEditor()
             // 已有兵器
             if (g.weapon != null && IsInstanceValid(g.weapon))
             {
-                spawnHintLabel.Text = "❌ 该区域已有兵器占据，无法放置";
+                TranslateGroup.SetText(spawnHintLabel, "❌ 该区域已有兵器占据，无法放置");
                 spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
                 return;
             }
@@ -8028,7 +8028,7 @@ private void OpenWeaponTerrainMatrixEditor()
             weapon.QueueFree();
             if (weapon.GetParent() == gameManager.weaponManager.weaponsNode)
                 gameManager.weaponManager.weaponsNode.RemoveChild(weapon);
-            spawnHintLabel.Text = "❌ 多格兵器绑定失败";
+            TranslateGroup.SetText(spawnHintLabel, "❌ 多格兵器绑定失败");
             spawnHintLabel.AddThemeColorOverride("font_color", Colors.Red);
             ClearMultiTilePreview();
             return;
@@ -8090,13 +8090,13 @@ private void OpenWeaponTerrainMatrixEditor()
     {
         if (gridManager == null)
         {
-            ShowImportHint("❌ GridManager 未初始化");
+            ShowImportHint(TranslateGroup.T("❌ GridManager 未初始化"));
             return;
         }
 
         // 确认对话框
         var confirm = new ConfirmationDialog();
-        confirm.Title = "⚠️ 确认生成新地图";
+        confirm.Title = TranslateGroup.T("⚠️ 确认生成新地图");
         confirm.DialogText = $"将生成 {width}×{height} 的新地图，\n当前所有单位、兵器、设施将被清空！\n\n是否继续？";
         confirm.Size = new Vector2I(400, 200);
         confirm.Confirmed += () => {
@@ -8565,10 +8565,10 @@ private void OpenWeaponTerrainMatrixEditor()
 
         string typeName = mode switch
         {
-            SpawnMode.Unit => "单位",
-            SpawnMode.Weapon => "兵器",
-            SpawnMode.Facility => "设施",
-            _ => "对象"
+            SpawnMode.Unit => TranslateGroup.T("单位"),
+            SpawnMode.Weapon => TranslateGroup.T("兵器"),
+            SpawnMode.Facility => TranslateGroup.T("设施"),
+            _ => TranslateGroup.T("对象")
         };
 
         // 显示提示
@@ -8608,7 +8608,7 @@ private void OpenWeaponTerrainMatrixEditor()
         CloseAllMenus();
 
         var hint = new Label();
-        hint.Text = $"🖱️ 点击地图格子应用地形 \"{data.displayName}\"...\nESC取消";
+        hint.Text = TranslateGroup.T("🖱️ 点击地图格子应用地形 ") + "\"" + data.displayName + "\"...\n" + TranslateGroup.T("ESC取消");
         hint.AddThemeFontSizeOverride("font_size", 14);
         hint.AddThemeColorOverride("font_color", new Color(0.7f, 1f, 0.4f));
         hint.HorizontalAlignment = HorizontalAlignment.Center;
@@ -8743,7 +8743,7 @@ private void OpenWeaponTerrainMatrixEditor()
             var texture = LoadTextureFromPath(pendingTextureApplyPath);
             if (texture == null)
             {
-                spawnHintLabel.Text = "❌ 贴图加载失败（格式不支持或文件损坏）";
+                TranslateGroup.SetText(spawnHintLabel, "❌ 贴图加载失败（格式不支持或文件损坏）");
                 return;
             }
 
@@ -8754,70 +8754,72 @@ private void OpenWeaponTerrainMatrixEditor()
                 gifFrames = TryExtractGifFrames(pendingTextureApplyPath);
                 spawnHintLabel.Text = gifFrames != null && gifFrames.Count > 1
                     ? $"🎞️ GIF已加载 {gifFrames.Count} 帧"
-                    : "⚠️ GIF只加载了第一帧（建议预转为PNG序列）";
+                    : TranslateGroup.T("⚠️ GIF只加载了第一帧（建议预转为PNG序列）");
             }
 
-            switch (pendingTextureApplyTargetType)
+            if (pendingTextureApplyTargetType == TranslateGroup.T("单位"))
             {
-                case "单位":
-                    foreach (var unit in grid.infantries.ToList())
+                foreach (var unit in grid.infantries.ToList())
+                {
+                    if (unit?.sprite != null)
                     {
-                        if (unit?.sprite != null)
-                        {
-                            unit.sprite.Texture = texture;
-                            spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 贴图";
-                        }
-                        // ✅ 同时支持AnimatedSprite2D的单位（如Mech/Flare）
-                        if (unit is Mech mech && mech.animSprite != null)
-                        {
-                            ApplyFramesToAnimSprite(mech.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "mech2" : "mech1");
-                            spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 动画贴图";
-                        }
-                        else if (unit is Flare flare && flare.animSprite != null)
-                        {
-                            ApplyFramesToAnimSprite(flare.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "Flare2" : "Flare1");
-                            spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 动画贴图";
-                        }
+                        unit.sprite.Texture = texture;
+                        spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 贴图";
                     }
-                    break;
-                case "兵器":
-                    foreach (var weapon in grid.weapons.ToList())
+                    // ✅ 同时支持AnimatedSprite2D的单位（如Mech/Flare）
+                    if (unit is Mech mech && mech.animSprite != null)
                     {
-                        if (weapon?.GetNodeOrNull<Sprite2D>("Sprite2D") != null)
-                        {
-                            weapon.GetNode<Sprite2D>("Sprite2D").Texture = texture;
-                            spawnHintLabel.Text = $"✅ 已替换 {weapon.Name} 贴图";
-                        }
-                        else if (weapon?.animSprite != null)
-                        {
-                            var frames = new SpriteFrames();
-                            frames.AddAnimation("default");
-                            frames.AddFrame("default", texture);
-                            weapon.animSprite.SpriteFrames = frames;
-                            weapon.animSprite.Play("default");
-                            spawnHintLabel.Text = $"✅ 已替换 {weapon.Name} 贴图";
-                        }
+                        ApplyFramesToAnimSprite(mech.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "mech2" : "mech1");
+                        spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 动画贴图";
                     }
-                    break;
-                case "设施":
-                    if (grid.city != null)
+                    else if (unit is Flare flare && flare.animSprite != null)
                     {
-                        var facSprite = grid.city.GetNodeOrNull<Sprite2D>("Sprite2D");
-                        if (facSprite != null) facSprite.Texture = texture;
-                        spawnHintLabel.Text = $"✅ 已替换设施贴图";
+                        ApplyFramesToAnimSprite(flare.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "Flare2" : "Flare1");
+                        spawnHintLabel.Text = $"✅ 已替换 {unit.Name} 动画贴图";
                     }
-                    break;
-                case "地形":
-                    var terrainSprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
-                    if (terrainSprite != null)
+                }
+            }
+            else if (pendingTextureApplyTargetType == TranslateGroup.T("兵器"))
+            {
+                foreach (var weapon in grid.weapons.ToList())
+                {
+                    if (weapon?.GetNodeOrNull<Sprite2D>("Sprite2D") != null)
                     {
-                        terrainSprite.Texture = texture;
-                        spawnHintLabel.Text = "✅ 已替换地形贴图";
+                        weapon.GetNode<Sprite2D>("Sprite2D").Texture = texture;
+                        spawnHintLabel.Text = $"✅ 已替换 {weapon.Name} 贴图";
                     }
-                    break;
-                case "移动方式":
-                    spawnHintLabel.Text = "⚠️ 移动方式贴图请在CustomConfigUI中设置";
-                    break;
+                    else if (weapon?.animSprite != null)
+                    {
+                        var frames = new SpriteFrames();
+                        frames.AddAnimation("default");
+                        frames.AddFrame("default", texture);
+                        weapon.animSprite.SpriteFrames = frames;
+                        weapon.animSprite.Play("default");
+                        spawnHintLabel.Text = $"✅ 已替换 {weapon.Name} 贴图";
+                    }
+                }
+            }
+            else if (pendingTextureApplyTargetType == TranslateGroup.T("设施"))
+            {
+                if (grid.city != null)
+                {
+                    var facSprite = grid.city.GetNodeOrNull<Sprite2D>("Sprite2D");
+                    if (facSprite != null) facSprite.Texture = texture;
+                    spawnHintLabel.Text = $"✅ 已替换设施贴图";
+                }
+            }
+            else if (pendingTextureApplyTargetType == TranslateGroup.T("地形"))
+            {
+                var terrainSprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
+                if (terrainSprite != null)
+                {
+                    terrainSprite.Texture = texture;
+                    TranslateGroup.SetText(spawnHintLabel, "✅ 已替换地形贴图");
+                }
+            }
+            else if (pendingTextureApplyTargetType == TranslateGroup.T("移动方式"))
+            {
+                TranslateGroup.SetText(spawnHintLabel, "⚠️ 移动方式贴图请在CustomConfigUI中设置");
             }
         }
         catch (Exception e)

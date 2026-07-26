@@ -30,9 +30,9 @@ public partial class FacilityStatus
     {
         return Type switch
         {
-            FacilityStatusType.CannotProduce => "不可生产",
-            FacilityStatusType.NoIncome => "无收入",
-            _ => "未知"
+            FacilityStatusType.CannotProduce => TranslateGroup.T("不可生产"),
+            FacilityStatusType.NoIncome => TranslateGroup.T("无收入"),
+            _ => TranslateGroup.T("未知")
         };
     }
 }
@@ -103,7 +103,7 @@ public partial class Facility : Node2D
         ParentGrid = GetParent() as Grids;
         if (ParentGrid == null)
         {
-            GD.PushError("[Facility] Facility 节点必须是 Grids 的子节点！");
+            GD.PushError(TranslateGroup.T("[Facility] Facility 节点必须是 Grids 的子节点！"));
             return;
         }
 

@@ -423,27 +423,27 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
 
     public static string ExportConfig()
     {
-        string result = "=== 视野配置表 ===\n\n";
+        string result = TranslateGroup.T("=== 视野配置表 ===\n\n");
 
-        result += "[单位基础视野]\n";
+        result += TranslateGroup.T("[单位基础视野]\n");
         foreach (var kvp in unitVisionRange)
             result += $"{kvp.Key}: {kvp.Value}\n";
 
-        result += "\n[兵器基础视野]\n";
+        result += TranslateGroup.T("\n[兵器基础视野]\n");
         foreach (var kvp in weaponVisionRange)
         {
-            string mode = weaponIndependentMode.GetValueOrDefault(kvp.Key, false) ? "[独立]" : "[正常]";
+            string mode = weaponIndependentMode.GetValueOrDefault(kvp.Key, false) ? TranslateGroup.T("[独立]") : TranslateGroup.T("[正常]");
             result += $"{kvp.Key}: {kvp.Value} {mode}\n";
         }
 
-        result += "\n[全局默认地形视野加成]\n";
+        result += TranslateGroup.T("\n[全局默认地形视野加成]\n");
         foreach (var kvp in defaultTerrainVisionBonus)
         {
             string sign = kvp.Value > 0 ? "+" : "";
             result += $"{kvp.Key}: {sign}{kvp.Value}\n";
         }
 
-        result += "\n[单位类型×地形 专属加成矩阵]\n";
+        result += TranslateGroup.T("\n[单位类型×地形 专属加成矩阵]\n");
         foreach (var unitKvp in unitTerrainVisionBonus)
         {
             result += $"\n--- {unitKvp.Key} ---\n";

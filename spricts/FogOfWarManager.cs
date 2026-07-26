@@ -506,11 +506,11 @@ public partial class FogOfWarManager : Node
 
     public string GetGridVisionStatus(Grids grid, string team)
     {
-        if (!isFogOfWarEnabled) return "无迷雾";
+        if (!isFogOfWarEnabled) return TranslateGroup.T("无迷雾");
         var vision = CalculateGlobalVisionPool(team);
-        if (vision.Contains(grid)) return "视野内";
-        if (grid.city != null && grid.city.facilityTeam == team) return "建筑视野";
-        return "战争迷雾";
+        if (vision.Contains(grid)) return TranslateGroup.T("视野内");
+        if (grid.city != null && grid.city.facilityTeam == team) return TranslateGroup.T("建筑视野");
+        return TranslateGroup.T("战争迷雾");
     }
 
 

@@ -12,7 +12,7 @@ public partial class Base : City
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
         if (animSprite == null)
         {
-            GD.PushError("[Base] 找不到 AnimatedSprite2D 节点！");
+            GD.PushError(TranslateGroup.T("[Base] 找不到 AnimatedSprite2D 节点！"));
             return;
         }
 

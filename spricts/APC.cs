@@ -325,7 +325,7 @@ public partial class APC : Infantry
         string info = $"[APC] 装甲运兵车\n团队: {team}\n生命值: {health}/{maxHealth}\n燃料: {fuel}/{maxFuel}\n移动力: {movePoints}\n装载容量: {maxTransportCapacity}\n当前装载: {transportedUnits.Count}\n补给范围: {minSupplyRange}-{maxSupplyRange}\n";
         if (transportedUnits.Count > 0)
         {
-            info += "\n[装载单位]\n";
+            info += TranslateGroup.T("\n[装载单位]\n");
             foreach (var unit in transportedUnits)
                 if (unit != null && IsInstanceValid(unit))
                     info += $"- {unit.Name} (HP:{unit.health})\n";

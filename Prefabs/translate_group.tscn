@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://4xuno5nrdnv0"]
+
+[ext_resource type="Script" uid="uid://cpcw55fpw8k0b" path="res://spricts/TranslateGroup.cs" id="1_ucro6"]
+
+[node name="TranslateGroup" type="Node" unique_id=1530141586]
+script = ExtResource("1_ucro6")

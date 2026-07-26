@@ -56,7 +56,7 @@ public partial class CaptureInterruptedEffect : Node2D
     
     private void DrawInterruptedText(float alpha)
     {
-        string text = "占领中断!";
+        string text = TranslateGroup.T("占领中断!");
         float t = lifetime / MAX_LIFETIME;
         // 抖动效果
         float shake = Mathf.Sin( t * 20f) * 2f;

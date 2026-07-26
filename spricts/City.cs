@@ -30,7 +30,7 @@ public partial class City : Facility
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
         if (animSprite == null)
         {
-            GD.PushError("[City] 找不到 AnimatedSprite2D 节点！");
+            GD.PushError(TranslateGroup.T("[City] 找不到 AnimatedSprite2D 节点！"));
             return;
         }
 

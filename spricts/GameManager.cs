@@ -579,7 +579,7 @@ private void AutoCategorizeUnit(Infantry unit)
         // 价值按钮
         valueStatsBtn = new Button();
         valueStatsBtn.Name = "ValueStatsBtn";
-        valueStatsBtn.Text = "💎 价值";
+        TranslateGroup.SetText(valueStatsBtn, "💎 价值");
         valueStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
         valueStatsBtn.OffsetLeft = -400;
         valueStatsBtn.OffsetTop = 0;
@@ -602,7 +602,7 @@ private void AutoCategorizeUnit(Infantry unit)
         // 单位按钮
         unitStatsBtn = new Button();
         unitStatsBtn.Name = "UnitStatsBtn";
-        unitStatsBtn.Text = "📊 单位";
+        TranslateGroup.SetText(unitStatsBtn, "📊 单位");
         unitStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
         unitStatsBtn.OffsetLeft = -320;
         unitStatsBtn.OffsetTop = 0;
@@ -625,7 +625,7 @@ private void AutoCategorizeUnit(Infantry unit)
         // 设施按钮
         facilityStatsBtn = new Button();
         facilityStatsBtn.Name = "FacilityStatsBtn";
-        facilityStatsBtn.Text = "🏙️ 设施";
+        TranslateGroup.SetText(facilityStatsBtn, "🏙️ 设施");
         facilityStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
         facilityStatsBtn.OffsetLeft = -240;
         facilityStatsBtn.OffsetTop = 0;
@@ -648,7 +648,7 @@ private void AutoCategorizeUnit(Infantry unit)
         // 资金按钮
         fundsStatsBtn = new Button();
         fundsStatsBtn.Name = "FundsStatsBtn";
-        fundsStatsBtn.Text = "💰 资金";
+        TranslateGroup.SetText(fundsStatsBtn, "💰 资金");
         fundsStatsBtn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
         fundsStatsBtn.OffsetLeft = -160;
         fundsStatsBtn.OffsetTop = 0;
@@ -671,7 +671,7 @@ private void AutoCategorizeUnit(Infantry unit)
         // ✅ 切换回合按钮（替代右键/三连击）
         nextPhaseButton = new Button();
         nextPhaseButton.Name = "NextPhaseButton";
-        nextPhaseButton.Text = "🔄 切换回合";
+        TranslateGroup.SetText(nextPhaseButton, "🔄 切换回合");
         nextPhaseButton.SetAnchorsPreset(Control.LayoutPreset.TopRight);
         nextPhaseButton.OffsetLeft = -400;
         nextPhaseButton.OffsetTop = 36;
@@ -873,7 +873,7 @@ public void UpdateFacilityLists()
             }
         }
 
-        string text = " [color=yellow]设施统计[/color] \n";
+        string text = TranslateGroup.T(" [color=yellow]设施统计[/color] \n");
         text += $"[color=gray]中立(P0): {p0Cities}[/color]\n";
         text += $"[color=red]🔴P1: {p1Cities}[/color]\n";
         text += $"[color=blue]🔵P2: {p2Cities}[/color]\n";
@@ -1023,7 +1023,7 @@ public void UpdateFacilityLists()
         var title = new Label();
         title.Name = "ZoomTitle";
         title.SetAnchorsPreset(Control.LayoutPreset.TopWide);
-        title.Text = "缩放";
+        TranslateGroup.SetText(title, "缩放");
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeColorOverride("font_color", Colors.White);
         title.AddThemeFontSizeOverride("font_size", 14);
@@ -1121,7 +1121,7 @@ public void UpdateFacilityLists()
         unitListsToggleBtn.OffsetTop = 0;
         unitListsToggleBtn.OffsetRight = -20;
         unitListsToggleBtn.OffsetBottom = 32;
-        unitListsToggleBtn.Text = "📊 统计";
+        TranslateGroup.SetText(unitListsToggleBtn, "📊 统计");
         unitListsToggleBtn.AddThemeFontSizeOverride("font_size", 14);
         unitListsToggleBtn.AddThemeColorOverride("font_color", Colors.White);
         var btnStyle = new StyleBoxFlat();
@@ -1158,13 +1158,13 @@ public void UpdateFacilityLists()
         {
             // 展开：显示面板
             UnitLists.Visible = true;
-            unitListsToggleBtn.Text = "📊 统计";
+            TranslateGroup.SetText(unitListsToggleBtn, "📊 统计");
         }
         else
         {
             // 收缩：隐藏面板
             UnitLists.Visible = false;
-            unitListsToggleBtn.Text = "📊 统计";
+            TranslateGroup.SetText(unitListsToggleBtn, "📊 统计");
         }
     }
 
@@ -1424,11 +1424,11 @@ private void ShowVictory(string winner, string loser)
     {
         titleLabel.BbcodeEnabled = false;
         if (winner == "Player1")
-            titleLabel.Text = "🔴 P1 获得胜利！";
+            TranslateGroup.SetText(titleLabel, "🔴 P1 获得胜利！");
         else if (winner == "Player2")
-            titleLabel.Text = "🔵 P2 获得胜利！";
+            TranslateGroup.SetText(titleLabel, "🔵 P2 获得胜利！");
         else if (winner == "Draw")
-            titleLabel.Text = "🤝 平局！";
+            TranslateGroup.SetText(titleLabel, "🤝 平局！");
         else
             titleLabel.Text = $"🏆 {winner} 获得胜利！";
 
@@ -1458,13 +1458,13 @@ private void ShowVictory(string winner, string loser)
     {
         subLabel.BbcodeEnabled = false;
         if (winner == "Player1")
-            subLabel.Text = "🔵 P2 战败";
+            TranslateGroup.SetText(subLabel, "🔵 P2 战败");
         else if (winner == "Player2")
-            subLabel.Text = "🔴 P1 战败";
+            TranslateGroup.SetText(subLabel, "🔴 P1 战败");
         else if (winner == "Draw")
-            subLabel.Text = "双方均未能取胜";
+            TranslateGroup.SetText(subLabel, "双方均未能取胜");
         else
-            subLabel.Text = "其他势力战败";
+            TranslateGroup.SetText(subLabel, "其他势力战败");
         subLabel.AddThemeColorOverride("default_color", new Color(0.8f, 0.8f, 0.8f));
         subLabel.AddThemeFontSizeOverride("normal_font_size", 32);
 
@@ -1479,7 +1479,7 @@ private void ShowVictory(string winner, string loser)
     // ========== 按钮 ==========
     if (btn != null)
     {
-        btn.Text = "🔄 再来一局";
+        TranslateGroup.SetText(btn, "🔄 再来一局");
         btn.AddThemeFontSizeOverride("font_size", 24);
         btn.CustomMinimumSize = new Godot.Vector2(200, 60);
 
@@ -2585,7 +2585,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
 
         // ✅ 即时移动开关
         var moveCheckBox = new CheckBox();
-        moveCheckBox.Text = "⚡ 生产后可立即移动";
+        TranslateGroup.SetText(moveCheckBox, "⚡ 生产后可立即移动");
         moveCheckBox.AddThemeFontSizeOverride("font_size", 12);
         moveCheckBox.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.4f));
         moveCheckBox.ButtonPressed = facility.instantMoveAfterProduction;
@@ -2621,7 +2621,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
                 disabledStyle.BgColor = new Color(0.2f, 0.2f, 0.2f, 0.6f);
                 disabledStyle.SetCornerRadiusAll(6);
                 btn.AddThemeStyleboxOverride("normal", disabledStyle);
-                btn.TooltipText = "已达本回合生产上限";
+                btn.TooltipText = TranslateGroup.T("已达本回合生产上限");
                 btn.Disabled = true;
             }
             else if (!gridEmpty)
@@ -2631,7 +2631,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
                 disabledStyle.BgColor = new Color(0.2f, 0.2f, 0.2f, 0.6f);
                 disabledStyle.SetCornerRadiusAll(6);
                 btn.AddThemeStyleboxOverride("normal", disabledStyle);
-                btn.TooltipText = "格子已被占据";
+                btn.TooltipText = TranslateGroup.T("格子已被占据");
                 btn.Disabled = true;
             }
             else if (!canAfford)
@@ -2641,7 +2641,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
                 poorStyle.BgColor = new Color(0.3f, 0.1f, 0.1f, 0.6f);
                 poorStyle.SetCornerRadiusAll(6);
                 btn.AddThemeStyleboxOverride("normal", poorStyle);
-                btn.TooltipText = "资金不足";
+                btn.TooltipText = TranslateGroup.T("资金不足");
                 btn.Disabled = true;
             }
             else
@@ -2664,7 +2664,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         }
 
         var closeBtn = new Button();
-        closeBtn.Text = "❌ 关闭";
+        TranslateGroup.SetText(closeBtn, "❌ 关闭");
         closeBtn.CustomMinimumSize = new Godot.Vector2(300, 40);
         closeBtn.AddThemeColorOverride("font_color", Colors.White);
         var closeStyle = new StyleBoxFlat();
@@ -2698,7 +2698,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
 
         productionMenuTitle = new Label();
         productionMenuTitle.Name = "ProductionMenuTitle";
-        productionMenuTitle.Text = "🏭 生产菜单";
+        TranslateGroup.SetText(productionMenuTitle, "🏭 生产菜单");
         productionMenuTitle.HorizontalAlignment = HorizontalAlignment.Center;
         productionMenuTitle.AddThemeFontSizeOverride("font_size", 18);
         productionMenuTitle.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
@@ -2717,7 +2717,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         handleStyle.SetCornerRadiusAll(8);
         dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
         var dragHint = new Label();
-        dragHint.Text = "⋮⋮ 拖拽移动";
+        TranslateGroup.SetText(dragHint, "⋮⋮ 拖拽移动");
         dragHint.AddThemeFontSizeOverride("font_size", 10);
         dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
         dragHint.Position = new Godot.Vector2(8, 2);

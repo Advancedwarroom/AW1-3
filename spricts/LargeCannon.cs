@@ -290,13 +290,13 @@ public partial class LargeCannon : BlackCannon
     public override string GetBlackCannonFullInfo()
     {
         string info = base.GetBlackCannonFullInfo();
-        info = info.Replace("[黑炮]", "[大型黑炮]");
+        info = info.Replace(TranslateGroup.T("[黑炮]"), TranslateGroup.T("[大型黑炮]"));
         info += $"\n=== 多格占据 ===\n";
         info += $"尺寸: {size.X}×{size.Y}\n";
         info += $"炮口位置: {direction} ({GetFirePointOffsetForDirection(direction)})\n";
         info += $"弱点位置: {direction} ({GetWeakPointOffsetForDirection(direction)})\n";
-        info += $"可旋转: {(canRotate ? "是" : "否")}\n";
-        info += $"状态: {(isDestroyed ? "已摧毁" : "运作中")}\n";
+        info += $"可旋转: {(canRotate ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+        info += $"状态: {(isDestroyed ? TranslateGroup.T("已摧毁") : TranslateGroup.T("运作中"))}\n";
         if (contributesToVictory)
         {
             info += $"\n[胜利条件] 摧毁此兵器计入胜利判定\n";

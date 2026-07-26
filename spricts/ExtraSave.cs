@@ -244,16 +244,16 @@ public partial class ExtraSave : Node
 
         // 确保目录存在
         EnsureDirectoryExists(CUSTOM_TEXTURE_DIR);
-        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "单位"));
-        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "兵器"));
-        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "设施"));
-        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "地形"));
-        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "移动方式"));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, TranslateGroup.T("单位")));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, TranslateGroup.T("兵器")));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, TranslateGroup.T("设施")));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, TranslateGroup.T("地形")));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, TranslateGroup.T("移动方式")));
 
         LoadAllData();
         InitializeDefaultSlots();
 
-        GD.Print("[ExtraSave] 初始化完成，版本: " + Data.version);
+        GD.Print(TranslateGroup.T("[ExtraSave] 初始化完成，版本: ") + Data.version);
     }
 
     private void EnsureDirectoryExists(string path)
@@ -276,7 +276,7 @@ public partial class ExtraSave : Node
                 using var file = Godot.FileAccess.Open(SAVE_FILE_NAME, Godot.FileAccess.ModeFlags.Read);
                 string json = file.GetAsText();
                 Data = ParseFromJson(json);
-                GD.Print("[ExtraSave] 数据加载成功");
+                GD.Print(TranslateGroup.T("[ExtraSave] 数据加载成功"));
             }
             catch (Exception e)
             {
@@ -304,7 +304,7 @@ public partial class ExtraSave : Node
             string json = SerializeToJson(Data);
             using var file = Godot.FileAccess.Open(SAVE_FILE_NAME, Godot.FileAccess.ModeFlags.Write);
             file.StoreString(json);
-            GD.Print("[ExtraSave] 数据保存成功");
+            GD.Print(TranslateGroup.T("[ExtraSave] 数据保存成功"));
         }
         catch (Exception e)
         {
@@ -779,11 +779,11 @@ public partial class ExtraSave : Node
 
     private void InitializeDefaultSlots()
     {
-        EnsureSlotList(ref Data.savedUnits, "单位");
-        EnsureSlotList(ref Data.savedWeapons, "兵器");
-        EnsureSlotList(ref Data.savedFacilities, "设施");
-        EnsureSlotList(ref Data.savedGridTerrains, "地形");
-        EnsureSlotList(ref Data.savedMaps, "地图");
+        EnsureSlotList(ref Data.savedUnits, TranslateGroup.T("单位"));
+        EnsureSlotList(ref Data.savedWeapons, TranslateGroup.T("兵器"));
+        EnsureSlotList(ref Data.savedFacilities, TranslateGroup.T("设施"));
+        EnsureSlotList(ref Data.savedGridTerrains, TranslateGroup.T("地形"));
+        EnsureSlotList(ref Data.savedMaps, TranslateGroup.T("地图"));
     }
 
     private void EnsureSlotList<T>(ref List<T> list, string prefix) where T : class

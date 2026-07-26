@@ -562,15 +562,15 @@ public partial class DeathRay : BlackCannon
     public override string GetBlackCannonFullInfo()
     {
         string info = base.GetBlackCannonFullInfo();
-        info = info.Replace("[黑炮]", "[死光炮]");
+        info = info.Replace(TranslateGroup.T("[黑炮]"), TranslateGroup.T("[死光炮]"));
         info += $"\n=== 死光炮特性 ===\n";
         info += $"尺寸: {size.X}×{size.Y}\n";
         info += $"激光方向: {direction}\n";
         info += $"弱点位置: {direction} ({GetWeakPointOffsetForDirection(direction)})\n";
         info += $"激光宽度: {laserBeamWidth}格\n";
-        info += $"射程: {(useInfiniteRange ? "无限" : maxLaserLength.ToString())}\n";
-        info += $"可旋转: {(canRotate ? "是" : "否")}\n";
-        info += $"状态: {(isDestroyed ? "已摧毁" : "运作中")}\n";
+        info += $"射程: {(useInfiniteRange ? TranslateGroup.T("无限") : maxLaserLength.ToString())}\n";
+        info += $"可旋转: {(canRotate ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+        info += $"状态: {(isDestroyed ? TranslateGroup.T("已摧毁") : TranslateGroup.T("运作中"))}\n";
         if (contributesToVictory)
         {
             info += $"\n[胜利条件] 摧毁此兵器计入胜利判定\n";

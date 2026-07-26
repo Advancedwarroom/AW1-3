@@ -25,7 +25,7 @@ public partial class AirPort : City
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
         if (animSprite == null)
         {
-            GD.PushError("[AirPort] 找不到 AnimatedSprite2D 节点！");
+            GD.PushError(TranslateGroup.T("[AirPort] 找不到 AnimatedSprite2D 节点！"));
             return;
         }
 

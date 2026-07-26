@@ -475,7 +475,7 @@ public partial class Grids : Node2D
         }
     }
 
-    public string GetTerrainDefenseDescription() { float bonus = TerrainDefenseBonus * 100; return bonus > 0 ? $"{bonus:F0}%" : "无"; }
+    public string GetTerrainDefenseDescription() { float bonus = TerrainDefenseBonus * 100; return bonus > 0 ? $"{bonus:F0}%" : TranslateGroup.T("无"); }
 
     public List<Infantry> GetEnemyInfantries(string team) { return infantries.Where(i => i != null && TeamHelper.IsEnemyForAttacker(team, i.team)).ToList(); }
 
@@ -574,9 +574,9 @@ public partial class Grids : Node2D
         if (gridVisionMode != GridVisionMode.None)
         {
             info += $"\n=== 格子视野 ===\n模式: {gridVisionMode}\n射程: {gridVisionRange}\n";
-            if (gridVisionMode == GridVisionMode.TowerCone) { info += $"方向: {towerDirection}\n可旋转: {(towerCanRotate ? "是" : "否")}\n"; }
+            if (gridVisionMode == GridVisionMode.TowerCone) { info += $"方向: {towerDirection}\n可旋转: {(towerCanRotate ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n"; }
             else if (gridVisionMode == GridVisionMode.TowerRay) { info += $"角度: {towerRayAngle}°\n"; }
-            info += $"无视地形: {(gridVisionIgnoreTerrain ? "是" : "否")}\n";
+            info += $"无视地形: {(gridVisionIgnoreTerrain ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
         }
         if (visionBonus != 0) info += $"视野加成: {visionBonus}\n";
         if (requiresAdjacentVision) info += $"需要紧邻视野: 是\n";

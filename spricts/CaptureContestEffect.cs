@@ -131,7 +131,7 @@ public partial class CaptureContestEffect : Node2D
     
     private void DrawContestText(float alpha)
     {
-        string text = "争夺中!";
+        string text = TranslateGroup.T("争夺中!");
         
         // 剧烈闪烁
         float flash = (Mathf.Sin(lifetime * 12f) + 1f) * 0.5f;

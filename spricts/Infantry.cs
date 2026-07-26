@@ -608,7 +608,7 @@ public virtual bool HasInfinitePrimaryAmmo => hasPrimaryWeapon && (!primaryHasLi
 
 public virtual string GetPrimaryAmmoString()
 {
-    if (!hasPrimaryWeapon) return "无";
+    if (!hasPrimaryWeapon) return TranslateGroup.T("无");
     if (HasInfinitePrimaryAmmo) return "∞";
     return $"{currentPrimaryAmmo}/{maxPrimaryAmmo}";
 }
@@ -2307,10 +2307,10 @@ public virtual (int damage, string info) CalculateDamagePreview(Infantry target)
     int damage = CalculateFinalDamage(target, weapon);
     int baseVal = weapon == WeaponType.Primary ? GetPrimaryDamageFromMatrix(target) : GetSecondaryDamageFromMatrix(target);
     
-    string weaponName = weapon == WeaponType.Primary ? "主" : "副";
+    string weaponName = weapon == WeaponType.Primary ? TranslateGroup.T("主") : TranslateGroup.T("副");
     string info = damage > 0 
         ? $"{weaponName}武:{damage}(基础{baseVal})" 
-        : "无法攻击";
+        : TranslateGroup.T("无法攻击");
     
     return (damage, info);
 }
@@ -2318,7 +2318,7 @@ public virtual (int damage, string info) CalculateDamagePreview(Infantry target)
 public virtual (int damage, string info) CalculateCounterPreview(Infantry attacker)
 {
     if (attackType == AttackType.NoAttack || health <= 0)
-        return (0, "无法反击");
+        return (0, TranslateGroup.T("无法反击"));
     
     WeaponType counterWeapon = SelectWeaponByMatrix(attacker);
     int damage = CalculateFinalDamage(attacker, counterWeapon, isCounter: true);
@@ -2376,7 +2376,7 @@ public virtual void Attack(Infantry target)
     this.UpdateHpLabel();
     
     // 日志
-    string weaponName = weapon == WeaponType.Primary ? "主" : "副";
+    string weaponName = weapon == WeaponType.Primary ? TranslateGroup.T("主") : TranslateGroup.T("副");
     int baseVal = weapon == WeaponType.Primary ? GetPrimaryDamageFromMatrix(target) : GetSecondaryDamageFromMatrix(target);
 
     // ========== 死亡处理 ==========

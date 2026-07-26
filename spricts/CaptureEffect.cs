@@ -127,7 +127,7 @@ public override void _Process(double delta)
     
     private void DrawCaptureText(float alpha)
     {
-        string text = IsCapturing ? "占领中..." : "占领完成!";
+        string text = IsCapturing ? TranslateGroup.T("占领中...") : TranslateGroup.T("占领完成!");
         Color textColor = IsCapturing ? Colors.Yellow : Colors.Green;
         
         // 文字阴影

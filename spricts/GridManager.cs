@@ -925,7 +925,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         // 1. 取消按钮
         var cancelBtn = new Button();
-        cancelBtn.Text = "❌ 取消";
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
         cancelBtn.CustomMinimumSize = new Godot.Vector2(200, 40);
         cancelBtn.Pressed += () => {
             dialog.QueueFree();
@@ -936,7 +936,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         // 2. 确认移动按钮
         var confirmBtn = new Button();
-        confirmBtn.Text = "✅ 确认移动";
+        TranslateGroup.SetText(confirmBtn, "✅ 确认移动");
         confirmBtn.CustomMinimumSize = new Godot.Vector2(200, 40);
         confirmBtn.Pressed += () => {
             dialog.QueueFree();
@@ -2162,7 +2162,7 @@ public void HideAttackRange()
                 text += $"\n🛡️ 反击{counterDamage}";
         }
         else if (!targetWillDie && counterDamage == 0)
-            text += "\n🛡️ 无反击";
+            text += TranslateGroup.T("\n🛡️ 无反击");
         
         damagePreviewLabel.Text = text;
         

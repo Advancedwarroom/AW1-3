@@ -1526,14 +1526,14 @@ public override void OnTurnStart()
         info += $"[黑炮] {Name}\n";
         info += $"团队: {team}\n";
         info += $"血量: {health}/{maxHealth} ({Mathf.CeilToInt(health/10f)}格)\n";
-        info += $"状态: {(hasActed ? "已行动" : "待机")}\n";
+        info += $"状态: {(hasActed ? TranslateGroup.T("已行动") : TranslateGroup.T("待机"))}\n";
 
         // ✅ 弹药信息
         info += $"\n=== 弹药系统 ===\n";
         if (useAmmoSystem)
         {
             info += $"弹药: {currentAmmo}/{maxAmmo}\n";
-            info += $"补给状态: {(currentAmmo >= maxAmmo ? "已满" : "可补给")}\n";
+            info += $"补给状态: {(currentAmmo >= maxAmmo ? TranslateGroup.T("已满") : TranslateGroup.T("可补给"))}\n";
         }
         else
         {
@@ -1546,10 +1546,10 @@ public override void OnTurnStart()
         {
             info += $"冷却周期: {cooldownTurns}回合\n";
             info += $"周期攻击次数: {attacksPerCooldown}次\n";
-            info += $"存次数: {(storeAttacks ? "是" : "否")}\n";
+            info += $"存次数: {(storeAttacks ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
             info += $"当前周期进度: {turnsSinceLastAttack}/{cooldownTurns}回合\n";
             info += $"周期剩余次数: {attacksRemainingInCycle}次\n";
-            info += $"冷却就绪: {(cooldownReady ? "✓ 是" : "✗ 否")}\n";
+            info += $"冷却就绪: {(cooldownReady ? TranslateGroup.T("✓ 是") : TranslateGroup.T("✗ 否"))}\n";
 
             if (!cooldownReady)
             {
@@ -1564,7 +1564,7 @@ public override void OnTurnStart()
 
         // ✅ 综合攻击状态
         info += $"\n=== 攻击状态 ===\n";
-        info += $"可攻击: {(CanAttack() ? "✓ 是" : "✗ 否")}\n";
+        info += $"可攻击: {(CanAttack() ? TranslateGroup.T("✓ 是") : TranslateGroup.T("✗ 否"))}\n";
         if (!CanAttack())
         {
             if (useAmmoSystem && currentAmmo <= 0)
@@ -1577,28 +1577,28 @@ public override void OnTurnStart()
 
         info += $"\n=== 配置信息 ===\n";
         info += $"射程深度: {maxAttackDepth}格\n";
-        info += $"伤害模式: {(useModifiedDamage ? "改良模式" : "传统模式")}\n";
+        info += $"伤害模式: {(useModifiedDamage ? TranslateGroup.T("改良模式") : TranslateGroup.T("传统模式"))}\n";
         info += $"朝向: {direction}\n";
-        info += $"可攻击兵器: {(CanAttackWeapon ? "是" : "否")}\n";
+        info += $"可攻击兵器: {(CanAttackWeapon ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
         info += $"目标选择: {targetSelectionMode switch 
         { 
-            TargetSelectionMode.AllSelect => "所有单位", 
-            TargetSelectionMode.OnlyEnemyUnits => "仅敌方单位", 
-            TargetSelectionMode.OnlyUserUnits => "仅己方单位", 
-            _ => "未知"
+            TargetSelectionMode.AllSelect => TranslateGroup.T("所有单位"), 
+            TargetSelectionMode.OnlyEnemyUnits => TranslateGroup.T("仅敌方单位"), 
+            TargetSelectionMode.OnlyUserUnits => TranslateGroup.T("仅己方单位"), 
+            _ => TranslateGroup.T("未知")
         }}\n";
 
         if (!useModifiedDamage)
         {
             info += $"固定伤害: {fixedDamagePercent * 100:F0}%\n";
-            info += $"可摧毁: {(CanDestroy ? "是" : "否")}\n";
+            info += $"可摧毁: {(CanDestroy ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
         }
         else
         {
-            info += $"血量变化: {modifiedHealthPercent * 100:F0}% ({(modifiedHealthPercent > 0 ? "扣血" : modifiedHealthPercent < 0 ? "回血" : "无变化")})\n";
+            info += $"血量变化: {modifiedHealthPercent * 100:F0}% ({(modifiedHealthPercent > 0 ? TranslateGroup.T("扣血") : modifiedHealthPercent < 0 ? TranslateGroup.T("回血") : TranslateGroup.T("无变化"))})\n";
             info += $"弹药变化: {modifiedAmmoPercent * 100:F0}%\n";
             info += $"燃料变化: {modifiedFuelPercent * 100:F0}%\n";
-            info += $"可超血量上限: {(canOverMaxHp ? "是" : "否")}\n";
+            info += $"可超血量上限: {(canOverMaxHp ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
         }
 
         info += $"\n[操作说明]\n";

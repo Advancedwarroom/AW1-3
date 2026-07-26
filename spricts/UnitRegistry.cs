@@ -92,7 +92,7 @@ public static class UnitRegistry
         ["Infantry"] = new UnitConfig
         {
             UnitId = "Infantry",
-            DisplayName = "步兵",
+            DisplayName = TranslateGroup.T("步兵"),
             MoveType = MoveType.Infantry,
             MovePoints = 3,
             Cost = 1000,
@@ -110,7 +110,7 @@ public static class UnitRegistry
         ["Mech"] = new UnitConfig
         {
             UnitId = "Mech",
-            DisplayName = "机甲",
+            DisplayName = TranslateGroup.T("机甲"),
             MoveType = MoveType.Mech,
             MovePoints = 2,
             Cost = 3000,
@@ -137,7 +137,7 @@ public static class UnitRegistry
         ["Bike"] = new UnitConfig
         {
             UnitId = "Bike",
-            DisplayName = "摩托兵",
+            DisplayName = TranslateGroup.T("摩托兵"),
             MoveType = MoveType.Tire,
             MovePoints = 5,
             Cost = 2500,
@@ -159,7 +159,7 @@ public static class UnitRegistry
         ["LightTank"] = new UnitConfig
         {
             UnitId = "LightTank",
-            DisplayName = "轻型坦克",
+            DisplayName = TranslateGroup.T("轻型坦克"),
             MoveType = MoveType.Treads,
             MovePoints = 6,
             Cost = 7000,
@@ -184,7 +184,7 @@ public static class UnitRegistry
         ["MdTank"] = new UnitConfig
         {
             UnitId = "MdTank",
-            DisplayName = "重型坦克",
+            DisplayName = TranslateGroup.T("重型坦克"),
             MoveType = MoveType.Treads,
             MovePoints = 5,
             Cost = 16000,
@@ -206,7 +206,7 @@ public static class UnitRegistry
         ["Recon"] = new UnitConfig
         {
             UnitId = "Recon",
-            DisplayName = "侦察车",
+            DisplayName = TranslateGroup.T("侦察车"),
             MoveType = MoveType.Tire,
             MovePoints = 8,
             Cost = 4000,
@@ -222,7 +222,7 @@ public static class UnitRegistry
         ["APC"] = new UnitConfig
         {
             UnitId = "APC",
-            DisplayName = "装甲运兵车",
+            DisplayName = TranslateGroup.T("装甲运兵车"),
             MoveType = MoveType.Treads,
             MovePoints = 6,
             Cost = 5000,
@@ -242,7 +242,7 @@ public static class UnitRegistry
         ["Artillery"] = new UnitConfig
         {
             UnitId = "Artillery",
-            DisplayName = "自行火炮",
+            DisplayName = TranslateGroup.T("自行火炮"),
             MoveType = MoveType.Treads,
             MovePoints = 5,
             Cost = 6000,
@@ -266,7 +266,7 @@ public static class UnitRegistry
         ["Rocket"] = new UnitConfig
         {
             UnitId = "Rocket",
-            DisplayName = "火箭炮",
+            DisplayName = TranslateGroup.T("火箭炮"),
             MoveType = MoveType.Tire,
             MovePoints = 4,
             Cost = 15000,
@@ -290,7 +290,7 @@ public static class UnitRegistry
         ["AntiAir"] = new UnitConfig
         {
             UnitId = "AntiAir",
-            DisplayName = "防空高炮",
+            DisplayName = TranslateGroup.T("防空高炮"),
             MoveType = MoveType.Treads,
             MovePoints = 6,
             Cost = 8000,
@@ -307,7 +307,7 @@ public static class UnitRegistry
         ["AntiTank"] = new UnitConfig
         {
             UnitId = "AntiTank",
-            DisplayName = "反坦克炮",
+            DisplayName = TranslateGroup.T("反坦克炮"),
             MoveType = MoveType.Tire,
             MovePoints = 4,
             Cost = 11000,
@@ -333,7 +333,7 @@ public static class UnitRegistry
         ["Flare"] = new UnitConfig
         {
             UnitId = "Flare",
-            DisplayName = "照明车",
+            DisplayName = TranslateGroup.T("照明车"),
             MoveType = MoveType.Treads,
             MovePoints = 5,
             Cost = 5000,
@@ -352,7 +352,7 @@ public static class UnitRegistry
         ["PipeRunner"] = new UnitConfig
         {
             UnitId = "PipeRunner",
-            DisplayName = "管道炮",
+            DisplayName = TranslateGroup.T("管道炮"),
             MoveType = MoveType.PipeRunner,
             MovePoints = 5,
             Cost = 20000,
@@ -376,7 +376,7 @@ public static class UnitRegistry
         ["Oozium"] = new UnitConfig
         {
             UnitId = "Oozium",
-            DisplayName = "史莱姆",
+            DisplayName = TranslateGroup.T("史莱姆"),
             MoveType = MoveType.Oozium,
             MovePoints = 1,
             Cost = 20000,
@@ -390,7 +390,7 @@ public static class UnitRegistry
         ["FlyBomb"] = new UnitConfig
         {
             UnitId = "FlyBomb",
-            DisplayName = "飞弹",
+            DisplayName = TranslateGroup.T("飞弹"),
             MoveType = MoveType.AirPlane,
             MovePoints = 9,
             Cost = 25000,
@@ -411,7 +411,7 @@ public static class UnitRegistry
         ["Fighter"] = new UnitConfig
         {
             UnitId = "Fighter",
-            DisplayName = "战斗机",
+            DisplayName = TranslateGroup.T("战斗机"),
             MoveType = MoveType.AirPlane,
             MovePoints = 9,
             Cost = 20000,

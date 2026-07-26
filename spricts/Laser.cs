@@ -1266,20 +1266,20 @@ public partial class Laser : Weapon
         info += $"[激光炮] {Name}\n";
         info += $"团队: {team}\n";
         info += $"血量: {health}/{maxHealth}\n";
-        info += $"状态: {(hasActed ? "已行动" : "待机")}\n";
+        info += $"状态: {(hasActed ? TranslateGroup.T("已行动") : TranslateGroup.T("待机"))}\n";
         if (enableAutoAI)
         {
             info += $"\n=== AI自动操作 ===\n";
             info += $"AI模式: 已启用\n";
-            info += $"自动旋转: {(aiAutoRotate ? "是" : "否")}\n";
-            info += $"用完所有攻击: {(aiUseAllAttacks ? "是" : "否")}\n";
+            info += $"自动旋转: {(aiAutoRotate ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+            info += $"用完所有攻击: {(aiUseAllAttacks ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
         }
         info += $"\n=== 角度系统 ===\n";
         info += $"启用角度: {string.Join(", ", enabledAngles.Select(a => $"{a}°"))}\n";
         info += $"当前发射: {string.Join(", ", currentFireAngles.Select(a => $"{a}°"))}\n";
         info += $"可旋转: {(canRotate ? "✓" : "✗")}\n";
         info += $"\n=== 射程 ===\n";
-        info += $"射程: {(useInfiniteRange ? "无限" : $"{maxLaserLength}格")}\n";
+        info += $"射程: {(useInfiniteRange ? TranslateGroup.T("无限") : $"{maxLaserLength}格")}\n";
         info += $"\n=== 伤害配置 ===\n";
         if (useContactAreaDamage)
         {
@@ -1290,7 +1290,7 @@ public partial class Laser : Weapon
         if (useModifiedDamage)
         {
             info += $"[改良模式]\n";
-            info += $"血量{modifiedHealthPercent * 100:F0}% {(modifiedHealthPercent > 0 ? "扣" : "回")}\n";
+            info += $"血量{modifiedHealthPercent * 100:F0}% {(modifiedHealthPercent > 0 ? TranslateGroup.T("扣") : TranslateGroup.T("回"))}\n";
             info += $"弹药: {modifiedAmmoPercent * 100:F0}%\n";
             info += $"燃料: {modifiedFuelPercent * 100:F0}%\n";
         }
@@ -1301,9 +1301,9 @@ public partial class Laser : Weapon
         }
         if (useContactAreaDamage)
             info += $"(已叠加接触面积衰减)\n";
-        info += $"可摧毁: {(CanDestroy ? "是" : "否（锁血1HP）")}\n";
+        info += $"可摧毁: {(CanDestroy ? TranslateGroup.T("是") : TranslateGroup.T("否（锁血1HP）"))}\n";
         info += $"\n=== 穿透系统 ===\n";
-        info += $"每条线穿透上限: {(maxPiercePerLine > 0 ? $"{maxPiercePerLine}个" : "无限")}\n";
+        info += $"每条线穿透上限: {(maxPiercePerLine > 0 ? $"{maxPiercePerLine}个" : TranslateGroup.T("无限"))}\n";
         info += $"目标模式: {targetSelectionMode}\n";
         info += $"\n=== 弹药 ===\n";
         if (useAmmoSystem)
@@ -1315,7 +1315,7 @@ public partial class Laser : Weapon
         {
             info += $"冷却周期: {cooldownTurns}回合\n";
             info += $"每周期次数: {attacksPerCooldown}\n";
-            info += $"存次数: {(storeAttacks ? "是" : "否")}\n";
+            info += $"存次数: {(storeAttacks ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
             info += $"剩余次数: {attacksRemainingInCycle}\n";
             info += $"冷却就绪: {(cooldownReady ? "✓" : "✗")}\n";
         }

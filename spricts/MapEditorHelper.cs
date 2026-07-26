@@ -160,7 +160,7 @@ public partial class MapEditorHelper : Node
     {
         helperToggleBtn = new Button();
         helperToggleBtn.Name = "HelperToggleBtn";
-        helperToggleBtn.Text = "🛠️ 编辑器助手";
+        TranslateGroup.SetText(helperToggleBtn, "🛠️ 编辑器助手");
         helperToggleBtn.CustomMinimumSize = new Vector2(120, 40);
         helperToggleBtn.Pressed += OnHelperToggle;
         AddChild(helperToggleBtn);
@@ -183,7 +183,7 @@ public partial class MapEditorHelper : Node
         vbox.AddChild(titleBar);
 
         var titleLabel = new Label();
-        titleLabel.Text = "=== 编辑器助手 ===";
+        TranslateGroup.SetText(titleLabel, "=== 编辑器助手 ===");
         titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         titleLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         titleBar.AddChild(titleLabel);
@@ -197,7 +197,7 @@ public partial class MapEditorHelper : Node
 
         statusHintLabel = new Label();
         statusHintLabel.Name = "StatusHint";
-        statusHintLabel.Text = "就绪";
+        TranslateGroup.SetText(statusHintLabel, "就绪");
         statusHintLabel.HorizontalAlignment = HorizontalAlignment.Center;
         statusHintLabel.AddThemeColorOverride("font_color", Colors.Gray);
         statusHintLabel.AddThemeFontSizeOverride("font_size", 11);
@@ -211,103 +211,103 @@ public partial class MapEditorHelper : Node
         vbox.AddChild(actionButtonBar);
 
         confirmBtn = new Button();
-        confirmBtn.Text = "✅ 确认";
+        TranslateGroup.SetText(confirmBtn, "✅ 确认");
         confirmBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         confirmBtn.Pressed += OnConfirmAction;
         actionButtonBar.AddChild(confirmBtn);
 
         cancelBtn = new Button();
-        cancelBtn.Text = "❌ 取消";
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
         cancelBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         cancelBtn.Pressed += OnCancelAction;
         actionButtonBar.AddChild(cancelBtn);
 
-        vbox.AddChild(CreateSectionLabel("📐 图形填充"));
+        vbox.AddChild(CreateSectionLabel(TranslateGroup.T("📐 图形填充")));
         var shapeGrid = new GridContainer();
         shapeGrid.Columns = 3;
         vbox.AddChild(shapeGrid);
-        AddShapeButton(shapeGrid, "⭕ 圆", FillShapeType.Circle);
-        AddShapeButton(shapeGrid, "⬜ 方", FillShapeType.Square);
-        AddShapeButton(shapeGrid, "▭ 长方", FillShapeType.Rectangle);
-        AddShapeButton(shapeGrid, "◆ 菱形", FillShapeType.Diamond);
-        AddShapeButton(shapeGrid, "🔺 三角", FillShapeType.Triangle);
+        AddShapeButton(shapeGrid, TranslateGroup.T("⭕ 圆"), FillShapeType.Circle);
+        AddShapeButton(shapeGrid, TranslateGroup.T("⬜ 方"), FillShapeType.Square);
+        AddShapeButton(shapeGrid, TranslateGroup.T("▭ 长方"), FillShapeType.Rectangle);
+        AddShapeButton(shapeGrid, TranslateGroup.T("◆ 菱形"), FillShapeType.Diamond);
+        AddShapeButton(shapeGrid, TranslateGroup.T("🔺 三角"), FillShapeType.Triangle);
 
         var shapeTerrainBtn = new Button();
-        shapeTerrainBtn.Text = "选择填充地形...";
+        TranslateGroup.SetText(shapeTerrainBtn, "选择填充地形...");
         shapeTerrainBtn.Pressed += () => OpenTerrainPicker((gt) => fillShapeTerrain = gt);
         vbox.AddChild(shapeTerrainBtn);
 
-        vbox.AddChild(CreateSectionLabel("🎨 填充工具"));
+        vbox.AddChild(CreateSectionLabel(TranslateGroup.T("🎨 填充工具")));
         var areaFillBtn = new Button();
-        areaFillBtn.Text = "区域填充(相邻)";
+        TranslateGroup.SetText(areaFillBtn, "区域填充(相邻)");
         areaFillBtn.Pressed += () => StartAreaFillMode(true);
         vbox.AddChild(areaFillBtn);
 
         var terrainFillBtn = new Button();
-        terrainFillBtn.Text = "地形填充(全图)";
+        TranslateGroup.SetText(terrainFillBtn, "地形填充(全图)");
         terrainFillBtn.Pressed += () => StartTerrainFillMode();
         vbox.AddChild(terrainFillBtn);
 
         var fillTerrainPicker = new Button();
-        fillTerrainPicker.Text = "选择目标新地形...";
+        TranslateGroup.SetText(fillTerrainPicker, "选择目标新地形...");
         fillTerrainPicker.Pressed += () => OpenTerrainPicker((gt) => areaFillNewTerrain = gt);
         vbox.AddChild(fillTerrainPicker);
 
-        vbox.AddChild(CreateSectionLabel("🗑️ 覆盖全图"));
+        vbox.AddChild(CreateSectionLabel(TranslateGroup.T("🗑️ 覆盖全图")));
         var clearMapBtn = new Button();
-        clearMapBtn.Text = "覆盖全图并清空实体";
+        TranslateGroup.SetText(clearMapBtn, "覆盖全图并清空实体");
         clearMapBtn.AddThemeColorOverride("font_color", Colors.Red);
         clearMapBtn.Pressed += StartClearMapMode;
         vbox.AddChild(clearMapBtn);
 
         var clearMapTerrainBtn = new Button();
-        clearMapTerrainBtn.Text = "选择覆盖地形...";
+        TranslateGroup.SetText(clearMapTerrainBtn, "选择覆盖地形...");
         clearMapTerrainBtn.Pressed += () => OpenTerrainPicker((gt) => clearMapTerrain = gt);
         vbox.AddChild(clearMapTerrainBtn);
 
-        vbox.AddChild(CreateSectionLabel("📋 选区操作"));
+        vbox.AddChild(CreateSectionLabel(TranslateGroup.T("📋 选区操作")));
         var rectSelectBtn = new Button();
-        rectSelectBtn.Text = "🔲 矩形选区";
+        TranslateGroup.SetText(rectSelectBtn, "🔲 矩形选区");
         rectSelectBtn.Pressed += () => StartSelectMode(SelectModeType.Rectangle);
         vbox.AddChild(rectSelectBtn);
 
         irregularSelectModeBtn = new Button();
-        irregularSelectModeBtn.Text = "✏️ 不规则选区";
+        TranslateGroup.SetText(irregularSelectModeBtn, "✏️ 不规则选区");
         irregularSelectModeBtn.Pressed += OnIrregularSelectBtnPressed;
         vbox.AddChild(irregularSelectModeBtn);
 
         var pasteBtn = new Button();
-        pasteBtn.Text = "📋 粘贴选区";
+        TranslateGroup.SetText(pasteBtn, "📋 粘贴选区");
         pasteBtn.Pressed += ShowPasteMenu;
         vbox.AddChild(pasteBtn);
 
         var symmetryBtn = new Button();
-        symmetryBtn.Text = "🔀 对称: 关";
+        TranslateGroup.SetText(symmetryBtn, "🔀 对称: 关");
         symmetryBtn.Name = "SymmetryBtn";
         symmetryBtn.Pressed += ToggleSymmetryMode;
         vbox.AddChild(symmetryBtn);
 
-        vbox.AddChild(CreateSectionLabel("↩️ 撤销/前进"));
+        vbox.AddChild(CreateSectionLabel(TranslateGroup.T("↩️ 撤销/前进")));
         var undoRedoHBox = new HBoxContainer();
         vbox.AddChild(undoRedoHBox);
         var undoBtn = new Button();
-        undoBtn.Text = "↩️ 撤销";
+        TranslateGroup.SetText(undoBtn, "↩️ 撤销");
         undoBtn.Pressed += Undo;
         undoRedoHBox.AddChild(undoBtn);
         var redoBtn = new Button();
-        redoBtn.Text = "↪️ 前进";
+        TranslateGroup.SetText(redoBtn, "↪️ 前进");
         redoBtn.Pressed += Redo;
         undoRedoHBox.AddChild(redoBtn);
 
         var historyLabel = new Label();
         historyLabel.Name = "HistoryLabel";
-        historyLabel.Text = "历史: 0/0";
+        TranslateGroup.SetText(historyLabel, "历史: 0/0");
         historyLabel.AddThemeColorOverride("font_color", Colors.Gray);
         vbox.AddChild(historyLabel);
 
-        vbox.AddChild(CreateSectionLabel("🖼️ 贴图替换"));
+        vbox.AddChild(CreateSectionLabel(TranslateGroup.T("🖼️ 贴图替换")));
         var textureReplaceBtn = new Button();
-        textureReplaceBtn.Text = "替换单位/兵器贴图";
+        TranslateGroup.SetText(textureReplaceBtn, "替换单位/兵器贴图");
         textureReplaceBtn.Pressed += OpenTextureReplaceDialog;
         vbox.AddChild(textureReplaceBtn);
 
@@ -402,7 +402,7 @@ public partial class MapEditorHelper : Node
     private void OpenTerrainPicker(Action<GridType> onSelected)
     {
         var dialog = new AcceptDialog();
-        dialog.Title = "选择地形";
+        dialog.Title = TranslateGroup.T("选择地形");
         dialog.Size = new Vector2I(400, 300);
         var scroll = new ScrollContainer();
         scroll.CustomMinimumSize = new Vector2(380, 250);
@@ -447,7 +447,7 @@ public partial class MapEditorHelper : Node
             shapeCurrentPos = pos;
             isDraggingShapeEdge = true;
             ShowShapePreview();
-            UpdateStatusHint("移动鼠标调整大小，按确认填充或取消");
+            UpdateStatusHint(TranslateGroup.T("移动鼠标调整大小，按确认填充或取消"));
         }
         // 后续由确认/取消按钮控制
     }
@@ -678,10 +678,10 @@ public partial class MapEditorHelper : Node
     private void StartClearMapMode()
     {
         var dialog = new AcceptDialog();
-        dialog.Title = "⚠️ 确认覆盖全图?";
+        dialog.Title = TranslateGroup.T("⚠️ 确认覆盖全图?");
         dialog.DialogText = $"这将把所有格子变为 {clearMapTerrain}，并删除所有单位/兵器/设施！\n\n确定要继续吗？";
         dialog.Size = new Vector2I(400, 200);
-        dialog.GetOkButton().Text = "确认覆盖";
+        dialog.GetOkButton().Text = TranslateGroup.T("确认覆盖");
         dialog.GetOkButton().AddThemeColorOverride("font_color", Colors.Red);
         dialog.Confirmed += () => { ApplyClearMap(); dialog.QueueFree(); };
         dialog.Canceled += () => dialog.QueueFree();
@@ -742,13 +742,13 @@ public partial class MapEditorHelper : Node
         {
             selectStartPos = new Vector2I(-1, -1);
             selectEndPos = new Vector2I(-1, -1);
-            UpdateStatusHint("矩形选区: 点击确定起点，再次点击确定终点");
+            UpdateStatusHint(TranslateGroup.T("矩形选区: 点击确定起点，再次点击确定终点"));
         }
         else if (mode == SelectModeType.Irregular)
         {
             irregularSelectedCells.Clear();
             ClearIrregularPreview();
-            UpdateStatusHint("不规则选区: 点击格子选中/取消，再次点击按钮完成选区");
+            UpdateStatusHint(TranslateGroup.T("不规则选区: 点击格子选中/取消，再次点击按钮完成选区"));
         }
     }
 
@@ -764,7 +764,7 @@ public partial class MapEditorHelper : Node
             }
             else
             {
-                UpdateStatusHint("未选择任何格子，已取消");
+                UpdateStatusHint(TranslateGroup.T("未选择任何格子，已取消"));
             }
             CancelAllModes();
         }
@@ -785,7 +785,7 @@ public partial class MapEditorHelper : Node
             if (selectStartPos.X < 0)
             {
                 selectStartPos = pos;
-                UpdateStatusHint("已确定起点，点击终点完成矩形选区");
+                UpdateStatusHint(TranslateGroup.T("已确定起点，点击终点完成矩形选区"));
             }
             else
             {
@@ -928,12 +928,12 @@ public partial class MapEditorHelper : Node
     {
         if (selectionClipboard.Count == 0)
         {
-            UpdateStatusHint("没有可粘贴的选区！");
+            UpdateStatusHint(TranslateGroup.T("没有可粘贴的选区！"));
             return;
         }
 
         var dialog = new AcceptDialog();
-        dialog.Title = "选择要粘贴的选区";
+        dialog.Title = TranslateGroup.T("选择要粘贴的选区");
         dialog.Size = new Vector2I(450, 400);
 
         var scroll = new ScrollContainer();
@@ -963,18 +963,18 @@ public partial class MapEditorHelper : Node
             hbox.AddChild(infoLabel);
 
             var pasteBtn = new Button();
-            pasteBtn.Text = "粘贴";
+            TranslateGroup.SetText(pasteBtn, "粘贴");
             pasteBtn.Pressed += () => { StartPasteMode(sel); dialog.QueueFree(); };
             hbox.AddChild(pasteBtn);
 
             var favBtn = new Button();
-            favBtn.Text = sel.isFavorite ? "取消收藏" : "收藏";
+            favBtn.Text = sel.isFavorite ? TranslateGroup.T("取消收藏") : TranslateGroup.T("收藏");
             favBtn.Pressed += () =>
             {
                 if (sel.isFavorite)
                 {
                     sel.isFavorite = false;
-                    favBtn.Text = "收藏";
+                    TranslateGroup.SetText(favBtn, "收藏");
                     favLabel.Text = "  ";
                 }
                 else
@@ -982,18 +982,18 @@ public partial class MapEditorHelper : Node
                     int favCount = selectionClipboard.Count(s => s.isFavorite);
                     if (favCount >= MAX_FAVORITE_SELECTIONS)
                     {
-                        UpdateStatusHint("收藏已达上限(3个)！");
+                        UpdateStatusHint(TranslateGroup.T("收藏已达上限(3个)！"));
                         return;
                     }
                     sel.isFavorite = true;
-                    favBtn.Text = "取消收藏";
+                    TranslateGroup.SetText(favBtn, "取消收藏");
                     favLabel.Text = "⭐";
                 }
             };
             hbox.AddChild(favBtn);
 
             var delBtn = new Button();
-            delBtn.Text = "删除";
+            TranslateGroup.SetText(delBtn, "删除");
             delBtn.AddThemeColorOverride("font_color", Colors.Red);
             delBtn.Pressed += () =>
             {
@@ -1012,7 +1012,7 @@ public partial class MapEditorHelper : Node
         CancelAllModes();
         IsPasteMode = true;
         currentPasteSelection = selection;
-        UpdateStatusHint("粘贴模式: 点击目标位置粘贴选区，ESC取消");
+        UpdateStatusHint(TranslateGroup.T("粘贴模式: 点击目标位置粘贴选区，ESC取消"));
     }
 
     public void OnGridClickForPaste(Grids grid)
@@ -1080,25 +1080,25 @@ public partial class MapEditorHelper : Node
             CurrentSymmetryAxis = SymmetryAxis.None;
             symmetryAxisLine = -1;
             ClearSymmetryPreview();
-            UpdateStatusHint("对称放置已关闭");
+            UpdateStatusHint(TranslateGroup.T("对称放置已关闭"));
             var btn = helperPanel?.GetNodeOrNull<Button>("HelperVBox/SymmetryBtn");
-            if (btn != null) btn.Text = "🔀 对称: 关";
+            if (btn != null) btn.Text = TranslateGroup.T("🔀 对称: 关");
         }
         else
         {
             var dialog = new AcceptDialog();
-            dialog.Title = "选择对称轴";
+            dialog.Title = TranslateGroup.T("选择对称轴");
             dialog.Size = new Vector2I(300, 150);
             var vbox = new VBoxContainer();
             dialog.AddChild(vbox);
 
             var vertBtn = new Button();
-            vertBtn.Text = "竖轴对称 (左右镜像)";
+            TranslateGroup.SetText(vertBtn, "竖轴对称 (左右镜像)");
             vertBtn.Pressed += () => { EnableSymmetry(SymmetryAxis.Vertical); dialog.QueueFree(); };
             vbox.AddChild(vertBtn);
 
             var horizBtn = new Button();
-            horizBtn.Text = "横轴对称 (上下镜像)";
+            TranslateGroup.SetText(horizBtn, "横轴对称 (上下镜像)");
             horizBtn.Pressed += () => { EnableSymmetry(SymmetryAxis.Horizontal); dialog.QueueFree(); };
             vbox.AddChild(horizBtn);
 
@@ -1339,17 +1339,17 @@ public partial class MapEditorHelper : Node
     private void OpenTextureReplaceDialog()
     {
         var dialog = new AcceptDialog();
-        dialog.Title = "🖼️ 贴图替换";
+        dialog.Title = TranslateGroup.T("🖼️ 贴图替换");
         dialog.Size = new Vector2I(450, 400);
         var vbox = new VBoxContainer();
         dialog.AddChild(vbox);
 
         var hintLabel = new Label();
-        hintLabel.Text = "点击地图上的单位/兵器/设施来替换其贴图";
+        TranslateGroup.SetText(hintLabel, "点击地图上的单位/兵器/设施来替换其贴图");
         vbox.AddChild(hintLabel);
 
         var fileBtn = new Button();
-        fileBtn.Text = "选择贴图文件...";
+        TranslateGroup.SetText(fileBtn, "选择贴图文件...");
         fileBtn.Pressed += () =>
         {
             dialog.Hide(); // ✅ 先关闭父对话框，避免exclusive冲突
@@ -1377,7 +1377,7 @@ public partial class MapEditorHelper : Node
         vbox.AddChild(fileBtn);
 
         var typeLabel = new Label();
-        typeLabel.Text = "或选择要替换的类型:";
+        TranslateGroup.SetText(typeLabel, "或选择要替换的类型:");
         vbox.AddChild(typeLabel);
 
         var typeGrid = new GridContainer();
@@ -1404,7 +1404,7 @@ public partial class MapEditorHelper : Node
     {
         pendingTexturePath = texturePath;
         terrainEditor?.SetTextureApplyMode(texturePath, "");
-        UpdateStatusHint("贴图替换: 点击目标单位/兵器/设施来应用贴图");
+        UpdateStatusHint(TranslateGroup.T("贴图替换: 点击目标单位/兵器/设施来应用贴图"));
     }
 
     private void StartTextureReplaceModeForType(string targetType)
@@ -1422,7 +1422,7 @@ public partial class MapEditorHelper : Node
         var texture = terrainEditor?.LoadTextureFromPath(pendingTexturePath);
         if (texture == null)
         {
-            UpdateStatusHint("贴图加载失败！");
+            UpdateStatusHint(TranslateGroup.T("贴图加载失败！"));
             return;
         }
 
@@ -1459,7 +1459,7 @@ public partial class MapEditorHelper : Node
         }
 
         PushAction(record);
-        UpdateStatusHint("贴图已替换！");
+        UpdateStatusHint(TranslateGroup.T("贴图已替换！"));
         pendingTexturePath = "";
     }
 
@@ -1482,9 +1482,9 @@ public partial class MapEditorHelper : Node
         symmetryAxisLine = -1;
         ShowActionButtons(false);
         if (irregularSelectModeBtn != null)
-            irregularSelectModeBtn.Text = "✏️ 不规则选区";
+            TranslateGroup.SetText(irregularSelectModeBtn, "✏️ 不规则选区");
         var symBtn = helperPanel?.GetNodeOrNull<Button>("HelperVBox/SymmetryBtn");
-        if (symBtn != null) symBtn.Text = "🔀 对称: 关";
+        if (symBtn != null) symBtn.Text = TranslateGroup.T("🔀 对称: 关");
     }
 
     // ========== 序列化辅助 ==========

@@ -65,7 +65,7 @@ public partial class CustomConfigUI : Control
     {
         openConfigBtn = new Button();
         openConfigBtn.Name = "OpenCustomConfigBtn";
-        openConfigBtn.Text = "📦 Extra配置";
+        TranslateGroup.SetText(openConfigBtn, "📦 Extra配置");
         openConfigBtn.CustomMinimumSize = new Vector2(120, 50);
         openConfigBtn.AddThemeFontSizeOverride("font_size", 14);
 
@@ -135,7 +135,7 @@ public partial class CustomConfigUI : Control
         dragHandle.AddThemeStyleboxOverride("panel", handleStyle);
 
         var dragHint = new Label();
-        dragHint.Text = "⋮⋮ 拖拽移动";
+        TranslateGroup.SetText(dragHint, "⋮⋮ 拖拽移动");
         dragHint.AddThemeFontSizeOverride("font_size", 10);
         dragHint.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.8f));
         dragHint.Position = new Vector2(8, 2);
@@ -150,7 +150,7 @@ public partial class CustomConfigUI : Control
         titleBar.Size = new Vector2(480, 40);
 
         var title = new Label();
-        title.Text = "⚙️ 自定义配置中心";
+        TranslateGroup.SetText(title, "⚙️ 自定义配置中心");
         title.AddThemeFontSizeOverride("font_size", 20);
         title.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f));
         title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -176,22 +176,22 @@ public partial class CustomConfigUI : Control
         // 1. 自定义移动方式
         moveTypePanel = CreateMoveTypeTab();
         tabContainer.AddChild(moveTypePanel);
-        tabContainer.SetTabTitle(0, "🚶 移动方式");
+        tabContainer.SetTabTitle(0, TranslateGroup.T("🚶 移动方式"));
 
         // 2. 自定义地形
         terrainTypePanel = CreateTerrainTypeTab();
         tabContainer.AddChild(terrainTypePanel);
-        tabContainer.SetTabTitle(1, "🗺️ 地形种类");
+        tabContainer.SetTabTitle(1, TranslateGroup.T("🗺️ 地形种类"));
 
         // 3. 贴图上传
         textureUploadPanel = CreateTextureUploadTab();
         tabContainer.AddChild(textureUploadPanel);
-        tabContainer.SetTabTitle(2, "🎨 贴图上传");
+        tabContainer.SetTabTitle(2, TranslateGroup.T("🎨 贴图上传"));
 
         // 4. 保存槽位
         saveSlotPanel = CreateSaveSlotTab();
         tabContainer.AddChild(saveSlotPanel);
-        tabContainer.SetTabTitle(3, "💾 保存/加载");
+        tabContainer.SetTabTitle(3, TranslateGroup.T("💾 保存/加载"));
     }
 
     // ==================== 自定义移动方式Tab ====================
@@ -213,7 +213,7 @@ public partial class CustomConfigUI : Control
 
         // 新建移动方式按钮
         var newBtn = new Button();
-        newBtn.Text = "➕ 新建自定义移动方式";
+        TranslateGroup.SetText(newBtn, "➕ 新建自定义移动方式");
         newBtn.CustomMinimumSize = new Vector2(0, 40);
         newBtn.AddThemeFontSizeOverride("font_size", 14);
         var newStyle = new StyleBoxFlat();
@@ -228,7 +228,7 @@ public partial class CustomConfigUI : Control
 
         // 现有移动方式列表
         var listLabel = new Label();
-        listLabel.Text = "=== 现有移动方式 ===";
+        TranslateGroup.SetText(listLabel, "=== 现有移动方式 ===");
         listLabel.AddThemeFontSizeOverride("font_size", 14);
         listLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         container.AddChild(listLabel);
@@ -242,7 +242,7 @@ public partial class CustomConfigUI : Control
 
         // 自定义移动方式
         var customLabel = new Label();
-        customLabel.Text = "=== 自定义移动方式 ===";
+        TranslateGroup.SetText(customLabel, "=== 自定义移动方式 ===");
         customLabel.AddThemeFontSizeOverride("font_size", 14);
         customLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
         container.AddChild(customLabel);
@@ -273,7 +273,7 @@ public partial class CustomConfigUI : Control
         hbox.AddChild(nameLabel);
 
         var infoLabel = new Label();
-        infoLabel.Text = isBuiltIn ? "[内置]" : "[自定义]";
+        infoLabel.Text = isBuiltIn ? TranslateGroup.T("[内置]") : TranslateGroup.T("[自定义]");
         infoLabel.AddThemeFontSizeOverride("font_size", 11);
         infoLabel.AddThemeColorOverride("font_color", isBuiltIn ? new Color(0.5f, 0.5f, 0.5f) : new Color(0.4f, 1f, 0.4f));
         hbox.AddChild(infoLabel);
@@ -281,14 +281,14 @@ public partial class CustomConfigUI : Control
         if (!isBuiltIn)
         {
             var editBtn = new Button();
-            editBtn.Text = "编辑";
+            TranslateGroup.SetText(editBtn, "编辑");
             editBtn.CustomMinimumSize = new Vector2(60, 28);
             editBtn.AddThemeFontSizeOverride("font_size", 11);
             editBtn.Pressed += () => ShowEditMoveTypeDialog(moveTypeId);
             hbox.AddChild(editBtn);
 
             var delBtn = new Button();
-            delBtn.Text = "删除";
+            TranslateGroup.SetText(delBtn, "删除");
             delBtn.CustomMinimumSize = new Vector2(60, 28);
             delBtn.AddThemeFontSizeOverride("font_size", 11);
             delBtn.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
@@ -303,13 +303,13 @@ public partial class CustomConfigUI : Control
             texBtn.Text = "🎨";
             texBtn.CustomMinimumSize = new Vector2(32, 28);
             texBtn.AddThemeFontSizeOverride("font_size", 10);
-            texBtn.Pressed += () => ShowTextureApplyDialog("移动方式", moveTypeId);
+            texBtn.Pressed += () => ShowTextureApplyDialog(TranslateGroup.T("移动方式"), moveTypeId);
             hbox.AddChild(texBtn);
         }
         else
         {
             var viewBtn = new Button();
-            viewBtn.Text = "查看消耗";
+            TranslateGroup.SetText(viewBtn, "查看消耗");
             viewBtn.CustomMinimumSize = new Vector2(80, 28);
             viewBtn.AddThemeFontSizeOverride("font_size", 11);
             viewBtn.Pressed += () => ShowBuiltInMoveTypeCosts(moveTypeId);
@@ -342,7 +342,7 @@ public partial class CustomConfigUI : Control
         vbox.AddThemeConstantOverride("separation", 10);
 
         var title = new Label();
-        title.Text = "➕ 新建自定义移动方式";
+        TranslateGroup.SetText(title, "➕ 新建自定义移动方式");
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 18);
         title.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
@@ -352,13 +352,13 @@ public partial class CustomConfigUI : Control
         var idHBox = new HBoxContainer();
         idHBox.AddThemeConstantOverride("separation", 8);
         var idLabel = new Label();
-        idLabel.Text = "ID (英文):";
+        TranslateGroup.SetText(idLabel, "ID (英文):");
         idLabel.CustomMinimumSize = new Vector2(80, 28);
         idHBox.AddChild(idLabel);
         var idEdit = new LineEdit();
         idEdit.Name = "MoveTypeIdEdit";
         idEdit.CustomMinimumSize = new Vector2(200, 28);
-        idEdit.PlaceholderText = "如: MyHover";
+        idEdit.PlaceholderText = TranslateGroup.T("如: MyHover");
         idHBox.AddChild(idEdit);
         vbox.AddChild(idHBox);
 
@@ -366,25 +366,25 @@ public partial class CustomConfigUI : Control
         var nameHBox = new HBoxContainer();
         nameHBox.AddThemeConstantOverride("separation", 8);
         var nameLabel = new Label();
-        nameLabel.Text = "显示名称:";
+        TranslateGroup.SetText(nameLabel, "显示名称:");
         nameLabel.CustomMinimumSize = new Vector2(80, 28);
         nameHBox.AddChild(nameLabel);
         var nameEdit = new LineEdit();
         nameEdit.Name = "MoveTypeNameEdit";
         nameEdit.CustomMinimumSize = new Vector2(200, 28);
-        nameEdit.PlaceholderText = "如: 我的气垫";
+        nameEdit.PlaceholderText = TranslateGroup.T("如: 我的气垫");
         nameHBox.AddChild(nameEdit);
         vbox.AddChild(nameHBox);
 
         // 地形消耗配置
         var costLabel = new Label();
-        costLabel.Text = "=== 地形移动消耗配置 ===";
+        TranslateGroup.SetText(costLabel, "=== 地形移动消耗配置 ===");
         costLabel.AddThemeFontSizeOverride("font_size", 14);
         costLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         vbox.AddChild(costLabel);
 
         var hintLabel = new Label();
-        hintLabel.Text = "未配置 = 999 (不可移动)";
+        TranslateGroup.SetText(hintLabel, "未配置 = 999 (不可移动)");
         hintLabel.AddThemeFontSizeOverride("font_size", 10);
         hintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
         vbox.AddChild(hintLabel);
@@ -456,7 +456,7 @@ public partial class CustomConfigUI : Control
         btnHBox.AddThemeConstantOverride("separation", 10);
 
         var confirmBtn = new Button();
-        confirmBtn.Text = "✅ 确认创建";
+        TranslateGroup.SetText(confirmBtn, "✅ 确认创建");
         confirmBtn.CustomMinimumSize = new Vector2(120, 36);
         confirmBtn.AddThemeFontSizeOverride("font_size", 13);
         var confirmStyle = new StyleBoxFlat();
@@ -468,7 +468,7 @@ public partial class CustomConfigUI : Control
             string displayName = nameEdit.Text.Trim();
             if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(displayName))
             {
-                ShowToast("ID和名称不能为空");
+                ShowToast(TranslateGroup.T("ID和名称不能为空"));
                 return;
             }
 
@@ -489,12 +489,12 @@ public partial class CustomConfigUI : Control
             extraSave?.AddCustomMoveType(id, displayName, costs);
             dialog.QueueFree();
             RefreshCustomMoveTypeList();
-            ShowToast("自定义移动方式已创建！");
+            ShowToast(TranslateGroup.T("自定义移动方式已创建！"));
         };
         btnHBox.AddChild(confirmBtn);
 
         var cancelBtn = new Button();
-        cancelBtn.Text = "❌ 取消";
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
         cancelBtn.CustomMinimumSize = new Vector2(120, 36);
         cancelBtn.AddThemeFontSizeOverride("font_size", 13);
         cancelBtn.Pressed += () => dialog.QueueFree();
@@ -517,7 +517,7 @@ public partial class CustomConfigUI : Control
         if (extraSave?.CustomMoveTypes == null || extraSave.CustomMoveTypes.Count == 0)
         {
             var emptyLabel = new Label();
-            emptyLabel.Text = "暂无自定义移动方式";
+            TranslateGroup.SetText(emptyLabel, "暂无自定义移动方式");
             emptyLabel.AddThemeFontSizeOverride("font_size", 12);
             emptyLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
             list.AddChild(emptyLabel);
@@ -549,7 +549,7 @@ public partial class CustomConfigUI : Control
 
         // 新建地形按钮
         var newBtn = new Button();
-        newBtn.Text = "➕ 新建自定义地形";
+        TranslateGroup.SetText(newBtn, "➕ 新建自定义地形");
         newBtn.CustomMinimumSize = new Vector2(0, 40);
         newBtn.AddThemeFontSizeOverride("font_size", 14);
         var newStyle = new StyleBoxFlat();
@@ -563,7 +563,7 @@ public partial class CustomConfigUI : Control
 
         // 现有地形列表
         var listLabel = new Label();
-        listLabel.Text = "=== 现有地形种类 ===";
+        TranslateGroup.SetText(listLabel, "=== 现有地形种类 ===");
         listLabel.AddThemeFontSizeOverride("font_size", 14);
         listLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         container.AddChild(listLabel);
@@ -577,7 +577,7 @@ public partial class CustomConfigUI : Control
 
         // 自定义地形
         var customLabel = new Label();
-        customLabel.Text = "=== 自定义地形 ===";
+        TranslateGroup.SetText(customLabel, "=== 自定义地形 ===");
         customLabel.AddThemeFontSizeOverride("font_size", 14);
         customLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
         container.AddChild(customLabel);
@@ -615,7 +615,7 @@ public partial class CustomConfigUI : Control
         hbox.AddChild(nameLabel);
 
         var infoLabel = new Label();
-        infoLabel.Text = isBuiltIn ? "[内置]" : "[自定义]";
+        infoLabel.Text = isBuiltIn ? TranslateGroup.T("[内置]") : TranslateGroup.T("[自定义]");
         infoLabel.AddThemeFontSizeOverride("font_size", 11);
         infoLabel.AddThemeColorOverride("font_color", isBuiltIn ? new Color(0.5f, 0.5f, 0.5f) : new Color(0.4f, 1f, 0.4f));
         hbox.AddChild(infoLabel);
@@ -623,14 +623,14 @@ public partial class CustomConfigUI : Control
         if (!isBuiltIn)
         {
             var editBtn = new Button();
-            editBtn.Text = "编辑";
+            TranslateGroup.SetText(editBtn, "编辑");
             editBtn.CustomMinimumSize = new Vector2(60, 28);
             editBtn.AddThemeFontSizeOverride("font_size", 11);
             editBtn.Pressed += () => ShowEditTerrainTypeDialog(terrainId);
             hbox.AddChild(editBtn);
 
             var delBtn = new Button();
-            delBtn.Text = "删除";
+            TranslateGroup.SetText(delBtn, "删除");
             delBtn.CustomMinimumSize = new Vector2(60, 28);
             delBtn.AddThemeFontSizeOverride("font_size", 11);
             delBtn.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
@@ -645,7 +645,7 @@ public partial class CustomConfigUI : Control
             texBtn.Text = "🎨";
             texBtn.CustomMinimumSize = new Vector2(32, 28);
             texBtn.AddThemeFontSizeOverride("font_size", 10);
-            texBtn.Pressed += () => ShowTextureApplyDialog("地形", terrainId);
+            texBtn.Pressed += () => ShowTextureApplyDialog(TranslateGroup.T("地形"), terrainId);
             hbox.AddChild(texBtn);
         }
 
@@ -675,7 +675,7 @@ public partial class CustomConfigUI : Control
         vbox.AddThemeConstantOverride("separation", 10);
 
         var title = new Label();
-        title.Text = "➕ 新建自定义地形";
+        TranslateGroup.SetText(title, "➕ 新建自定义地形");
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 18);
         title.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
@@ -685,12 +685,12 @@ public partial class CustomConfigUI : Control
         var idHBox = new HBoxContainer();
         idHBox.AddThemeConstantOverride("separation", 8);
         var idLabel = new Label();
-        idLabel.Text = "ID (英文):";
+        TranslateGroup.SetText(idLabel, "ID (英文):");
         idLabel.CustomMinimumSize = new Vector2(80, 28);
         idHBox.AddChild(idLabel);
         var idEdit = new LineEdit();
         idEdit.CustomMinimumSize = new Vector2(200, 28);
-        idEdit.PlaceholderText = "如: MyForest";
+        idEdit.PlaceholderText = TranslateGroup.T("如: MyForest");
         idHBox.AddChild(idEdit);
         vbox.AddChild(idHBox);
 
@@ -698,12 +698,12 @@ public partial class CustomConfigUI : Control
         var nameHBox = new HBoxContainer();
         nameHBox.AddThemeConstantOverride("separation", 8);
         var nameLabel = new Label();
-        nameLabel.Text = "显示名称:";
+        TranslateGroup.SetText(nameLabel, "显示名称:");
         nameLabel.CustomMinimumSize = new Vector2(80, 28);
         nameHBox.AddChild(nameLabel);
         var nameEdit = new LineEdit();
         nameEdit.CustomMinimumSize = new Vector2(200, 28);
-        nameEdit.PlaceholderText = "如: 我的森林";
+        nameEdit.PlaceholderText = TranslateGroup.T("如: 我的森林");
         nameHBox.AddChild(nameEdit);
         vbox.AddChild(nameHBox);
 
@@ -711,7 +711,7 @@ public partial class CustomConfigUI : Control
         var defHBox = new HBoxContainer();
         defHBox.AddThemeConstantOverride("separation", 8);
         var defLabel = new Label();
-        defLabel.Text = "防御加成:";
+        TranslateGroup.SetText(defLabel, "防御加成:");
         defLabel.CustomMinimumSize = new Vector2(80, 28);
         defHBox.AddChild(defLabel);
         var defSpin = new SpinBox();
@@ -727,7 +727,7 @@ public partial class CustomConfigUI : Control
         var colorHBox = new HBoxContainer();
         colorHBox.AddThemeConstantOverride("separation", 8);
         var colorLabel = new Label();
-        colorLabel.Text = "地形颜色:";
+        TranslateGroup.SetText(colorLabel, "地形颜色:");
         colorLabel.CustomMinimumSize = new Vector2(80, 28);
         colorHBox.AddChild(colorLabel);
         var colorPicker = new ColorPickerButton();
@@ -738,13 +738,13 @@ public partial class CustomConfigUI : Control
 
         // 移动方式消耗配置
         var costLabel = new Label();
-        costLabel.Text = "=== 移动方式消耗配置 ===";
+        TranslateGroup.SetText(costLabel, "=== 移动方式消耗配置 ===");
         costLabel.AddThemeFontSizeOverride("font_size", 14);
         costLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         vbox.AddChild(costLabel);
 
         var hintLabel = new Label();
-        hintLabel.Text = "未配置 = 999 (不可移动)";
+        TranslateGroup.SetText(hintLabel, "未配置 = 999 (不可移动)");
         hintLabel.AddThemeFontSizeOverride("font_size", 10);
         hintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
         vbox.AddChild(hintLabel);
@@ -815,7 +815,7 @@ public partial class CustomConfigUI : Control
         btnHBox.AddThemeConstantOverride("separation", 10);
 
         var confirmBtn = new Button();
-        confirmBtn.Text = "✅ 确认创建";
+        TranslateGroup.SetText(confirmBtn, "✅ 确认创建");
         confirmBtn.CustomMinimumSize = new Vector2(120, 36);
         confirmBtn.AddThemeFontSizeOverride("font_size", 13);
         var confirmStyle = new StyleBoxFlat();
@@ -827,7 +827,7 @@ public partial class CustomConfigUI : Control
             string displayName = nameEdit.Text.Trim();
             if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(displayName))
             {
-                ShowToast("ID和名称不能为空");
+                ShowToast(TranslateGroup.T("ID和名称不能为空"));
                 return;
             }
 
@@ -848,12 +848,12 @@ public partial class CustomConfigUI : Control
             extraSave?.AddCustomTerrainType(id, displayName, costs, (float)defSpin.Value, colorPicker.Color);
             dialog.QueueFree();
             RefreshCustomTerrainTypeList();
-            ShowToast("自定义地形已创建！");
+            ShowToast(TranslateGroup.T("自定义地形已创建！"));
         };
         btnHBox.AddChild(confirmBtn);
 
         var cancelBtn = new Button();
-        cancelBtn.Text = "❌ 取消";
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
         cancelBtn.CustomMinimumSize = new Vector2(120, 36);
         cancelBtn.AddThemeFontSizeOverride("font_size", 13);
         cancelBtn.Pressed += () => dialog.QueueFree();
@@ -876,7 +876,7 @@ public partial class CustomConfigUI : Control
         if (extraSave?.CustomTerrainTypes == null || extraSave.CustomTerrainTypes.Count == 0)
         {
             var emptyLabel = new Label();
-            emptyLabel.Text = "暂无自定义地形";
+            TranslateGroup.SetText(emptyLabel, "暂无自定义地形");
             emptyLabel.AddThemeFontSizeOverride("font_size", 12);
             emptyLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
             list.AddChild(emptyLabel);
@@ -908,7 +908,7 @@ public partial class CustomConfigUI : Control
 
         // 权限请求按钮
         var permBtn = new Button();
-        permBtn.Text = "📱 请求相册访问权限";
+        TranslateGroup.SetText(permBtn, "📱 请求相册访问权限");
         permBtn.CustomMinimumSize = new Vector2(0, 40);
         permBtn.AddThemeFontSizeOverride("font_size", 14);
         var permStyle = new StyleBoxFlat();
@@ -917,12 +917,12 @@ public partial class CustomConfigUI : Control
         permBtn.AddThemeStyleboxOverride("normal", permStyle);
         permBtn.Pressed += () => {
             ExtraSave.RequestGalleryPermission();
-            ShowToast("权限请求已发送");
+            ShowToast(TranslateGroup.T("权限请求已发送"));
         };
         container.AddChild(permBtn);
 
         var permStatus = new Label();
-        permStatus.Text = $"当前权限状态: {(ExtraSave.HasGalleryPermission() ? "✅ 已授权" : "❌ 未授权")}";
+        permStatus.Text = $"当前权限状态: {(ExtraSave.HasGalleryPermission() ? TranslateGroup.T("✅ 已授权") : TranslateGroup.T("❌ 未授权"))}";
         permStatus.AddThemeFontSizeOverride("font_size", 12);
         permStatus.AddThemeColorOverride("font_color", ExtraSave.HasGalleryPermission() ? new Color(0.3f, 1, 0.3f) : new Color(1, 0.3f, 0.3f));
         container.AddChild(permStatus);
@@ -931,13 +931,13 @@ public partial class CustomConfigUI : Control
 
         // 上传说明
         var infoLabel = new Label();
-        infoLabel.Text = "📋 上传要求:\n• 尺寸: 32×32 像素\n• 格式: PNG / JPG / GIF\n• 非标准尺寸将被拒绝";
+        TranslateGroup.SetText(infoLabel, "📋 上传要求:\n• 尺寸: 32×32 像素\n• 格式: PNG / JPG / GIF\n• 非标准尺寸将被拒绝");
         infoLabel.AddThemeFontSizeOverride("font_size", 12);
         infoLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
         container.AddChild(infoLabel);
 
         // 分类上传
-        var categories = new[] { "单位", "兵器", "设施", "地形", "移动方式" };
+        var categories = new[] { TranslateGroup.T("单位"), TranslateGroup.T("兵器"), TranslateGroup.T("设施"), TranslateGroup.T("地形"), TranslateGroup.T("移动方式") };
         foreach (var category in categories)
         {
             var catBtn = new Button();
@@ -952,7 +952,7 @@ public partial class CustomConfigUI : Control
         container.AddChild(new HSeparator());
 
         var uploadedLabel = new Label();
-        uploadedLabel.Text = "=== 已上传贴图 ===";
+        TranslateGroup.SetText(uploadedLabel, "=== 已上传贴图 ===");
         uploadedLabel.AddThemeFontSizeOverride("font_size", 14);
         uploadedLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         container.AddChild(uploadedLabel);
@@ -966,13 +966,13 @@ public partial class CustomConfigUI : Control
         container.AddChild(new HSeparator());
 
         var applyLabel = new Label();
-        applyLabel.Text = "=== 应用到现有对象 ===";
+        TranslateGroup.SetText(applyLabel, "=== 应用到现有对象 ===");
         applyLabel.AddThemeFontSizeOverride("font_size", 14);
         applyLabel.AddThemeColorOverride("font_color", Colors.Yellow);
         container.AddChild(applyLabel);
 
         var applyHint = new Label();
-        applyHint.Text = "选择已上传贴图，然后点击地图上的对象进行替换";
+        TranslateGroup.SetText(applyHint, "选择已上传贴图，然后点击地图上的对象进行替换");
         applyHint.AddThemeFontSizeOverride("font_size", 11);
         applyHint.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
         container.AddChild(applyHint);
@@ -982,7 +982,7 @@ public partial class CustomConfigUI : Control
         textureSelectHBox.AddThemeConstantOverride("separation", 8);
 
         var textureSelectLabel = new Label();
-        textureSelectLabel.Text = "选择贴图:";
+        TranslateGroup.SetText(textureSelectLabel, "选择贴图:");
         textureSelectLabel.CustomMinimumSize = new Vector2(80, 28);
         textureSelectHBox.AddChild(textureSelectLabel);
 
@@ -995,11 +995,11 @@ public partial class CustomConfigUI : Control
         // 选择目标类型
         var targetTypeOption = new OptionButton();
         targetTypeOption.Name = "TargetTypeSelect";
-        targetTypeOption.AddItem("单位", 0);
-        targetTypeOption.AddItem("兵器", 1);
-        targetTypeOption.AddItem("设施", 2);
-        targetTypeOption.AddItem("地形", 3);
-        targetTypeOption.AddItem("移动方式", 4);
+        targetTypeOption.AddItem(TranslateGroup.T("单位"), 0);
+        targetTypeOption.AddItem(TranslateGroup.T("兵器"), 1);
+        targetTypeOption.AddItem(TranslateGroup.T("设施"), 2);
+        targetTypeOption.AddItem(TranslateGroup.T("地形"), 3);
+        targetTypeOption.AddItem(TranslateGroup.T("移动方式"), 4);
         targetTypeOption.CustomMinimumSize = new Vector2(100, 28);
         targetTypeOption.AddThemeFontSizeOverride("font_size", 11);
         textureSelectHBox.AddChild(targetTypeOption);
@@ -1008,7 +1008,7 @@ public partial class CustomConfigUI : Control
 
         // 应用按钮
         var applyTextureBtn = new Button();
-        applyTextureBtn.Text = "🖱️ 进入贴图替换模式";
+        TranslateGroup.SetText(applyTextureBtn, "🖱️ 进入贴图替换模式");
         applyTextureBtn.CustomMinimumSize = new Vector2(300, 40);
         applyTextureBtn.AddThemeFontSizeOverride("font_size", 13);
         var applyBtnStyle = new StyleBoxFlat();
@@ -1028,7 +1028,7 @@ public partial class CustomConfigUI : Control
     {
         if (!ExtraSave.HasGalleryPermission())
         {
-            ShowToast("请先请求相册访问权限");
+            ShowToast(TranslateGroup.T("请先请求相册访问权限"));
             return;
         }
 
@@ -1047,7 +1047,7 @@ public partial class CustomConfigUI : Control
             Error err = image.Load(path);
             if (err != Error.Ok)
             {
-                ShowToast("❌ 图片加载失败");
+                ShowToast(TranslateGroup.T("❌ 图片加载失败"));
                 dialog.QueueFree();
                 return;
             }
@@ -1087,10 +1087,10 @@ public partial class CustomConfigUI : Control
             {
                 string errorMsg = savedPath switch
                 {
-                    "ERROR_NOT_SQUARE" => "❌ 贴图不是正方形，请裁剪后重新上传",
-                    "ERROR_TOO_SMALL" => "❌ 贴图尺寸过小，无法resize",
-                    "ERROR_LOAD_FAILED" => "❌ 贴图加载失败",
-                    _ => "❌ 贴图保存失败"
+                    "ERROR_NOT_SQUARE" => TranslateGroup.T("❌ 贴图不是正方形，请裁剪后重新上传"),
+                    "ERROR_TOO_SMALL" => TranslateGroup.T("❌ 贴图尺寸过小，无法resize"),
+                    "ERROR_LOAD_FAILED" => TranslateGroup.T("❌ 贴图加载失败"),
+                    _ => TranslateGroup.T("❌ 贴图保存失败")
                 };
                 ShowToast(errorMsg);
             }
@@ -1131,7 +1131,7 @@ public partial class CustomConfigUI : Control
         vbox.AddChild(title);
 
         var hint = new Label();
-        hint.Text = "选择已上传的贴图文件，或上传新贴图";
+        TranslateGroup.SetText(hint, "选择已上传的贴图文件，或上传新贴图");
         hint.AddThemeFontSizeOverride("font_size", 11);
         hint.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
         vbox.AddChild(hint);
@@ -1164,7 +1164,7 @@ public partial class CustomConfigUI : Control
                     row.AddChild(fileLabel);
 
                     var applyBtn = new Button();
-                    applyBtn.Text = "应用";
+                    TranslateGroup.SetText(applyBtn, "应用");
                     applyBtn.CustomMinimumSize = new Vector2(60, 24);
                     applyBtn.AddThemeFontSizeOverride("font_size", 10);
                     string fullPath = GodotPathCombine(textureDir, fileName);
@@ -1183,7 +1183,7 @@ public partial class CustomConfigUI : Control
         if (list.GetChildCount() == 0)
         {
             var empty = new Label();
-            empty.Text = "暂无上传的贴图";
+            TranslateGroup.SetText(empty, "暂无上传的贴图");
             empty.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
             list.AddChild(empty);
         }
@@ -1192,7 +1192,7 @@ public partial class CustomConfigUI : Control
         vbox.AddChild(scroll);
 
         var uploadBtn = new Button();
-        uploadBtn.Text = "📤 上传新贴图";
+        TranslateGroup.SetText(uploadBtn, "📤 上传新贴图");
         uploadBtn.CustomMinimumSize = new Vector2(200, 36);
         uploadBtn.Pressed += () => {
             dialog.QueueFree();
@@ -1201,7 +1201,7 @@ public partial class CustomConfigUI : Control
         vbox.AddChild(uploadBtn);
 
         var cancelBtn = new Button();
-        cancelBtn.Text = "❌ 取消";
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
         cancelBtn.CustomMinimumSize = new Vector2(200, 36);
         cancelBtn.Pressed += () => dialog.QueueFree();
         vbox.AddChild(cancelBtn);
@@ -1216,29 +1216,31 @@ public partial class CustomConfigUI : Control
         bool success = false;
         try
         {
-            switch (category)
+            if (category == TranslateGroup.T("单位"))
             {
-                case "单位":
-                    if (int.TryParse(targetId, out int uSlot))
-                        success = extraSave?.ApplyCustomTextureToSavedUnit(uSlot, texturePath) ?? false;
-                    break;
-                case "兵器":
-                    if (int.TryParse(targetId, out int wSlot))
-                        success = extraSave?.ApplyCustomTextureToSavedWeapon(wSlot, texturePath) ?? false;
-                    break;
-                case "设施":
-                    if (int.TryParse(targetId, out int fSlot))
-                        success = extraSave?.ApplyCustomTextureToSavedFacility(fSlot, texturePath) ?? false;
-                    break;
-                case "地形":
-                    if (int.TryParse(targetId, out int gSlot))
-                        success = extraSave?.ApplyCustomTextureToSavedGrid(gSlot, texturePath) ?? false;
-                    else
-                        success = extraSave?.ApplyCustomTextureToTerrainType(targetId, texturePath) ?? false;
-                    break;
-                case "移动方式":
-                    success = extraSave?.ApplyCustomTextureToMoveType(targetId, texturePath) ?? false;
-                    break;
+                if (int.TryParse(targetId, out int uSlot))
+                    success = extraSave?.ApplyCustomTextureToSavedUnit(uSlot, texturePath) ?? false;
+            }
+            else if (category == TranslateGroup.T("兵器"))
+            {
+                if (int.TryParse(targetId, out int wSlot))
+                    success = extraSave?.ApplyCustomTextureToSavedWeapon(wSlot, texturePath) ?? false;
+            }
+            else if (category == TranslateGroup.T("设施"))
+            {
+                if (int.TryParse(targetId, out int fSlot))
+                    success = extraSave?.ApplyCustomTextureToSavedFacility(fSlot, texturePath) ?? false;
+            }
+            else if (category == TranslateGroup.T("地形"))
+            {
+                if (int.TryParse(targetId, out int gSlot))
+                    success = extraSave?.ApplyCustomTextureToSavedGrid(gSlot, texturePath) ?? false;
+                else
+                    success = extraSave?.ApplyCustomTextureToTerrainType(targetId, texturePath) ?? false;
+            }
+            else if (category == TranslateGroup.T("移动方式"))
+            {
+                success = extraSave?.ApplyCustomTextureToMoveType(targetId, texturePath) ?? false;
             }
         }
         catch (Exception e)
@@ -1246,7 +1248,7 @@ public partial class CustomConfigUI : Control
             GD.PrintErr($"[CustomConfigUI] 贴图应用异常: {e.Message}");
         }
 
-        ShowToast(success ? "✅ 贴图应用成功！" : "❌ 贴图应用失败");
+        ShowToast(success ? TranslateGroup.T("✅ 贴图应用成功！") : TranslateGroup.T("❌ 贴图应用失败"));
 
         // ✅ 关键修复：成功后刷新运行时实例贴图
         if (success)
@@ -1265,72 +1267,72 @@ public partial class CustomConfigUI : Control
             if (image.Load(texturePath) != Error.Ok) return;
             var texture = ImageTexture.CreateFromImage(image);
 
-            switch (category)
+            if (category == TranslateGroup.T("单位"))
             {
-                case "单位":
-                    if (int.TryParse(targetId, out int uSlot))
-                    {
-                        var unitData = extraSave?.GetSavedUnit(uSlot);
-                        if (unitData != null)
-                        {
-                            foreach (var unit in gameManager.unitManager?.AllUnits ?? new System.Collections.Generic.List<Infantry>())
-                            {
-                                if (unit?.Name == unitData.displayName || unit?.Name == unitData.slotName)
-                                {
-                                    if (unit.sprite != null) unit.sprite.Texture = texture;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case "兵器":
-                    if (int.TryParse(targetId, out int wSlot))
-                    {
-                        var weaponData = extraSave?.GetSavedWeapon(wSlot);
-                        if (weaponData != null)
-                        {
-                            foreach (var weapon in gameManager.weaponManager?.AllWeapons ?? new System.Collections.Generic.List<Weapon>())
-                            {
-                                if (weapon?.Name == weaponData.displayName || weapon?.Name == weaponData.slotName)
-                                {
-                                    // ✅ 修复：AnimatedSprite2D 没有 Texture 属性
-                                    // 方案1：如果兵器有 sprite (Sprite2D) 字段，直接替换
-                                    // 方案2：创建单帧 SpriteFrames
-                                    if (weapon.GetNodeOrNull<Sprite2D>("Sprite2D") != null)
+                if (int.TryParse(targetId, out int uSlot))
                                     {
-                                        weapon.GetNode<Sprite2D>("Sprite2D").Texture = texture;
+                                        var unitData = extraSave?.GetSavedUnit(uSlot);
+                                        if (unitData != null)
+                                        {
+                                            foreach (var unit in gameManager.unitManager?.AllUnits ?? new System.Collections.Generic.List<Infantry>())
+                                            {
+                                                if (unit?.Name == unitData.displayName || unit?.Name == unitData.slotName)
+                                                {
+                                                    if (unit.sprite != null) unit.sprite.Texture = texture;
+                                                }
+                                            }
+                                        }
                                     }
-                                    else if (weapon.animSprite != null)
+            }
+            else if (category == TranslateGroup.T("兵器"))
+            {
+                if (int.TryParse(targetId, out int wSlot))
                                     {
-                                        // 创建单帧动画
-                                        var frames = new SpriteFrames();
-                                        frames.AddAnimation("default");
-                                        frames.AddFrame("default", texture);
-                                        weapon.animSprite.SpriteFrames = frames;
-                                        weapon.animSprite.Play("default");
+                                        var weaponData = extraSave?.GetSavedWeapon(wSlot);
+                                        if (weaponData != null)
+                                        {
+                                            foreach (var weapon in gameManager.weaponManager?.AllWeapons ?? new System.Collections.Generic.List<Weapon>())
+                                            {
+                                                if (weapon?.Name == weaponData.displayName || weapon?.Name == weaponData.slotName)
+                                                {
+                                                    // ✅ 修复：AnimatedSprite2D 没有 Texture 属性
+                                                    // 方案1：如果兵器有 sprite (Sprite2D) 字段，直接替换
+                                                    // 方案2：创建单帧 SpriteFrames
+                                                    if (weapon.GetNodeOrNull<Sprite2D>("Sprite2D") != null)
+                                                    {
+                                                        weapon.GetNode<Sprite2D>("Sprite2D").Texture = texture;
+                                                    }
+                                                    else if (weapon.animSprite != null)
+                                                    {
+                                                        // 创建单帧动画
+                                                        var frames = new SpriteFrames();
+                                                        frames.AddAnimation("default");
+                                                        frames.AddFrame("default", texture);
+                                                        weapon.animSprite.SpriteFrames = frames;
+                                                        weapon.animSprite.Play("default");
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case "地形":
-                    if (int.TryParse(targetId, out int gSlot))
-                    {
-                        var gridData = extraSave?.GetSavedGridTerrain(gSlot);
-                        if (gridData != null && terrainEditor?.gridManager?.grids != null)
-                        {
-                            foreach (var grid in terrainEditor.gridManager.grids)
-                            {
-                                if (grid?.gridType.ToString() == gridData.gridType.ToString())
-                                {
-                                    var sprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
-                                    if (sprite != null) sprite.Texture = texture;
-                                }
-                            }
-                        }
-                    }
-                    break;
+            }
+            else if (category == TranslateGroup.T("地形"))
+            {
+                if (int.TryParse(targetId, out int gSlot))
+                                    {
+                                        var gridData = extraSave?.GetSavedGridTerrain(gSlot);
+                                        if (gridData != null && terrainEditor?.gridManager?.grids != null)
+                                        {
+                                            foreach (var grid in terrainEditor.gridManager.grids)
+                                            {
+                                                if (grid?.gridType.ToString() == gridData.gridType.ToString())
+                                                {
+                                                    var sprite = grid.GetNodeOrNull<Sprite2D>("Sprite2D");
+                                                    if (sprite != null) sprite.Texture = texture;
+                                                }
+                                            }
+                                        }
+                                    }
             }
         }
         catch (Exception e)
@@ -1379,7 +1381,7 @@ public partial class CustomConfigUI : Control
                             row.AddChild(fileLabel);
 
                             var previewBtn = new Button();
-                            previewBtn.Text = "预览";
+                            TranslateGroup.SetText(previewBtn, "预览");
                             previewBtn.CustomMinimumSize = new Vector2(60, 24);
                             previewBtn.AddThemeFontSizeOverride("font_size", 10);
                             string fullPath = GodotPathCombine(textureDir, folderName, fileName);
@@ -1387,7 +1389,7 @@ public partial class CustomConfigUI : Control
                             row.AddChild(previewBtn);
 
                             var delBtn = new Button();
-                            delBtn.Text = "删除";
+                            TranslateGroup.SetText(delBtn, "删除");
                             delBtn.CustomMinimumSize = new Vector2(60, 24);
                             delBtn.AddThemeFontSizeOverride("font_size", 10);
                             delBtn.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
@@ -1410,7 +1412,7 @@ public partial class CustomConfigUI : Control
         if (list.GetChildCount() == 0)
         {
             var emptyLabel = new Label();
-            emptyLabel.Text = "暂无上传的贴图";
+            TranslateGroup.SetText(emptyLabel, "暂无上传的贴图");
             emptyLabel.AddThemeFontSizeOverride("font_size", 12);
             emptyLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
             list.AddChild(emptyLabel);
@@ -1477,7 +1479,7 @@ public partial class CustomConfigUI : Control
         if (extraSave == null || extraSave.Data == null)
         {
             var errorLabel = new Label();
-            errorLabel.Text = "⚠️ ExtraSave 未初始化\n请检查场景中的 ExtraSave 节点";
+            TranslateGroup.SetText(errorLabel, "⚠️ ExtraSave 未初始化\n请检查场景中的 ExtraSave 节点");
             errorLabel.AddThemeFontSizeOverride("font_size", 14);
             errorLabel.AddThemeColorOverride("font_color", Colors.Red);
             container.AddChild(errorLabel);
@@ -1489,19 +1491,19 @@ public partial class CustomConfigUI : Control
         var data = extraSave.Data;
 
         // 单位槽位
-        container.AddChild(CreateSlotSection("🚶 单位保存槽", ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedUnit(i), data.favoriteUnitSlots ?? new List<string>(), "单位"));
+        container.AddChild(CreateSlotSection(TranslateGroup.T("🚶 单位保存槽"), ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedUnit(i), data.favoriteUnitSlots ?? new List<string>(), TranslateGroup.T("单位")));
 
         // 兵器槽位
-        container.AddChild(CreateSlotSection("⚔️ 兵器保存槽", ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedWeapon(i), data.favoriteWeaponSlots ?? new List<string>(), "兵器"));
+        container.AddChild(CreateSlotSection(TranslateGroup.T("⚔️ 兵器保存槽"), ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedWeapon(i), data.favoriteWeaponSlots ?? new List<string>(), TranslateGroup.T("兵器")));
 
         // 设施槽位
-        container.AddChild(CreateSlotSection("🏙️ 设施保存槽", ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedFacility(i), data.favoriteFacilitySlots ?? new List<string>(), "设施"));
+        container.AddChild(CreateSlotSection(TranslateGroup.T("🏙️ 设施保存槽"), ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedFacility(i), data.favoriteFacilitySlots ?? new List<string>(), TranslateGroup.T("设施")));
 
         // 地形槽位
-        container.AddChild(CreateSlotSection("🗺️ 地形保存槽", ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedGridTerrain(i), data.favoriteGridSlots ?? new List<string>(), "地形"));
+        container.AddChild(CreateSlotSection(TranslateGroup.T("🗺️ 地形保存槽"), ExtraSave.MAX_SLOTS, (i) => extraSave.GetSavedGridTerrain(i), data.favoriteGridSlots ?? new List<string>(), TranslateGroup.T("地形")));
 
         // 地图槽位
-        container.AddChild(CreateSlotSection("🌍 地图保存槽", ExtraSave.MAX_MAP_SLOTS, (i) => extraSave.GetSavedMap(i), null, "地图"));
+        container.AddChild(CreateSlotSection(TranslateGroup.T("🌍 地图保存槽"), ExtraSave.MAX_MAP_SLOTS, (i) => extraSave.GetSavedMap(i), null, TranslateGroup.T("地图")));
 
         scroll.AddChild(container);
         panel.AddChild(scroll);
@@ -1678,7 +1680,7 @@ public partial class CustomConfigUI : Control
         saveStyle.SetCornerRadiusAll(10);
         saveBtn.AddThemeStyleboxOverride("normal", saveStyle);
         saveBtn.Pressed += () => {
-            if (category == "地图")
+            if (category == TranslateGroup.T("地图"))
             {
                 if (editorSaveSlots != null)
                 {
@@ -1697,7 +1699,7 @@ public partial class CustomConfigUI : Control
                     }
                     else
                     {
-                        ShowToast("槽位已有数据，请先清除");
+                        ShowToast(TranslateGroup.T("槽位已有数据，请先清除"));
                     }
                 }
             }
@@ -1717,12 +1719,12 @@ public partial class CustomConfigUI : Control
         loadBtn.AddThemeStyleboxOverride("normal", loadStyle);
         loadBtn.Disabled = isEmpty;
         loadBtn.Pressed += () => {
-            if (category == "地图")
+            if (category == TranslateGroup.T("地图"))
             {
                 if (editorSaveSlots != null && !isEmpty)
                 {
                     editorSaveSlots.LoadMapFromSlot(slotIndex);
-                    ShowToast("✅ 地图加载完成");
+                    ShowToast(TranslateGroup.T("✅ 地图加载完成"));
                 }
             }
             else
@@ -1740,7 +1742,7 @@ public partial class CustomConfigUI : Control
 
         // 收藏按钮
         var favBtn = new Button();
-        favBtn.Text = isFav ? "★ 取消收藏" : "☆ 收藏";
+        favBtn.Text = isFav ? TranslateGroup.T("★ 取消收藏") : TranslateGroup.T("☆ 收藏");
         favBtn.CustomMinimumSize = new Vector2(0, 44);
         favBtn.AddThemeFontSizeOverride("font_size", 13);
         var favStyle = new StyleBoxFlat();
@@ -1756,7 +1758,7 @@ public partial class CustomConfigUI : Control
 
         // 改名按钮
         var renameBtn = new Button();
-        renameBtn.Text = "✏️ 改名";
+        TranslateGroup.SetText(renameBtn, "✏️ 改名");
         renameBtn.CustomMinimumSize = new Vector2(0, 44);
         renameBtn.AddThemeFontSizeOverride("font_size", 13);
         var renameStyle = new StyleBoxFlat();
@@ -1774,7 +1776,7 @@ public partial class CustomConfigUI : Control
         if (!isEmpty)
         {
             var clearBtn = new Button();
-            clearBtn.Text = "🗑️ 清除";
+            TranslateGroup.SetText(clearBtn, "🗑️ 清除");
             clearBtn.CustomMinimumSize = new Vector2(0, 44);
             clearBtn.AddThemeFontSizeOverride("font_size", 13);
             clearBtn.AddThemeColorOverride("font_color", new Color(1f, 0.4f, 0.4f));
@@ -1792,7 +1794,7 @@ public partial class CustomConfigUI : Control
 
         // 关闭按钮
         var closeBtn = new Button();
-        closeBtn.Text = "❌ 关闭";
+        TranslateGroup.SetText(closeBtn, "❌ 关闭");
         closeBtn.CustomMinimumSize = new Vector2(0, 40);
         closeBtn.AddThemeFontSizeOverride("font_size", 12);
         var closeStyle = new StyleBoxFlat();
@@ -1810,19 +1812,15 @@ public partial class CustomConfigUI : Control
         MakeMenuDraggable(panel);
     }
 
-    private string GetEditorSlotType(string category)
-    {
-        return category switch
-        {
-            "单位" => "unit",
-            "兵器" => "weapon",
-            "设施" => "facility",
-            "地形" => "grid",
-            "地图" => "map",
-            _ => category.ToLower()
-        };
-    }
-
+private string GetEditorSlotType(string category)
+{
+    if (category == TranslateGroup.T("单位")) return "unit";
+    if (category == TranslateGroup.T("兵器")) return "weapon";
+    if (category == TranslateGroup.T("设施")) return "facility";
+    if (category == TranslateGroup.T("地形")) return "grid";
+    if (category == TranslateGroup.T("地图")) return "map";
+    return category.ToLower();
+}
     private void OnSlotDataChanged(string type)
     {
         RefreshSaveSlotTab();
@@ -1858,11 +1856,11 @@ public partial class CustomConfigUI : Control
         var nameHBox = new HBoxContainer();
         nameHBox.AddThemeConstantOverride("separation", 8);
         var nameLabel = new Label();
-        nameLabel.Text = "自定义名称:";
+        TranslateGroup.SetText(nameLabel, "自定义名称:");
         nameHBox.AddChild(nameLabel);
         var nameEdit = new LineEdit();
         nameEdit.CustomMinimumSize = new Vector2(200, 28);
-        nameEdit.PlaceholderText = "留空使用默认名称";
+        nameEdit.PlaceholderText = TranslateGroup.T("留空使用默认名称");
         nameHBox.AddChild(nameEdit);
         vbox.AddChild(nameHBox);
 
@@ -1870,7 +1868,7 @@ public partial class CustomConfigUI : Control
         btnHBox.AddThemeConstantOverride("separation", 10);
 
         var confirmBtn = new Button();
-        confirmBtn.Text = "✅ 确认保存";
+        TranslateGroup.SetText(confirmBtn, "✅ 确认保存");
         confirmBtn.CustomMinimumSize = new Vector2(120, 36);
         var confirmStyle = new StyleBoxFlat();
         confirmStyle.BgColor = new Color(0.2f, 0.5f, 0.3f, 0.9f);
@@ -1883,7 +1881,7 @@ public partial class CustomConfigUI : Control
         btnHBox.AddChild(confirmBtn);
 
         var cancelBtn = new Button();
-        cancelBtn.Text = "❌ 取消";
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
         cancelBtn.CustomMinimumSize = new Vector2(120, 36);
         cancelBtn.Pressed += () => dialog.QueueFree();
         btnHBox.AddChild(cancelBtn);
@@ -1902,69 +1900,67 @@ public partial class CustomConfigUI : Control
         if (finalName != null && finalName.Length > 20)
         {
             finalName = finalName.Substring(0, 20);
-            ShowToast("⚠️ 名称过长，已截断至20字符");
+            ShowToast(TranslateGroup.T("⚠️ 名称过长，已截断至20字符"));
         }
 
-        switch (category)
+        if (category == TranslateGroup.T("单位"))
         {
-            case "单位":
-                if (te?.selectedGrid != null && te.selectedGrid.infantries.Count > 0)
-                {
-                    var unit = te.selectedGrid.infantries[0];
-                    if (!string.IsNullOrEmpty(finalName)) unit.Name = finalName; // ✅ 应用名称到实例
-                    extraSave?.SaveUnit(unit, slotIndex, finalName);
-                    ShowToast($"✅ 单位已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
-                }
-                else
-                {
-                    ShowToast("❌ 请先选择一个单位");
-                }
-                break;
-
-            case "兵器":
-                if (te?.selectedGrid != null && te.selectedGrid.weapon != null)
-                {
-                    var weapon = te.selectedGrid.weapon;
-                    if (!string.IsNullOrEmpty(finalName)) weapon.Name = finalName;
-                    extraSave?.SaveWeapon(weapon, slotIndex, finalName);
-                    ShowToast($"✅ 兵器已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
-                }
-                else
-                {
-                    ShowToast("❌ 请先选择一个兵器");
-                }
-                break;
-
-            case "设施":
-                if (te?.selectedGrid != null && te.selectedGrid.city != null)
-                {
-                    var facility = te.selectedGrid.city;
-                    if (!string.IsNullOrEmpty(finalName)) facility.Name = finalName;
-                    extraSave?.SaveFacility(facility, slotIndex, finalName);
-                    ShowToast($"✅ 设施已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
-                }
-                else
-                {
-                    ShowToast("❌ 请先选择一个设施");
-                }
-                break;
-
-            case "地形":
-                if (te?.selectedGrid != null)
-                {
-                    extraSave?.SaveGridTerrain(te.selectedGrid, slotIndex, finalName);
-                    ShowToast($"✅ 地形已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
-                }
-                else
-                {
-                    ShowToast("❌ 请先选择一个格子");
-                }
-                break;
-
-            case "地图":
-                extraSave?.SaveCurrentMap(slotIndex, finalName, gameManager, te?.gridManager);
-                ShowToast($"✅ 地图已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
-                break;
+            if (te?.selectedGrid != null && te.selectedGrid.infantries.Count > 0)
+                            {
+                                var unit = te.selectedGrid.infantries[0];
+                                if (!string.IsNullOrEmpty(finalName)) unit.Name = finalName; // ✅ 应用名称到实例
+                                extraSave?.SaveUnit(unit, slotIndex, finalName);
+                                ShowToast($"✅ 单位已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 请先选择一个单位"));
+                            }
+        }
+        else if (category == TranslateGroup.T("兵器"))
+        {
+            if (te?.selectedGrid != null && te.selectedGrid.weapon != null)
+                            {
+                                var weapon = te.selectedGrid.weapon;
+                                if (!string.IsNullOrEmpty(finalName)) weapon.Name = finalName;
+                                extraSave?.SaveWeapon(weapon, slotIndex, finalName);
+                                ShowToast($"✅ 兵器已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 请先选择一个兵器"));
+                            }
+        }
+        else if (category == TranslateGroup.T("设施"))
+        {
+            if (te?.selectedGrid != null && te.selectedGrid.city != null)
+                            {
+                                var facility = te.selectedGrid.city;
+                                if (!string.IsNullOrEmpty(finalName)) facility.Name = finalName;
+                                extraSave?.SaveFacility(facility, slotIndex, finalName);
+                                ShowToast($"✅ 设施已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 请先选择一个设施"));
+                            }
+        }
+        else if (category == TranslateGroup.T("地形"))
+        {
+            if (te?.selectedGrid != null)
+                            {
+                                extraSave?.SaveGridTerrain(te.selectedGrid, slotIndex, finalName);
+                                ShowToast($"✅ 地形已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 请先选择一个格子"));
+                            }
+        }
+        else if (category == TranslateGroup.T("地图"))
+        {
+            extraSave?.SaveCurrentMap(slotIndex, finalName, gameManager, te?.gridManager);
+                            ShowToast($"✅ 地图已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
         }
 
         RefreshSaveSlotTab();
@@ -1977,76 +1973,74 @@ public partial class CustomConfigUI : Control
         var te = terrainEditor;
         if (te == null)
         {
-            ShowToast("❌ TerrainEditor 未连接");
+            ShowToast(TranslateGroup.T("❌ TerrainEditor 未连接"));
             return;
         }
 
-        switch (category)
+        if (category == TranslateGroup.T("单位"))
         {
-            case "单位":
-                var unitData = extraSave?.GetSavedUnit(slotIndex);
-                if (unitData != null && !string.IsNullOrEmpty(unitData.scenePath))
-                {
-                    te.SetSpawnMode(SpawnMode.Unit, unitData.scenePath, unitData.team);
-                    ShowToast($"✅ 单位 \"{unitData.displayName}\" 已准备，点击地图格子放置");
-                }
-                else
-                {
-                    ShowToast("❌ 该槽位没有保存的单位");
-                }
-                break;
-
-            case "兵器":
-                var weaponData = extraSave?.GetSavedWeapon(slotIndex);
-                if (weaponData != null && !string.IsNullOrEmpty(weaponData.scenePath))
-                {
-                    te.SetSpawnMode(SpawnMode.Weapon, weaponData.scenePath, weaponData.team);
-                    ShowToast($"✅ 兵器 \"{weaponData.displayName}\" 已准备，点击地图格子放置");
-                }
-                else
-                {
-                    ShowToast("❌ 该槽位没有保存的兵器");
-                }
-                break;
-
-            case "设施":
-                var facilityData = extraSave?.GetSavedFacility(slotIndex);
-                if (facilityData != null && !string.IsNullOrEmpty(facilityData.scenePath))
-                {
-                    te.SetSpawnMode(SpawnMode.Facility, facilityData.scenePath, facilityData.team);
-                    ShowToast($"✅ 设施 \"{facilityData.displayName}\" 已准备，点击地图格子放置");
-                }
-                else
-                {
-                    ShowToast("❌ 该槽位没有保存的设施");
-                }
-                break;
-
-            case "地形":
-                var gridData = extraSave?.GetSavedGridTerrain(slotIndex);
-                if (gridData != null && gridData.savedTimestamp > 0)
-                {
-                    te.SetApplyTerrainMode(gridData);
-                    ShowToast($"✅ 地形 \"{gridData.displayName}\" 已准备，点击地图格子应用");
-                }
-                else
-                {
-                    ShowToast("❌ 该槽位没有保存的地形");
-                }
-                break;
-
-            case "地图":
-                var mapData = extraSave?.GetSavedMap(slotIndex);
-                if (mapData != null && mapData.width > 0)
-                {
-                    bool success = extraSave?.LoadMapToGame(slotIndex, gameManager, te.gridManager, te) ?? false;
-                    ShowToast(success ? $"✅ 地图 \"{mapData.displayName}\" 加载成功！" : "❌ 地图加载失败");
-                }
-                else
-                {
-                    ShowToast("❌ 该槽位没有保存的地图");
-                }
-                break;
+            var unitData = extraSave?.GetSavedUnit(slotIndex);
+                            if (unitData != null && !string.IsNullOrEmpty(unitData.scenePath))
+                            {
+                                te.SetSpawnMode(SpawnMode.Unit, unitData.scenePath, unitData.team);
+                                ShowToast("✅ " + TranslateGroup.T("单位") + " \"" + unitData.displayName + "\" " + TranslateGroup.T("已准备，点击地图格子放置"));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 该槽位没有保存的单位"));
+                            }
+        }
+        else if (category == TranslateGroup.T("兵器"))
+        {
+            var weaponData = extraSave?.GetSavedWeapon(slotIndex);
+                            if (weaponData != null && !string.IsNullOrEmpty(weaponData.scenePath))
+                            {
+                                te.SetSpawnMode(SpawnMode.Weapon, weaponData.scenePath, weaponData.team);
+                                ShowToast("✅ " + TranslateGroup.T("兵器") + " \"" + weaponData.displayName + "\" " + TranslateGroup.T("已准备，点击地图格子放置"));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 该槽位没有保存的兵器"));
+                            }
+        }
+        else if (category == TranslateGroup.T("设施"))
+        {
+            var facilityData = extraSave?.GetSavedFacility(slotIndex);
+                            if (facilityData != null && !string.IsNullOrEmpty(facilityData.scenePath))
+                            {
+                                te.SetSpawnMode(SpawnMode.Facility, facilityData.scenePath, facilityData.team);
+                                ShowToast("✅ " + TranslateGroup.T("设施") + " \"" + facilityData.displayName + "\" " + TranslateGroup.T("已准备，点击地图格子放置"));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 该槽位没有保存的设施"));
+                            }
+        }
+        else if (category == TranslateGroup.T("地形"))
+        {
+            var gridData = extraSave?.GetSavedGridTerrain(slotIndex);
+                            if (gridData != null && gridData.savedTimestamp > 0)
+                            {
+                                te.SetApplyTerrainMode(gridData);
+                                ShowToast("✅ " + TranslateGroup.T("地形") + " \"" + gridData.displayName + "\" " + TranslateGroup.T("已准备，点击地图格子应用"));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 该槽位没有保存的地形"));
+                            }
+        }
+        else if (category == TranslateGroup.T("地图"))
+        {
+            var mapData = extraSave?.GetSavedMap(slotIndex);
+                            if (mapData != null && mapData.width > 0)
+                            {
+                                bool success = extraSave?.LoadMapToGame(slotIndex, gameManager, te.gridManager, te) ?? false;
+                                ShowToast(success ? "✅ " + TranslateGroup.T("地图") + " \"" + mapData.displayName + "\" " + TranslateGroup.T("加载成功！") : TranslateGroup.T("❌ 地图加载失败"));
+                            }
+                            else
+                            {
+                                ShowToast(TranslateGroup.T("❌ 该槽位没有保存的地图"));
+                            }
         }
     }
 
@@ -2055,12 +2049,17 @@ public partial class CustomConfigUI : Control
         bool success = false;
         try
         {
-            switch (category)
+            if (category == TranslateGroup.T("单位"))
             {
-                case "单位": success = extraSave?.ToggleUnitFavorite(slotIndex) ?? false; break;
-                case "兵器": success = extraSave?.ToggleWeaponFavorite(slotIndex) ?? false; break;
-                case "设施": success = extraSave?.ToggleFacilityFavorite(slotIndex) ?? false; break;
-                case "地形": success = extraSave?.ToggleGridFavorite(slotIndex) ?? false; break;
+                success = extraSave?.ToggleUnitFavorite(slotIndex) ?? false; 
+            }
+            else if (category == TranslateGroup.T("兵器"))
+            {
+                success = extraSave?.ToggleWeaponFavorite(slotIndex) ?? false; 
+            }
+            else if (category == TranslateGroup.T("设施"))
+            {
+                success = extraSave?.ToggleFacilityFavorite(slotIndex) ?? false; 
             }
         }
         catch (Exception e)
@@ -2104,40 +2103,48 @@ public partial class CustomConfigUI : Control
 
         var nameEdit = new LineEdit();
         nameEdit.CustomMinimumSize = new Vector2(250, 28);
-        nameEdit.PlaceholderText = "输入新名称";
+        nameEdit.PlaceholderText = TranslateGroup.T("输入新名称");
         vbox.AddChild(nameEdit);
 
         var btnHBox = new HBoxContainer();
         btnHBox.AddThemeConstantOverride("separation", 10);
 
         var confirmBtn = new Button();
-        confirmBtn.Text = "确认";
+        TranslateGroup.SetText(confirmBtn, "确认");
         confirmBtn.Pressed += () => {
             bool success = false;
-            switch (category)
+            if (category == TranslateGroup.T("单位"))
             {
-                case "单位": success = extraSave?.RenameUnit(slotIndex, nameEdit.Text) ?? false; break;
-                case "兵器": success = extraSave?.RenameWeapon(slotIndex, nameEdit.Text) ?? false; break;
-                case "设施": success = extraSave?.RenameFacility(slotIndex, nameEdit.Text) ?? false; break;
-                case "地形": success = extraSave?.RenameGridTerrain(slotIndex, nameEdit.Text) ?? false; break;
-                case "地图": success = extraSave?.RenameMap(slotIndex, nameEdit.Text) ?? false; break;
+                success = extraSave?.RenameUnit(slotIndex, nameEdit.Text) ?? false; 
+            }
+            else if (category == TranslateGroup.T("兵器"))
+            {
+                success = extraSave?.RenameWeapon(slotIndex, nameEdit.Text) ?? false;
+            }
+            else if (category == TranslateGroup.T("设施"))
+            {
+                success = extraSave?.RenameFacility(slotIndex, nameEdit.Text) ?? false;
+            }
+            else if (category == TranslateGroup.T("地形"))
+            {
+                success = extraSave?.RenameGridTerrain(slotIndex, nameEdit.Text) ?? false; 
             }
 
             if (success)
             {
-                ShowToast("✅ 重命名成功！");
+                ShowToast(TranslateGroup.T("✅ 重命名成功！"));
                 RefreshSaveSlotTab();
             }
             else
             {
-                ShowToast("❌ 重命名失败");
+                ShowToast(TranslateGroup.T("❌ 重命名失败"));
             }
             dialog.QueueFree();
         };
         btnHBox.AddChild(confirmBtn);
 
         var cancelBtn = new Button();
-        cancelBtn.Text = "取消";
+        TranslateGroup.SetText(cancelBtn, "取消");
         cancelBtn.Pressed += () => dialog.QueueFree();
         btnHBox.AddChild(cancelBtn);
 
@@ -2150,23 +2157,25 @@ public partial class CustomConfigUI : Control
     private void ClearSlot(int slotIndex, string category)
     {
         // 清除槽位数据
-        switch (category)
+        if (category == TranslateGroup.T("单位"))
         {
-            case "单位":
-                extraSave?.ClearUnitSlot(slotIndex);
-                break;
-            case "兵器":
-                extraSave?.ClearWeaponSlot(slotIndex);
-                break;
-            case "设施":
-                extraSave?.ClearFacilitySlot(slotIndex);
-                break;
-            case "地形":
-                extraSave?.ClearGridSlot(slotIndex);
-                break;
-            case "地图":
-                extraSave?.ClearMapSlot(slotIndex);
-                break;
+            extraSave?.ClearUnitSlot(slotIndex);
+        }
+        else if (category == TranslateGroup.T("兵器"))
+        {
+            extraSave?.ClearWeaponSlot(slotIndex);
+        }
+        else if (category == TranslateGroup.T("设施"))
+        {
+            extraSave?.ClearFacilitySlot(slotIndex);
+        }
+        else if (category == TranslateGroup.T("地形"))
+        {
+            extraSave?.ClearGridSlot(slotIndex);
+        }
+        else if (category == TranslateGroup.T("地图"))
+        {
+            extraSave?.ClearMapSlot(slotIndex);
         }
 
         ShowToast($"✅ {category}槽位{slotIndex + 1} 已清除");
@@ -2181,7 +2190,7 @@ public partial class CustomConfigUI : Control
         tabContainer.RemoveChild(oldPanel);
         oldPanel.QueueFree();
         tabContainer.AddChild(saveSlotPanel);
-        tabContainer.SetTabTitle(3, "💾 保存/加载");
+        tabContainer.SetTabTitle(3, TranslateGroup.T("💾 保存/加载"));
     }
 
     // ==================== 通用方法 ====================
@@ -2200,7 +2209,7 @@ public partial class CustomConfigUI : Control
         RefreshUploadedTextureList();
         RefreshApplyTextureList();
         RefreshSaveSlotTab(); // 保存槽位界面
-        GD.Print("[CustomConfigUI] 配置面板已打开，所有列表已刷新");
+        GD.Print(TranslateGroup.T("[CustomConfigUI] 配置面板已打开，所有列表已刷新"));
     }
 
     public new void Hide()
@@ -2257,12 +2266,12 @@ public partial class CustomConfigUI : Control
 
         if (textureOption == null || targetTypeOption == null) 
         {
-            ShowToast("❌ UI组件未初始化");
+            ShowToast(TranslateGroup.T("❌ UI组件未初始化"));
             return;
         }
         if (textureOption.Selected < 0 || textureOption.Selected >= textureOption.ItemCount) 
         {
-            ShowToast("❌ 请先选择贴图");
+            ShowToast(TranslateGroup.T("❌ 请先选择贴图"));
             return;
         }
 
@@ -2276,7 +2285,7 @@ public partial class CustomConfigUI : Control
 
         if (string.IsNullOrEmpty(texturePath))
         {
-            ShowToast("❌ 贴图路径无效");
+            ShowToast(TranslateGroup.T("❌ 贴图路径无效"));
             return;
         }
 
@@ -2285,12 +2294,12 @@ public partial class CustomConfigUI : Control
 
         if (string.IsNullOrEmpty(pendingApplyTexturePath))
         {
-            ShowToast("❌ 贴图路径为空");
+            ShowToast(TranslateGroup.T("❌ 贴图路径为空"));
             return;
         }
         if (!Godot.FileAccess.FileExists(pendingApplyTexturePath))
         {
-            ShowToast("❌ 贴图文件不存在");
+            ShowToast(TranslateGroup.T("❌ 贴图文件不存在"));
             return;
         }
 
@@ -2302,7 +2311,7 @@ public partial class CustomConfigUI : Control
         }
         else
         {
-            ShowToast("❌ TerrainEditor未连接");
+            ShowToast(TranslateGroup.T("❌ TerrainEditor未连接"));
         }
     }
 

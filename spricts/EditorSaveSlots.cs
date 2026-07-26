@@ -43,7 +43,7 @@ public partial class EditorSaveSlots : Node
     {
         pendingSaveSlotIndex = index;
         pendingSaveType = type;
-        var typeName = type switch { "unit" => "单位", "weapon" => "兵器", "facility" => "设施", "grid" => "地形", _ => type };
+        var typeName = type switch { "unit" => TranslateGroup.T("单位"), "weapon" => TranslateGroup.T("兵器"), "facility" => TranslateGroup.T("设施"), "grid" => TranslateGroup.T("地形"), _ => type };
         if (terrainEditor != null)
             terrainEditor.spawnHintLabel.Text = $"💾 请点击地图上的{typeName}来保存到槽位 {index + 1}";
     }
@@ -108,7 +108,7 @@ public partial class EditorSaveSlots : Node
     {
         pendingLoadSlotIndex = index;
         pendingLoadType = type;
-        var typeName = type switch { "unit" => "单位", "weapon" => "兵器", "facility" => "设施", "grid" => "地形", _ => type };
+        var typeName = type switch { "unit" => TranslateGroup.T("单位"), "weapon" => TranslateGroup.T("兵器"), "facility" => TranslateGroup.T("设施"), "grid" => TranslateGroup.T("地形"), _ => type };
         if (terrainEditor != null)
             terrainEditor.spawnHintLabel.Text = $"📂 请点击地图上的格子来加载{typeName}到槽位 {index + 1}";
     }
@@ -236,7 +236,7 @@ public partial class EditorSaveSlots : Node
         {
             if (list.Count >= ExtraSave.MAX_FAVORITES)
             {
-                GD.PrintErr("[EditorSaveSlots] 收藏已达上限");
+                GD.PrintErr(TranslateGroup.T("[EditorSaveSlots] 收藏已达上限"));
                 return;
             }
             list.Add(key);
@@ -255,7 +255,7 @@ public partial class EditorSaveSlots : Node
             SavedFacilityData f => f.displayName,
             SavedGridTerrainData g => g.displayName,
             SavedMapData m => m.displayName,
-            _ => "未知"
+            _ => TranslateGroup.T("未知")
         };
     }
 
