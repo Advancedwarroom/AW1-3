@@ -66,13 +66,12 @@ public partial class EditorPanelDragger : Node
         dragBar.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         dragBar.MouseFilter = Control.MouseFilterEnum.Stop;
 
-        if (panel.GetChildCount() > 0)
+        panel.AddChild(dragBar);
+        if (dragBar.GetParent() == panel && panel.GetChildCount() > 1)
             panel.MoveChild(dragBar, 0);
-        else
-            panel.AddChild(dragBar);
 
         var titleLabel = new Label();
-        titleLabel.Text = panelName.Replace("Panel", "").Replace("Menu", "");
+        titleLabel.Text = ""; // 面板自己已有标题，这里留空
         titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         titleLabel.VerticalAlignment = VerticalAlignment.Center;
         titleLabel.MouseFilter = Control.MouseFilterEnum.Ignore;

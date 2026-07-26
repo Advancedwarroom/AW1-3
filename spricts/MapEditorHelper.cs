@@ -58,6 +58,9 @@ public class EditorActionRecord
     public SavedUnitData oldUnitData;
     public SavedWeaponData oldWeaponData;
     public SavedFacilityData oldFacilityData;
+    public SavedUnitData newUnitData;
+    public SavedWeaponData newWeaponData;
+    public SavedFacilityData newFacilityData;
     public List<EditorActionRecord> subActions = new();
     public long timestamp;
 }
@@ -130,6 +133,13 @@ public partial class MapEditorHelper : Node
     private Label statusHintLabel;
     private Button irregularSelectModeBtn;
 
+    // ✅ 操作按钮栏（确认/取消）—— 手机友好
+    private HBoxContainer actionButtonBar;
+    private Button confirmBtn;
+    private Button cancelBtn;
+
+    public bool IsPanelVisible => helperPanel?.Visible == true;
+
     public override void _Ready()
     {
         AddToGroup("map_editor_helper");
@@ -192,6 +202,25 @@ public partial class MapEditorHelper : Node
         statusHintLabel.AddThemeColorOverride("font_color", Colors.Gray);
         statusHintLabel.AddThemeFontSizeOverride("font_size", 11);
         vbox.AddChild(statusHintLabel);
+
+        // ✅ 操作按钮栏（确认/取消）—— 手机友好
+        actionButtonBar = new HBoxContainer();
+        actionButtonBar.Name = "ActionButtonBar";
+        actionButtonBar.Visible = false;
+        actionButtonBar.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        vbox.AddChild(actionButtonBar);
+
+        confirmBtn = new Button();
+        confirmBtn.Text = "✅ 确认";
+        confirmBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        confirmBtn.Pressed += OnConfirmAction;
+        actionButtonBar.AddChild(confirmBtn);
+
+        cancelBtn = new Button();
+        cancelBtn.Text = "❌ 取消";
+        cancelBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        cancelBtn.Pressed += OnCancelAction;
+        actionButtonBar.AddChild(cancelBtn);
 
         vbox.AddChild(CreateSectionLabel("📐 图形填充"));
         var shapeGrid = new GridContainer();
@@ -341,6 +370,35 @@ public partial class MapEditorHelper : Node
         if (statusHintLabel != null) statusHintLabel.Text = text;
     }
 
+    private void ShowActionButtons(bool show)
+    {
+        if (actionButtonBar != null) actionButtonBar.Visible = show;
+    }
+
+    private void OnConfirmAction()
+    {
+        if (IsShapeFillMode && isDraggingShapeEdge)
+        {
+            ApplyShapeFill();
+            CancelShapeFillMode();
+        }
+        else if (IsClearMapMode)
+        {
+            ApplyClearMap();
+        }
+        else if (IsSelectMode)
+        {
+            CreateIrregularSelection();
+        }
+        ShowActionButtons(false);
+    }
+
+    private void OnCancelAction()
+    {
+        CancelAllModes();
+        ShowActionButtons(false);
+    }
+
     private void OpenTerrainPicker(Action<GridType> onSelected)
     {
         var dialog = new AcceptDialog();
@@ -373,7 +431,8 @@ public partial class MapEditorHelper : Node
         shapeAnchorPos = new Vector2I(-1, -1);
         shapeCurrentPos = new Vector2I(-1, -1);
         isDraggingShapeEdge = false;
-        UpdateStatusHint($"图形填充: {shape} | 点击确定中心，拖拽调整大小");
+        ShowActionButtons(true);
+        UpdateStatusHint($"图形填充: {shape} | 点击确定中心，拖拽调整大小，按确认填充");
     }
 
     public void OnGridClickForShapeFill(Grids grid)
@@ -383,24 +442,14 @@ public partial class MapEditorHelper : Node
 
         if (shapeAnchorPos.X < 0)
         {
+            // 第一次点击：确定中心点
             shapeAnchorPos = pos;
             shapeCurrentPos = pos;
             isDraggingShapeEdge = true;
             ShowShapePreview();
-            UpdateStatusHint("拖拽调整大小，点击内部确认，点击外部取消");
+            UpdateStatusHint("移动鼠标调整大小，按确认填充或取消");
         }
-        else if (isDraggingShapeEdge)
-        {
-            if (IsPointInsideShape(pos, shapeAnchorPos, shapeCurrentPos, currentFillShape))
-            {
-                ApplyShapeFill();
-                CancelShapeFillMode();
-            }
-            else
-            {
-                CancelShapeFillMode();
-            }
-        }
+        // 后续由确认/取消按钮控制
     }
 
     public void OnGridHoverForShapeFill(Grids grid)
@@ -419,7 +468,10 @@ public partial class MapEditorHelper : Node
         {
             if (g != null && IsInstanceValid(g))
             {
-                g.Modulate = shapePreviewColor;
+                // ✅ 用 attackRangeIcon 显示蓝色预览（和多格兵器统一）
+                g.attackRangeIcon?.Show();
+                if (g.attackRangeIcon != null)
+                    g.attackRangeIcon.Modulate = new Color(0.3f, 0.6f, 1.0f, 0.8f); // 蓝色
                 shapePreviewGrids.Add(g);
             }
         }
@@ -430,7 +482,11 @@ public partial class MapEditorHelper : Node
         foreach (var g in shapePreviewGrids)
         {
             if (g != null && IsInstanceValid(g))
-                g.Modulate = Colors.White;
+            {
+                g.attackRangeIcon?.Hide();
+                if (g.attackRangeIcon != null)
+                    g.attackRangeIcon.Modulate = new Color(1, 0.2f, 0.2f, 0.9f);
+            }
         }
         shapePreviewGrids.Clear();
     }
@@ -529,6 +585,7 @@ public partial class MapEditorHelper : Node
         shapeAnchorPos = new Vector2I(-1, -1);
         shapeCurrentPos = new Vector2I(-1, -1);
         isDraggingShapeEdge = false;
+        ShowActionButtons(false);
     }
 
     // ========== 区域填充（相邻相同地形） ==========
@@ -744,13 +801,13 @@ public partial class MapEditorHelper : Node
             if (irregularSelectedCells.Contains(pos))
             {
                 irregularSelectedCells.Remove(pos);
-                grid.Modulate = Colors.White;
+                grid.SelfModulate = Colors.White;
                 UpdateStatusHint($"已取消 ({pos.X},{pos.Y}) | 当前共 {irregularSelectedCells.Count} 格");
             }
             else
             {
                 irregularSelectedCells.Add(pos);
-                grid.Modulate = irregularSelectColor;
+                grid.SelfModulate = irregularSelectColor;
                 UpdateStatusHint($"已选中 ({pos.X},{pos.Y}) | 当前共 {irregularSelectedCells.Count} 格");
             }
         }
@@ -851,7 +908,7 @@ public partial class MapEditorHelper : Node
                 continue;
             var g = gridManager.map[pos.X, pos.Y];
             if (g != null && IsInstanceValid(g))
-                g.Modulate = Colors.White;
+                g.SelfModulate = Colors.White;
         }
         irregularSelectedCells.Clear();
     }
@@ -1110,7 +1167,7 @@ public partial class MapEditorHelper : Node
                     var g = gridManager.map[x, y];
                     if (g != null)
                     {
-                        g.Modulate = new Color(1, 0, 1, 0.5f);
+                        g.SelfModulate = new Color(1, 0, 1, 0.5f);
                         symmetryPreviewGrids.Add(g);
                     }
                 }
@@ -1123,7 +1180,7 @@ public partial class MapEditorHelper : Node
         foreach (var g in symmetryPreviewGrids)
         {
             if (g != null && IsInstanceValid(g))
-                g.Modulate = Colors.White;
+                g.SelfModulate = Colors.White;
         }
         symmetryPreviewGrids.Clear();
     }
@@ -1206,10 +1263,10 @@ public partial class MapEditorHelper : Node
         g.gridType = record.oldTerrain;
         g.UpdateTerrainIcon();
 
-        if (record.oldUnitData == null && g.infantry != null) { g.infantry.QueueFree(); g.infantry = null; g.infantries.Clear(); }
-        if (record.oldWeaponData == null && g.weapon != null) { g.weapon.QueueFree(); g.weapon = null; g.weapons.Clear(); }
-        if (record.oldFacilityData == null && g.city != null) { g.city.QueueFree(); g.city = null; }
+        // ✅ 安全清理当前格子上的所有单位/兵器/设施（多格兵器特殊处理）
+        ClearGridEntities(g);
 
+        // ✅ 再从记录中恢复旧状态
         if (record.oldUnitData != null) SpawnUnitFromData(g, record.oldUnitData);
         if (record.oldWeaponData != null) SpawnWeaponFromData(g, record.oldWeaponData);
         if (record.oldFacilityData != null) SpawnFacilityFromData(g, record.oldFacilityData);
@@ -1223,8 +1280,52 @@ public partial class MapEditorHelper : Node
             return;
         var g = gridManager.map[x, y];
         if (g == null) return;
+
         g.gridType = record.newTerrain;
         g.UpdateTerrainIcon();
+
+        // ✅ 安全清理当前格子上的所有单位/兵器/设施（多格兵器特殊处理）
+        ClearGridEntities(g);
+
+        // ✅ 再从记录中恢复新状态（redo 后的状态）
+        if (record.newUnitData != null) SpawnUnitFromData(g, record.newUnitData);
+        if (record.newWeaponData != null) SpawnWeaponFromData(g, record.newWeaponData);
+        if (record.newFacilityData != null) SpawnFacilityFromData(g, record.newFacilityData);
+    }
+
+    /// <summary>
+    /// 安全清理格子上的所有实体。多格兵器会清理所有 occupiedGrids 的引用。
+    /// </summary>
+    private void ClearGridEntities(Grids g)
+    {
+        // 单位
+        if (g.infantry != null) { g.infantry.QueueFree(); g.infantry = null; }
+        g.infantries.Clear();
+
+        // 兵器 - 多格兵器需要清理所有占据格子的引用
+        if (g.weapon != null)
+        {
+            var wp = g.weapon;
+            if (wp.isMultiTile && wp.occupiedGrids != null && wp.occupiedGrids.Count > 0)
+            {
+                foreach (var og in wp.occupiedGrids.ToList())
+                {
+                    if (og != null && IsInstanceValid(og))
+                    {
+                        og.weapons.Remove(wp);
+                        if (og.weapon == wp)
+                            og.weapon = og.weapons.Count > 0 ? og.weapons[0] : null;
+                    }
+                }
+                wp.occupiedGrids.Clear();
+            }
+            wp.QueueFree();
+            g.weapon = null;
+        }
+        g.weapons.Clear();
+
+        // 设施
+        if (g.city != null) { g.city.QueueFree(); g.city = null; }
     }
 
     private void UpdateHistoryLabel()
@@ -1251,6 +1352,7 @@ public partial class MapEditorHelper : Node
         fileBtn.Text = "选择贴图文件...";
         fileBtn.Pressed += () =>
         {
+            dialog.Hide(); // ✅ 先关闭父对话框，避免exclusive冲突
             var fileDialog = new FileDialog();
             fileDialog.FileMode = FileDialog.FileModeEnum.OpenFile;
             fileDialog.Access = FileDialog.AccessEnum.Filesystem;
@@ -1262,6 +1364,12 @@ public partial class MapEditorHelper : Node
             {
                 StartTextureReplaceMode(path);
                 fileDialog.QueueFree();
+                dialog.QueueFree(); // ✅ 文件选择完成后彻底关闭原对话框
+            };
+            fileDialog.Canceled += () =>
+            {
+                fileDialog.QueueFree();
+                dialog.Show(); // ✅ 取消时恢复父对话框
             };
             AddChild(fileDialog);
             fileDialog.PopupCentered(new Vector2I(600, 400));
@@ -1372,6 +1480,7 @@ public partial class MapEditorHelper : Node
         shapeAnchorPos = new Vector2I(-1, -1);
         selectStartPos = new Vector2I(-1, -1);
         symmetryAxisLine = -1;
+        ShowActionButtons(false);
         if (irregularSelectModeBtn != null)
             irregularSelectModeBtn.Text = "✏️ 不规则选区";
         var symBtn = helperPanel?.GetNodeOrNull<Button>("HelperVBox/SymmetryBtn");
@@ -1428,15 +1537,32 @@ public partial class MapEditorHelper : Node
         var unit = scene.Instantiate<Infantry>();
         if (unit == null) return;
         unit.team = data.team;
-        grid.AddChild(unit);
-        grid.infantry = unit;
-        grid.infantries.Add(unit);
+
+        // ✅ 正规流程：加到 units 节点 → 通过 UnitManager 绑定格子 → 注册到 AllUnits
+        if (gameManager?.unitManager?.units != null)
+            gameManager.unitManager.units.AddChild(unit);
+        else
+            grid.AddChild(unit); // 备用
+
+        gameManager?.unitManager?.BindUnitToGrid(unit, true);
+
+        if (gameManager?.unitManager?.AllUnits != null && !gameManager.unitManager.AllUnits.Contains(unit))
+            gameManager.unitManager.AllUnits.Add(unit);
+
         unit.GlobalPosition = grid.GlobalPosition;
     }
 
     private void SpawnWeaponFromData(Grids grid, SavedWeaponData data)
     {
         if (string.IsNullOrEmpty(data.scenePath)) return;
+
+        // ✅ 多格兵器走 TerrainEditor 的正规绑定流程（避免重复实例化）
+        if (data.isMultiTile && terrainEditor != null)
+        {
+            terrainEditor.SpawnSavedWeaponAtGrid(grid, data);
+            return;
+        }
+
         var scene = GD.Load<PackedScene>(data.scenePath);
         if (scene == null) return;
         var weapon = scene.Instantiate<Weapon>();
@@ -1447,9 +1573,18 @@ public partial class MapEditorHelper : Node
         if (weapon is BlackCannon bc && data.direction != 0) bc.direction = (BlackCannon.CannonDirection)data.direction;
         else if (weapon is DeathRay dr && data.direction != 0) dr.direction = (DeathRay.CannonDirection)data.direction;
         else if (weapon is LargeCannon lc && data.direction != 0) lc.direction = (LargeCannon.CannonDirection)data.direction;
-        grid.AddChild(weapon);
-        grid.weapon = weapon;
-        grid.weapons.Add(weapon);
+
+        // ✅ 单格兵器正规流程：加到 weaponsNode → 通过 WeaponManager 绑定格子 → 注册到 AllWeapons
+        if (gameManager?.weaponManager?.weaponsNode != null)
+            gameManager.weaponManager.weaponsNode.AddChild(weapon);
+        else
+            grid.AddChild(weapon); // 备用
+
+        gameManager?.weaponManager?.BindWeaponToGrid(weapon, true);
+
+        if (gameManager?.weaponManager?.AllWeapons != null && !gameManager.weaponManager.AllWeapons.Contains(weapon))
+            gameManager.weaponManager.AllWeapons.Add(weapon);
+
         weapon.GlobalPosition = grid.GlobalPosition;
     }
 
@@ -1461,6 +1596,8 @@ public partial class MapEditorHelper : Node
         var facility = scene.Instantiate<Facility>();
         if (facility == null) return;
         facility.facilityTeam = data.team;
+
+        // ✅ 设施直接加到格子下
         grid.AddChild(facility);
         grid.city = facility;
         facility.GlobalPosition = grid.GlobalPosition;

@@ -29,6 +29,10 @@ public class SavedUnitData
     // 攻防表
     public Dictionary<string, int> attackMatrix = new();
     public Dictionary<string, int> secondaryAttackMatrix = new();
+
+    // 地图位置（用于战局地图保存）
+    public int positionX = 0;
+    public int positionY = 0;
 }
 
 [Serializable]
@@ -51,6 +55,10 @@ public class SavedWeaponData
     public int sizeX = 1;
     public int sizeY = 1;
     public int direction = 0;
+
+    // 地图位置（用于战局地图保存）
+    public int positionX = 0;
+    public int positionY = 0;
 }
 
 [Serializable]
@@ -67,6 +75,10 @@ public class SavedFacilityData
     public Dictionary<string, string> fieldValues = new();
     public string customTexturePath = "";
     public bool useCustomTexture = false;
+
+    // 地图位置（用于战局地图保存）
+    public int positionX = 0;
+    public int positionY = 0;
 }
 
 [Serializable]
@@ -232,11 +244,11 @@ public partial class ExtraSave : Node
 
         // 确保目录存在
         EnsureDirectoryExists(CUSTOM_TEXTURE_DIR);
-        EnsureDirectoryExists(Path.Combine(CUSTOM_TEXTURE_DIR, "单位"));
-        EnsureDirectoryExists(Path.Combine(CUSTOM_TEXTURE_DIR, "兵器"));
-        EnsureDirectoryExists(Path.Combine(CUSTOM_TEXTURE_DIR, "设施"));
-        EnsureDirectoryExists(Path.Combine(CUSTOM_TEXTURE_DIR, "地形"));
-        EnsureDirectoryExists(Path.Combine(CUSTOM_TEXTURE_DIR, "移动方式"));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "单位"));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "兵器"));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "设施"));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "地形"));
+        EnsureDirectoryExists(GodotPathCombine(CUSTOM_TEXTURE_DIR, "移动方式"));
 
         LoadAllData();
         InitializeDefaultSlots();
@@ -358,6 +370,7 @@ public partial class ExtraSave : Node
         var arr = new Godot.Collections.Array();
         foreach (var item in list)
         {
+            if (item == null) continue;
             var d = new Godot.Collections.Dictionary();
             d["slotName"] = item.slotName;
             d["displayName"] = item.displayName;
@@ -409,6 +422,7 @@ public partial class ExtraSave : Node
         var arr = new Godot.Collections.Array();
         foreach (var item in list)
         {
+            if (item == null) continue;
             var d = new Godot.Collections.Dictionary();
             d["slotName"] = item.slotName;
             d["displayName"] = item.displayName;
@@ -464,6 +478,7 @@ public partial class ExtraSave : Node
         var arr = new Godot.Collections.Array();
         foreach (var item in list)
         {
+            if (item == null) continue;
             var d = new Godot.Collections.Dictionary();
             d["slotName"] = item.slotName;
             d["displayName"] = item.displayName;
@@ -511,6 +526,7 @@ public partial class ExtraSave : Node
         var arr = new Godot.Collections.Array();
         foreach (var item in list)
         {
+            if (item == null) continue;
             var d = new Godot.Collections.Dictionary();
             d["slotName"] = item.slotName;
             d["displayName"] = item.displayName;
@@ -594,6 +610,7 @@ public partial class ExtraSave : Node
         var arr = new Godot.Collections.Array();
         foreach (var item in list)
         {
+            if (item == null) continue;
             var d = new Godot.Collections.Dictionary();
             d["slotName"] = item.slotName;
             d["displayName"] = item.displayName;
@@ -769,19 +786,13 @@ public partial class ExtraSave : Node
         EnsureSlotList(ref Data.savedMaps, "地图");
     }
 
-    private void EnsureSlotList<T>(ref List<T> list, string prefix) where T : new()
+    private void EnsureSlotList<T>(ref List<T> list, string prefix) where T : class
     {
         int maxSlots = typeof(T) == typeof(SavedMapData) ? MAX_MAP_SLOTS : MAX_SLOTS;
 
         while (list.Count < maxSlots)
         {
-            var item = new T();
-            if (item is SavedUnitData u) u.slotName = $"{prefix}{list.Count + 1}";
-            else if (item is SavedWeaponData w) w.slotName = $"{prefix}{list.Count + 1}";
-            else if (item is SavedFacilityData f) f.slotName = $"{prefix}{list.Count + 1}";
-            else if (item is SavedGridTerrainData g) g.slotName = $"{prefix}{list.Count + 1}";
-            else if (item is SavedMapData m) m.slotName = $"{prefix}{list.Count + 1}";
-            list.Add(item);
+            list.Add(null);
         }
     }
 
@@ -1199,11 +1210,11 @@ public partial class ExtraSave : Node
                 return null;
             }
 
-            string targetDir = Path.Combine(CUSTOM_TEXTURE_DIR, category);
+            string targetDir = GodotPathCombine(CUSTOM_TEXTURE_DIR, category);
             EnsureDirectoryExists(targetDir);
 
             string safeSlotName = string.Join("_", slotName.Split(Path.GetInvalidFileNameChars()));
-            string targetPath = Path.Combine(targetDir, $"{safeSlotName}{ext}");
+            string targetPath = GodotPathCombine(targetDir, $"{safeSlotName}{ext}");
 
             // 保存图片（如果是resize后的，保存resize后的版本）
             if (w != MAX_TEXTURE_SIZE || h != MAX_TEXTURE_SIZE)
@@ -1732,6 +1743,12 @@ public partial class ExtraSave : Node
     {
         if (slotIndex < 0 || slotIndex >= Data.savedMaps.Count) return null;
         return Data.savedMaps[slotIndex];
+    }
+
+    // Godot 路径拼接（统一使用正斜杠）
+    private string GodotPathCombine(params string[] parts)
+    {
+        return string.Join("/", parts).Replace("\\", "/");
     }
 
     // ==================== 序列化辅助方法 ====================

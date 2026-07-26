@@ -98,8 +98,8 @@ public partial class Grids : Node2D
         var area2D = GetNodeOrNull<Area2D>("Area2D");
         if (area2D != null)
         {
-            area2D.MouseEntered += () => OnMouseEnteredAttackGrid?.Invoke();
-            area2D.MouseExited += () => OnMouseExitedAttackGrid?.Invoke();
+            area2D.MouseEntered += OnArea2DMouseEntered;
+            area2D.MouseExited += OnArea2DMouseExited;
             area2D.InputPickable = true;
         }
 

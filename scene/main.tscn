@@ -34,6 +34,9 @@
 [ext_resource type="PackedScene" path="res://Prefabs/Flare.tscn" id="28_flareq"]
 [ext_resource type="PackedScene" uid="uid://dt34620naxdc3" path="res://Prefabs/FlyBomb.tscn" id="28_vneqc"]
 [ext_resource type="PackedScene" uid="uid://b2721lm0rscie" path="res://Prefabs/Anti_Tank.tscn" id="29_antitan"]
+[ext_resource type="Script" uid="uid://d2iamvqfi3ida" path="res://spricts/EditorSaveSlots.cs" id="30_216wm"]
+[ext_resource type="Script" uid="uid://ltftlah0etrk" path="res://spricts/CustomConfigUI.cs" id="30_kpobt"]
+[ext_resource type="Script" uid="uid://cppncwnmgkx0v" path="res://spricts/ExtraSave.cs" id="31_216wm"]
 [ext_resource type="PackedScene" uid="uid://kbpull7ec1pg" path="res://Prefabs/large_cannon.tscn" id="34_7xrs8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mswub"]
@@ -2468,54 +2471,109 @@ team = "Player2"
 [node name="HpLabel" parent="UnitManager/Units/Infantry7" index="2" unique_id=1380967663]
 metadata/_edit_use_anchors_ = true
 
-[node name="Oozium" parent="UnitManager/Units" unique_id=1807137787 node_paths=PackedStringArray("gridManager") instance=ExtResource("15_v2gmf")]
+[node name="Oozium" parent="UnitManager/Units" unique_id=1807137787 instance=ExtResource("15_v2gmf")]
 position = Vector2(224, 352)
-overlapType = 2
-gridManager = NodePath("../../GridManager")
-useDefaultAmmoConfig = false
+useDefaultConfig = true
+unitCategory = 16
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+maxHealth = 100
+health = 100
+baseAttack = 100
 team = "Player1"
 
-[node name="Oozium2" parent="UnitManager/Units" unique_id=928967852 node_paths=PackedStringArray("gridManager") instance=ExtResource("15_v2gmf")]
+[node name="Oozium2" parent="UnitManager/Units" unique_id=928967852 instance=ExtResource("15_v2gmf")]
 position = Vector2(224, 512)
-overlapType = 2
-gridManager = NodePath("../../GridManager")
-attackType = 1
-health = 1
-captureAbility = 0
-team = "Player1"
+useDefaultConfig = true
+unitCategory = 16
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+maxHealth = 100
+health = 100
+baseAttack = 100
+team = "Player2"
 
-[node name="Mech" parent="UnitManager/Units" unique_id=1167390325 node_paths=PackedStringArray("gridManager") instance=ExtResource("16_jcbur")]
+[node name="Mech" parent="UnitManager/Units" unique_id=1167390325 instance=ExtResource("16_jcbur")]
 position = Vector2(768, 448)
-moveType = 5
-gridManager = NodePath("../../GridManager")
-captureAbility = 0
-team = "Player1"
+useDefaultConfig = true
+unitCategory = 16
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+secondaryAttack = 100
+counterMul = 0.5
+team = "Player2"
 
 [node name="Sprite2D" parent="UnitManager/Units/Mech" index="2" unique_id=525152588]
 visible = false
 
-[node name="Mech2" parent="UnitManager/Units" unique_id=8995270 node_paths=PackedStringArray("gridManager") instance=ExtResource("16_jcbur")]
+[node name="Mech2" parent="UnitManager/Units" unique_id=8995270 instance=ExtResource("16_jcbur")]
 position = Vector2(96, 448)
-overlapType = 1
-gridManager = NodePath("../../GridManager")
-captureAbility = 0
-team = "Player2"
+useDefaultConfig = true
+unitCategory = 16
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+secondaryAttack = 100
+counterMul = 0.5
+team = "Player1"
 
 [node name="Sprite2D" parent="UnitManager/Units/Mech2" index="2" unique_id=525152588]
 visible = false
 texture = ExtResource("17_smf0o")
 
-[node name="LightTank" parent="UnitManager/Units" unique_id=548670000 node_paths=PackedStringArray("gridManager") instance=ExtResource("14_v2gmf")]
+[node name="LightTank" parent="UnitManager/Units" unique_id=548670000 instance=ExtResource("14_v2gmf")]
 position = Vector2(288, 352)
-gridManager = NodePath("../../GridManager")
-health = 60
+useDefaultConfig = true
+unitCategory = 16
+isArmoredUnit = false
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
 currentPrimaryAmmo = 0
+primaryAntiArmor = false
+primaryAntiInfantry = true
 team = "Player1"
 
-[node name="LightTank2" parent="UnitManager/Units" unique_id=118940428 node_paths=PackedStringArray("gridManager") instance=ExtResource("14_v2gmf")]
+[node name="LightTank2" parent="UnitManager/Units" unique_id=118940428 instance=ExtResource("14_v2gmf")]
 position = Vector2(288, 320)
-gridManager = NodePath("../../GridManager")
-health = 70
+useDefaultConfig = true
+unitCategory = 16
+isArmoredUnit = false
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+primaryAntiArmor = false
+primaryAntiInfantry = true
 team = "Player2"
 
 [node name="AnimatedSprite2D" parent="UnitManager/Units/LightTank2" index="1" unique_id=1828372812]
@@ -2524,10 +2582,24 @@ frame_progress = 0.0
 [node name="Sprite2D" parent="UnitManager/Units/LightTank2" index="2" unique_id=1080152555]
 texture = ExtResource("15_jcbur")
 
-[node name="LightTank4" parent="UnitManager/Units" unique_id=98936044 node_paths=PackedStringArray("gridManager") instance=ExtResource("14_v2gmf")]
+[node name="LightTank4" parent="UnitManager/Units" unique_id=98936044 instance=ExtResource("14_v2gmf")]
 position = Vector2(704, 320)
-gridManager = NodePath("../../GridManager")
-team = "Player2"
+useDefaultConfig = true
+unitCategory = 16
+isArmoredUnit = false
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+primaryAntiArmor = false
+primaryAntiInfantry = true
+team = "Player1"
 
 [node name="AnimatedSprite2D" parent="UnitManager/Units/LightTank4" index="1" unique_id=1828372812]
 frame_progress = 0.0
@@ -2535,106 +2607,280 @@ frame_progress = 0.0
 [node name="Sprite2D" parent="UnitManager/Units/LightTank4" index="2" unique_id=1080152555]
 texture = ExtResource("15_jcbur")
 
-[node name="LightTank3" parent="UnitManager/Units" unique_id=488045069 node_paths=PackedStringArray("gridManager") instance=ExtResource("14_v2gmf")]
+[node name="LightTank3" parent="UnitManager/Units" unique_id=488045069 instance=ExtResource("14_v2gmf")]
 position = Vector2(608, 480)
-gridManager = NodePath("../../GridManager")
-attackRange = 3
-minAttackRange = 2
-maxAttackRange = 3
-team = "Player1"
-
-[node name="APC1" parent="UnitManager/Units" unique_id=1999259536 node_paths=PackedStringArray("gridManager", "spriteBlue") instance=ExtResource("18_fdqew")]
-position = Vector2(160, 448)
-maxTransportCapacity = 2
-canTransportUnitTypes = Array[String](["Infantry", "Mech", "LightTank"])
-maxLoadCapacity = 2
-gridManager = NodePath("../../GridManager")
-consumeFuel = true
-team = "Player1"
-spriteBlue = NodePath("Sprite2D")
-
-[node name="Artillery" parent="UnitManager/Units" unique_id=167020777 node_paths=PackedStringArray("gridManager") instance=ExtResource("16_smf0o")]
-position = Vector2(192, 416)
-moveType = 3
-gridManager = NodePath("../../GridManager")
-currentPrimaryAmmo = 1
+useDefaultConfig = true
+unitCategory = 16
+isArmoredUnit = false
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+primaryAntiArmor = false
+primaryAntiInfantry = true
 team = "Player2"
+
+[node name="APC1" parent="UnitManager/Units" unique_id=1999259536 instance=ExtResource("18_fdqew")]
+position = Vector2(160, 448)
+useDefaultConfig = true
+unitCategory = 16
+isArmoredUnit = false
+canTransportUnits = false
+canSupplyUnits = false
+maxTransportCapacity = 0
+canTransportUnitTypes = Array[String]([])
+maxLoadCapacity = 0
+moveType = 0
+attackType = 0
+defaultMovePoints = 3
+movePoints = 3
+maxHealth = 100
+health = 100
+baseAttack = 100
+canAttackAfterMoving = true
+maxFuel = 99
+fuel = 99
+hasSecondaryWeapon = true
+secondaryAttack = 100
+primaryAntiInfantry = true
+secondaryAntiInfantry = true
+
+[node name="Artillery" parent="UnitManager/Units" unique_id=167020777 instance=ExtResource("16_smf0o")]
+position = Vector2(192, 416)
+useDefaultConfig = true
+unitCategory = 16
+isArmoredUnit = false
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+minAttackRange = 1
+maxAttackRange = 1
+useMinMaxAttackRange = false
+canAttackAfterMoving = true
+useDefaultAmmoConfig = true
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
 
 [node name="Sprite2D" parent="UnitManager/Units/Artillery" index="2" unique_id=1603783663]
 texture = ExtResource("17_tv8i1")
 
-[node name="Rocket1" parent="UnitManager/Units" unique_id=1282062844 node_paths=PackedStringArray("gridManager") instance=ExtResource("19_0d4pv")]
+[node name="Rocket1" parent="UnitManager/Units" unique_id=1282062844 instance=ExtResource("19_0d4pv")]
 position = Vector2(320, 416)
-cannotCounterWhenAttacked = true
-moveType = 3
-gridManager = NodePath("../../GridManager")
-minAttackRange = 4
+useDefaultConfig = true
+unitCategory = 16
+isArmoredUnit = false
+moveType = 0
+baseAttack = 100
+minAttackRange = 1
+maxAttackRange = 1
+useMinMaxAttackRange = false
+useDefaultAmmoConfig = true
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+primaryAntiArmor = false
 team = "Player2"
 
-[node name="FlyBomb" parent="UnitManager/Units" unique_id=1986724623 node_paths=PackedStringArray("gridManager") instance=ExtResource("28_vneqc")]
+[node name="FlyBomb" parent="UnitManager/Units" unique_id=1986724623 instance=ExtResource("28_vneqc")]
 position = Vector2(448, 416)
-gridManager = NodePath("../../GridManager")
+useDefaultConfig = true
+canCapture = true
+unitCategory = 16
+visionRange = -1
+isArmoredUnit = false
+IsAirUnit = false
+defenseBonusType = 1
+moveType = 0
+attackType = 0
+defaultMovePoints = 3
+movePoints = 3
+canAttackAfterMoving = true
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+lowFuelThreshold = 15
+dailyFuelConsumption = 0
+destroyOnOutOfFuel = false
+useDefaultAmmoConfig = true
+primaryHasLimitedAmmo = true
+hasSecondaryWeapon = true
+primaryAntiInfantry = true
+secondaryAntiInfantry = true
+explosionSelfDamageEnabled = true
 team = "Player1"
 
-[node name="Recon" parent="UnitManager/Units" unique_id=150983514 node_paths=PackedStringArray("gridManager") instance=ExtResource("22_io27d")]
+[node name="Recon" parent="UnitManager/Units" unique_id=150983514 instance=ExtResource("22_io27d")]
 position = Vector2(608, 288)
-gridManager = NodePath("../../GridManager")
-team = "Player2"
+useDefaultConfig = true
+unitCategory = 16
+canSupplyAfterMove = true
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+team = "Player1"
 
 [node name="FlyBomb2" parent="UnitManager/Units" unique_id=195680775 instance=ExtResource("28_vneqc")]
 position = Vector2(416, 352)
-explosionMinRange = 4
-explosionMaxRange = 9
-explosionDamageMode = 0
-explosionFixedValue = 9999
-explosionDestroysSelf = false
-explosionCanKill = true
-explosionAffectsWeapons = true
-maxExplodeAmmo = 1
-currentExplodeAmmo = 1
+useDefaultConfig = true
+canCapture = true
+unitCategory = 16
+visionRange = -1
+isArmoredUnit = false
+IsAirUnit = false
+defenseBonusType = 1
+moveType = 0
+attackType = 0
+defaultMovePoints = 3
+movePoints = 3
+canAttackAfterMoving = true
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+lowFuelThreshold = 15
+dailyFuelConsumption = 0
+destroyOnOutOfFuel = false
+useDefaultAmmoConfig = true
+primaryHasLimitedAmmo = true
+hasSecondaryWeapon = true
+primaryAntiInfantry = true
+secondaryAntiInfantry = true
+explosionSelfDamageEnabled = true
 team = "Player2"
 
 [node name="FlyBomb4" parent="UnitManager/Units" unique_id=1415390045 instance=ExtResource("28_vneqc")]
 position = Vector2(448, 352)
-explosionMaxRange = 6
-explosionPercentValue = -0.5
-explosionCanKill = true
-explosionAffectsWeapons = true
-explosionCanExceedMaxHealth = true
-team = "Player2"
+useDefaultConfig = true
+canCapture = true
+unitCategory = 16
+visionRange = -1
+isArmoredUnit = false
+IsAirUnit = false
+defenseBonusType = 1
+moveType = 0
+attackType = 0
+defaultMovePoints = 3
+movePoints = 3
+canAttackAfterMoving = true
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+lowFuelThreshold = 15
+dailyFuelConsumption = 0
+destroyOnOutOfFuel = false
+useDefaultAmmoConfig = true
+primaryHasLimitedAmmo = true
+hasSecondaryWeapon = true
+primaryAntiInfantry = true
+secondaryAntiInfantry = true
+explosionSelfDamageEnabled = true
+team = "Player1"
 
 [node name="FlyBomb5" parent="UnitManager/Units" unique_id=1769097147 instance=ExtResource("28_vneqc")]
 position = Vector2(576, 288)
-fuel = 10
-explosionMaxRange = 6
-explosionPercentValue = -0.5
-explosionCanKill = true
-explosionAffectsWeapons = true
-explosionCanExceedMaxHealth = true
-team = "Player2"
+useDefaultConfig = true
+canCapture = true
+unitCategory = 16
+visionRange = -1
+isArmoredUnit = false
+IsAirUnit = false
+defenseBonusType = 1
+moveType = 0
+attackType = 0
+defaultMovePoints = 3
+movePoints = 3
+canAttackAfterMoving = true
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+lowFuelThreshold = 15
+dailyFuelConsumption = 0
+destroyOnOutOfFuel = false
+useDefaultAmmoConfig = true
+primaryHasLimitedAmmo = true
+hasSecondaryWeapon = true
+primaryAntiInfantry = true
+secondaryAntiInfantry = true
+explosionSelfDamageEnabled = true
+team = "Player1"
 
 [node name="FlyBomb3" parent="UnitManager/Units" unique_id=559531958 instance=ExtResource("28_vneqc")]
 position = Vector2(448, 512)
-team = "Player1"
+useDefaultConfig = true
+canCapture = true
+unitCategory = 16
+visionRange = -1
+isArmoredUnit = false
+IsAirUnit = false
+defenseBonusType = 1
+moveType = 0
+attackType = 0
+defaultMovePoints = 3
+movePoints = 3
+canAttackAfterMoving = true
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+lowFuelThreshold = 15
+dailyFuelConsumption = 0
+destroyOnOutOfFuel = false
+useDefaultAmmoConfig = true
+primaryHasLimitedAmmo = true
+hasSecondaryWeapon = true
+primaryAntiInfantry = true
+secondaryAntiInfantry = true
+explosionSelfDamageEnabled = true
+team = "Player2"
 
-[node name="AntiTank" parent="UnitManager/Units" unique_id=435382715 node_paths=PackedStringArray("gridManager") instance=ExtResource("29_antitan")]
+[node name="AntiTank" parent="UnitManager/Units" unique_id=435382715 instance=ExtResource("29_antitan")]
 position = Vector2(320, 480)
-gridManager = NodePath("../../GridManager")
+useDefaultConfig = true
+unitCategory = 16
+visionRange = -1
+isArmoredUnit = false
+moveType = 0
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+maxAttackRange = 1
+useMinMaxAttackRange = false
+canAttackAfterMoving = true
+maxFuel = 99
+fuel = 99
+consumeFuel = false
+hasPrimaryWeapon = false
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+hasSecondaryWeapon = true
 canIlluminate = true
 maxFlareAmmo = 1
 currentFlareAmmo = 1
-flareDurationTurns = 3
+minLaunchRange = 1
+maxLaunchRange = 3
+minIlluminationRange = 1
+maxIlluminationRange = 4
+flareDurationTurns = 2
 canIlluminateAfterMove = true
 team = "Player1"
 
-[node name="Flare" parent="UnitManager/Units" unique_id=771793553 node_paths=PackedStringArray("gridManager") instance=ExtResource("28_flareq")]
+[node name="Flare" parent="UnitManager/Units" unique_id=771793553 instance=ExtResource("28_flareq")]
 position = Vector2(352, 512)
-gridManager = NodePath("../../GridManager")
 team = "Player1"
 
 [node name="AntiAir" parent="UnitManager/Units" unique_id=365018763 instance=ExtResource("25_p8adh")]
 position = Vector2(480, 512)
-unitCategory = 12
+useDefaultConfig = true
+visionRange = -1
+defaultMovePoints = 3
+movePoints = 3
+baseAttack = 100
+baseDefense = 0
 team = "Player2"
 
 [node name="UnitLists" type="RichTextLabel" parent="." unique_id=860954284]
@@ -2672,14 +2918,36 @@ icon = ExtResource("8_v2gmf")
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=997004957]
 layer = 10
 
-[node name="TerrainEditor" type="Control" parent="CanvasLayer" unique_id=1311251061 node_paths=PackedStringArray("gameManager", "gridManager")]
+[node name="TerrainEditor" type="Control" parent="CanvasLayer" unique_id=1311251061 node_paths=PackedStringArray("gameManager", "extraSave", "gridManager", "customConfigUI")]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("21_gtqqq")
 gameManager = NodePath("../../GameManager")
+extraSave = NodePath("ExtraSave")
 gridManager = NodePath("../../UnitManager/GridManager")
+customConfigUI = NodePath("CustomConfigUI")
+
+[node name="EditorSaveSlots" type="Node" parent="CanvasLayer/TerrainEditor" unique_id=1274376145 node_paths=PackedStringArray("extraSave", "terrainEditor", "gridManager", "gameManager")]
+script = ExtResource("30_216wm")
+extraSave = NodePath("../ExtraSave")
+terrainEditor = NodePath("..")
+gridManager = NodePath("../../../UnitManager/GridManager")
+gameManager = NodePath("../../../GameManager")
+
+[node name="CustomConfigUI" type="Control" parent="CanvasLayer/TerrainEditor" unique_id=1507757296 node_paths=PackedStringArray("extraSave", "terrainEditor", "gameManager", "editorSaveSlots")]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("30_kpobt")
+extraSave = NodePath("../ExtraSave")
+terrainEditor = NodePath("..")
+gameManager = NodePath("../../../GameManager")
+editorSaveSlots = NodePath("../EditorSaveSlots")
+
+[node name="ExtraSave" type="Node" parent="CanvasLayer/TerrainEditor" unique_id=226550216]
+script = ExtResource("31_216wm")
 
 [node name="VictoryPanel" type="Control" parent="CanvasLayer" unique_id=473306802]
 visible = false
@@ -2767,7 +3035,7 @@ maxAttacksPerTurn = 2
 
 [node name="LargeCannon" parent="WeaponManager/Weapons" unique_id=769636627 instance=ExtResource("34_7xrs8")]
 position = Vector2(480, 224)
-direction = 2
+fixedDamagePercent = 0.3
 contributesToVictory = true
 health = 1
 

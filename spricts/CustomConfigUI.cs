@@ -9,6 +9,7 @@ public partial class CustomConfigUI : Control
     [Export] public ExtraSave extraSave;
     [Export] public TerrainEditor terrainEditor;
     [Export] public GameManager gameManager;
+    [Export] public EditorSaveSlots editorSaveSlots;
 
     private Panel mainPanel;
     private TabContainer tabContainer;
@@ -33,15 +34,28 @@ public partial class CustomConfigUI : Control
 
         if (extraSave == null)
             extraSave = GetTree().GetFirstNodeInGroup("extra_save") as ExtraSave;
-        if (terrainEditor == null)
-            terrainEditor = GetTree().GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
-        if (gameManager == null)
-            gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 
         CreateMainPanel();
         CreateTabs();
         CreateOpenButton(); // ✅ 创建编辑模式入口按钮
         Hide();
+
+        // 延迟获取其他引用（确保目标节点已 _Ready）
+        CallDeferred(nameof(DeferredInit));
+    }
+
+    private void DeferredInit()
+    {
+        if (terrainEditor == null)
+            terrainEditor = GetTree().GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
+        if (gameManager == null)
+            gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (editorSaveSlots == null)
+            editorSaveSlots = GetTree().GetFirstNodeInGroup("editor_save_slots") as EditorSaveSlots;
+
+        // 订阅EditorSaveSlots数据变化信号，自动刷新槽位显示
+        if (editorSaveSlots != null)
+            editorSaveSlots.SlotDataChanged += OnSlotDataChanged;
     }
 
     // ✅ 新增：编辑模式下的 Extra配置 打开按钮
@@ -86,6 +100,11 @@ public partial class CustomConfigUI : Control
     {
         if (openConfigBtn != null)
             openConfigBtn.Visible = visible;
+    }
+
+    private string GodotPathCombine(params string[] parts)
+    {
+        return string.Join("/", parts).Replace("\\", "/");
     }
 
     private void CreateMainPanel()
@@ -1016,11 +1035,13 @@ public partial class CustomConfigUI : Control
         var dialog = new FileDialog();
         dialog.FileMode = FileDialog.FileModeEnum.OpenFile;
         dialog.Access = FileDialog.AccessEnum.Filesystem;
-        dialog.Filters = new string[] { "*.png ; PNG Images", "*.jpg ; JPG Images", "*.jpeg ; JPEG Images", "*.gif ; GIF Images" };
-        dialog.Title = $"选择{category}贴图 (32×32)";
+        dialog.Filters = new string[] { "*.png ; PNG Images", "*.jpg ; JPG Images", "*.jpeg ; JPEG Images", "*.gif ; GIF Images", "*.webp ; WebP Images" };
+        dialog.Title = $"选择{category}贴图 (建议32×32)";
         dialog.Size = new Vector2I(800, 600);
 
         dialog.FileSelected += (path) => {
+            if (string.IsNullOrEmpty(path)) { dialog.QueueFree(); return; }
+
             // 验证尺寸
             var image = new Image();
             Error err = image.Load(path);
@@ -1041,17 +1062,26 @@ public partial class CustomConfigUI : Control
             }
             if (w != 32 || h != 32)
             {
-                ShowToast($"⚠️ 尺寸 {w}×{h} 非标准，将自动resize到 32×32");
-                dialog.QueueFree();
-                return;
+                // ✅ 自动resize到32x32，不再直接return
+                image.Resize(32, 32, Image.Interpolation.Lanczos);
+                ShowToast($"⚠️ 尺寸 {w}×{h} 非标准，已自动resize到 32×32");
+            }
+
+            // ✅ 先保存resize后的图片到临时路径，再传给ProcessUploadedTexture
+            string tempPath = path;
+            if (w != 32 || h != 32)
+            {
+                tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"resized_{Guid.NewGuid()}.png");
+                image.SavePng(tempPath);
             }
 
             // 保存
-            string savedPath = extraSave?.ProcessUploadedTexture(path, category, $"custom_{DateTime.Now:yyyyMMddHHmmss}");
+            string savedPath = extraSave?.ProcessUploadedTexture(tempPath, category, $"custom_{DateTime.Now:yyyyMMddHHmmss}");
             if (!string.IsNullOrEmpty(savedPath) && !savedPath.StartsWith("ERROR"))
             {
                 ShowToast($"✅ 贴图上传成功！\n{Path.GetFileName(savedPath)}");
                 RefreshUploadedTextureList();
+                RefreshApplyTextureList(); // ✅ 同时刷新应用列表
             }
             else
             {
@@ -1113,7 +1143,7 @@ public partial class CustomConfigUI : Control
         var list = new VBoxContainer();
         list.AddThemeConstantOverride("separation", 4);
 
-        string textureDir = Path.Combine(ExtraSave.CUSTOM_TEXTURE_DIR, category);
+        string textureDir = GodotPathCombine(ExtraSave.CUSTOM_TEXTURE_DIR, category);
         if (DirAccess.DirExistsAbsolute(textureDir))
         {
             var dir = DirAccess.Open(textureDir);
@@ -1137,7 +1167,7 @@ public partial class CustomConfigUI : Control
                     applyBtn.Text = "应用";
                     applyBtn.CustomMinimumSize = new Vector2(60, 24);
                     applyBtn.AddThemeFontSizeOverride("font_size", 10);
-                    string fullPath = Path.Combine(textureDir, fileName);
+                    string fullPath = GodotPathCombine(textureDir, fileName);
                     applyBtn.Pressed += () => {
                         ApplyTextureToTarget(category, targetId, fullPath);
                         dialog.QueueFree();
@@ -1317,69 +1347,74 @@ public partial class CustomConfigUI : Control
         foreach (var child in list.GetChildren())
             child.QueueFree();
 
+        // ✅ 从文件系统读取
         string textureDir = ExtraSave.CUSTOM_TEXTURE_DIR;
-        if (!DirAccess.DirExistsAbsolute(textureDir))
+        if (DirAccess.DirExistsAbsolute(textureDir))
+        {
+            var dir = DirAccess.Open(textureDir);
+            if (dir != null)
+            {
+                dir.ListDirBegin();
+                string folderName;
+                while ((folderName = dir.GetNext()) != "")
+                {
+                    if (dir.CurrentIsDir() && folderName != "." && folderName != "..")
+                    {
+                        var subDir = DirAccess.Open(GodotPathCombine(textureDir, folderName));
+                        if (subDir == null) continue;
+
+                        subDir.ListDirBegin();
+                        string fileName;
+                        while ((fileName = subDir.GetNext()) != "")
+                        {
+                            if (subDir.CurrentIsDir()) continue;
+
+                            var row = new HBoxContainer();
+                            row.AddThemeConstantOverride("separation", 8);
+
+                            var fileLabel = new Label();
+                            fileLabel.Text = $"[{folderName}] {fileName}";
+                            fileLabel.CustomMinimumSize = new Vector2(250, 24);
+                            fileLabel.AddThemeFontSizeOverride("font_size", 11);
+                            row.AddChild(fileLabel);
+
+                            var previewBtn = new Button();
+                            previewBtn.Text = "预览";
+                            previewBtn.CustomMinimumSize = new Vector2(60, 24);
+                            previewBtn.AddThemeFontSizeOverride("font_size", 10);
+                            string fullPath = GodotPathCombine(textureDir, folderName, fileName);
+                            previewBtn.Pressed += () => ShowTexturePreview(fullPath);
+                            row.AddChild(previewBtn);
+
+                            var delBtn = new Button();
+                            delBtn.Text = "删除";
+                            delBtn.CustomMinimumSize = new Vector2(60, 24);
+                            delBtn.AddThemeFontSizeOverride("font_size", 10);
+                            delBtn.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
+                            delBtn.Pressed += () => {
+                                try { DirAccess.RemoveAbsolute(fullPath); } catch { }
+                                RefreshUploadedTextureList();
+                                RefreshApplyTextureList();
+                            };
+                            row.AddChild(delBtn);
+
+                            list.AddChild(row);
+                        }
+                        subDir.ListDirEnd();
+                    }
+                }
+                dir.ListDirEnd();
+            }
+        }
+
+        if (list.GetChildCount() == 0)
         {
             var emptyLabel = new Label();
             emptyLabel.Text = "暂无上传的贴图";
             emptyLabel.AddThemeFontSizeOverride("font_size", 12);
             emptyLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
             list.AddChild(emptyLabel);
-            return;
         }
-
-        var dir = DirAccess.Open(textureDir);
-        if (dir == null) return;
-
-        dir.ListDirBegin();
-        string folderName;
-        while ((folderName = dir.GetNext()) != "")
-        {
-            if (dir.CurrentIsDir() && folderName != "." && folderName != "..")
-            {
-                var subDir = DirAccess.Open(Path.Combine(textureDir, folderName));
-                if (subDir == null) continue;
-
-                subDir.ListDirBegin();
-                string fileName;
-                while ((fileName = subDir.GetNext()) != "")
-                {
-                    if (subDir.CurrentIsDir()) continue;
-
-                    var row = new HBoxContainer();
-                    row.AddThemeConstantOverride("separation", 8);
-
-                    var fileLabel = new Label();
-                    fileLabel.Text = $"[{folderName}] {fileName}";
-                    fileLabel.CustomMinimumSize = new Vector2(250, 24);
-                    fileLabel.AddThemeFontSizeOverride("font_size", 11);
-                    row.AddChild(fileLabel);
-
-                    var previewBtn = new Button();
-                    previewBtn.Text = "预览";
-                    previewBtn.CustomMinimumSize = new Vector2(60, 24);
-                    previewBtn.AddThemeFontSizeOverride("font_size", 10);
-                    string fullPath = Path.Combine(textureDir, folderName, fileName);
-                    previewBtn.Pressed += () => ShowTexturePreview(fullPath);
-                    row.AddChild(previewBtn);
-
-                    var delBtn = new Button();
-                    delBtn.Text = "删除";
-                    delBtn.CustomMinimumSize = new Vector2(60, 24);
-                    delBtn.AddThemeFontSizeOverride("font_size", 10);
-                    delBtn.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
-                    delBtn.Pressed += () => {
-                        try { DirAccess.RemoveAbsolute(fullPath); } catch { }
-                        RefreshUploadedTextureList();
-                    };
-                    row.AddChild(delBtn);
-
-                    list.AddChild(row);
-                }
-                subDir.ListDirEnd();
-            }
-        }
-        dir.ListDirEnd();
     }
 
     private void ShowTexturePreview(string path)
@@ -1573,43 +1608,224 @@ public partial class CustomConfigUI : Control
 
     private void ShowSlotContextMenu<T>(int slotIndex, string category, T slotData, bool isEmpty, bool isFav, string slotName) where T : class
     {
-        var menu = new PopupMenu();
-        menu.AddItem($"保存当前{category}", 0);
-        menu.AddItem($"加载{category}", 1);
-        menu.AddItem(isFav ? "取消收藏" : "收藏", 2);
-        menu.AddItem("改名", 3);
+        // 关闭已存在的操作面板
+        var existing = GetNodeOrNull("SlotActionPanel");
+        existing?.QueueFree();
+
+        // 先声明 panel 变量，供 overlay lambda 捕获
+        Panel panel = null;
+
+        // 半透明遮罩（点击关闭）
+        var overlay = new Panel();
+        overlay.Name = "SlotActionOverlay";
+        overlay.SetAnchorsPreset(LayoutPreset.FullRect);
+        overlay.ZIndex = 1599;
+        overlay.MouseFilter = MouseFilterEnum.Stop;
+        var overlayStyle = new StyleBoxFlat();
+        overlayStyle.BgColor = new Color(0, 0, 0, 0.4f);
+        overlay.AddThemeStyleboxOverride("panel", overlayStyle);
+        overlay.GuiInput += (e) => {
+            if (e is InputEventMouseButton btn && btn.Pressed && btn.ButtonIndex == MouseButton.Left)
+            {
+                overlay.QueueFree();
+                panel?.QueueFree();
+            }
+        };
+        AddChild(overlay);
+
+        // 操作面板
+        panel = new Panel();
+        panel.Name = "SlotActionPanel";
+        panel.CustomMinimumSize = new Vector2(280, 0);
+        panel.SetAnchorsPreset(LayoutPreset.Center);
+        panel.ZIndex = 1600;
+        panel.MouseFilter = MouseFilterEnum.Stop;
+
+        var panelStyle = new StyleBoxFlat();
+        panelStyle.BgColor = new Color(0.12f, 0.14f, 0.2f, 0.98f);
+        panelStyle.SetCornerRadiusAll(16);
+        panelStyle.SetBorderWidthAll(2);
+        panelStyle.BorderColor = new Color(0.5f, 0.7f, 0.9f);
+        panel.AddThemeStyleboxOverride("panel", panelStyle);
+
+        var vbox = new VBoxContainer();
+        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.AddThemeConstantOverride("margin_left", 16);
+        vbox.AddThemeConstantOverride("margin_right", 16);
+        vbox.AddThemeConstantOverride("margin_top", 16);
+        vbox.AddThemeConstantOverride("margin_bottom", 16);
+        vbox.AddThemeConstantOverride("separation", 10);
+
+        // 标题
+        var title = new Label();
+        title.Text = $"{category} 槽位 {slotIndex + 1}";
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 18);
+        title.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f));
+        vbox.AddChild(title);
+
+        // 分隔线
+        var sep = new HSeparator();
+        vbox.AddChild(sep);
+
+        // 保存按钮
+        var saveBtn = new Button();
+        saveBtn.Text = isEmpty ? $"💾 保存{category}" : $"💾 覆盖保存";
+        saveBtn.CustomMinimumSize = new Vector2(0, 48);
+        saveBtn.AddThemeFontSizeOverride("font_size", 14);
+        var saveStyle = new StyleBoxFlat();
+        saveStyle.BgColor = new Color(0.2f, 0.5f, 0.3f, 0.9f);
+        saveStyle.SetCornerRadiusAll(10);
+        saveBtn.AddThemeStyleboxOverride("normal", saveStyle);
+        saveBtn.Pressed += () => {
+            if (category == "地图")
+            {
+                if (editorSaveSlots != null)
+                {
+                    editorSaveSlots.SaveMapToSlot(slotIndex);
+                    ShowToast($"✅ 地图已保存到槽位{slotIndex + 1}");
+                }
+            }
+            else
+            {
+                if (editorSaveSlots != null)
+                {
+                    if (isEmpty)
+                    {
+                        editorSaveSlots.SaveToSlot(slotIndex, GetEditorSlotType(category));
+                        ShowToast($"💾 请点击地图上的{category}来保存");
+                    }
+                    else
+                    {
+                        ShowToast("槽位已有数据，请先清除");
+                    }
+                }
+            }
+            overlay.QueueFree();
+            panel.QueueFree();
+        };
+        vbox.AddChild(saveBtn);
+
+        // 加载按钮（空槽禁用）
+        var loadBtn = new Button();
+        loadBtn.Text = $"📂 加载{category}";
+        loadBtn.CustomMinimumSize = new Vector2(0, 48);
+        loadBtn.AddThemeFontSizeOverride("font_size", 14);
+        var loadStyle = new StyleBoxFlat();
+        loadStyle.BgColor = isEmpty ? new Color(0.3f, 0.3f, 0.35f, 0.5f) : new Color(0.3f, 0.5f, 0.7f, 0.9f);
+        loadStyle.SetCornerRadiusAll(10);
+        loadBtn.AddThemeStyleboxOverride("normal", loadStyle);
+        loadBtn.Disabled = isEmpty;
+        loadBtn.Pressed += () => {
+            if (category == "地图")
+            {
+                if (editorSaveSlots != null && !isEmpty)
+                {
+                    editorSaveSlots.LoadMapFromSlot(slotIndex);
+                    ShowToast("✅ 地图加载完成");
+                }
+            }
+            else
+            {
+                if (editorSaveSlots != null && !isEmpty)
+                {
+                    editorSaveSlots.LoadFromSlot(slotIndex, GetEditorSlotType(category));
+                    ShowToast($"📂 请点击地图上的格子来加载{category}");
+                }
+            }
+            overlay.QueueFree();
+            panel.QueueFree();
+        };
+        vbox.AddChild(loadBtn);
+
+        // 收藏按钮
+        var favBtn = new Button();
+        favBtn.Text = isFav ? "★ 取消收藏" : "☆ 收藏";
+        favBtn.CustomMinimumSize = new Vector2(0, 44);
+        favBtn.AddThemeFontSizeOverride("font_size", 13);
+        var favStyle = new StyleBoxFlat();
+        favStyle.BgColor = new Color(0.8f, 0.6f, 0.2f, 0.8f);
+        favStyle.SetCornerRadiusAll(10);
+        favBtn.AddThemeStyleboxOverride("normal", favStyle);
+        favBtn.Pressed += () => {
+            ToggleFavorite(slotIndex, category);
+            overlay.QueueFree();
+            panel.QueueFree();
+        };
+        vbox.AddChild(favBtn);
+
+        // 改名按钮
+        var renameBtn = new Button();
+        renameBtn.Text = "✏️ 改名";
+        renameBtn.CustomMinimumSize = new Vector2(0, 44);
+        renameBtn.AddThemeFontSizeOverride("font_size", 13);
+        var renameStyle = new StyleBoxFlat();
+        renameStyle.BgColor = new Color(0.4f, 0.4f, 0.5f, 0.8f);
+        renameStyle.SetCornerRadiusAll(10);
+        renameBtn.AddThemeStyleboxOverride("normal", renameStyle);
+        renameBtn.Pressed += () => {
+            ShowRenameDialog(slotIndex, category);
+            overlay.QueueFree();
+            panel.QueueFree();
+        };
+        vbox.AddChild(renameBtn);
+
+        // 清除按钮（空槽禁用）
         if (!isEmpty)
         {
-            menu.AddItem("清除", 4);
+            var clearBtn = new Button();
+            clearBtn.Text = "🗑️ 清除";
+            clearBtn.CustomMinimumSize = new Vector2(0, 44);
+            clearBtn.AddThemeFontSizeOverride("font_size", 13);
+            clearBtn.AddThemeColorOverride("font_color", new Color(1f, 0.4f, 0.4f));
+            var clearStyle = new StyleBoxFlat();
+            clearStyle.BgColor = new Color(0.5f, 0.2f, 0.2f, 0.8f);
+            clearStyle.SetCornerRadiusAll(10);
+            clearBtn.AddThemeStyleboxOverride("normal", clearStyle);
+            clearBtn.Pressed += () => {
+                ClearSlot(slotIndex, category);
+                overlay.QueueFree();
+                panel.QueueFree();
+            };
+            vbox.AddChild(clearBtn);
         }
 
-        menu.IdPressed += (id) => {
-            switch (id)
-            {
-                case 0: // 保存
-                    ShowSaveDialog(slotIndex, category);
-                    break;
-                case 1: // 加载
-                    if (!isEmpty)
-                        ShowLoadDialog(slotIndex, category);
-                    else
-                        ShowToast("槽位为空，无法加载");
-                    break;
-                case 2: // 收藏
-                    ToggleFavorite(slotIndex, category);
-                    break;
-                case 3: // 改名
-                    ShowRenameDialog(slotIndex, category);
-                    break;
-                case 4: // 清除
-                    ClearSlot(slotIndex, category);
-                    break;
-            }
-            menu.QueueFree();
+        // 关闭按钮
+        var closeBtn = new Button();
+        closeBtn.Text = "❌ 关闭";
+        closeBtn.CustomMinimumSize = new Vector2(0, 40);
+        closeBtn.AddThemeFontSizeOverride("font_size", 12);
+        var closeStyle = new StyleBoxFlat();
+        closeStyle.BgColor = new Color(0.25f, 0.25f, 0.3f, 0.7f);
+        closeStyle.SetCornerRadiusAll(8);
+        closeBtn.AddThemeStyleboxOverride("normal", closeStyle);
+        closeBtn.Pressed += () => {
+            overlay.QueueFree();
+            panel.QueueFree();
         };
+        vbox.AddChild(closeBtn);
 
-        AddChild(menu);
-        menu.Popup(new Rect2I((int)GetGlobalMousePosition().X, (int)GetGlobalMousePosition().Y, 150, 150));
+        panel.AddChild(vbox);
+        AddChild(panel);
+        MakeMenuDraggable(panel);
+    }
+
+    private string GetEditorSlotType(string category)
+    {
+        return category switch
+        {
+            "单位" => "unit",
+            "兵器" => "weapon",
+            "设施" => "facility",
+            "地形" => "grid",
+            "地图" => "map",
+            _ => category.ToLower()
+        };
+    }
+
+    private void OnSlotDataChanged(string type)
+    {
+        RefreshSaveSlotTab();
     }
 
     private void ShowSaveDialog(int slotIndex, string category)
@@ -2050,15 +2266,21 @@ public partial class CustomConfigUI : Control
             return;
         }
 
-        // ✅ 增强：验证贴图路径
+        // ✅ 从metadata读取贴图路径
+        string texturePath = "";
         var metadata = textureOption.GetItemMetadata(textureOption.Selected);
-        if (metadata.VariantType == Variant.Type.Nil)
+        if (metadata.VariantType != Variant.Type.Nil)
+        {
+            texturePath = metadata.AsString();
+        }
+
+        if (string.IsNullOrEmpty(texturePath))
         {
             ShowToast("❌ 贴图路径无效");
             return;
         }
 
-        pendingApplyTexturePath = metadata.AsString();
+        pendingApplyTexturePath = texturePath;
         pendingApplyTargetType = targetTypeOption.GetItemText(targetTypeOption.Selected);
 
         if (string.IsNullOrEmpty(pendingApplyTexturePath))
@@ -2091,35 +2313,38 @@ public partial class CustomConfigUI : Control
 
         textureOption.Clear();
 
+        // ✅ 从文件系统读取
         string textureDir = ExtraSave.CUSTOM_TEXTURE_DIR;
-        if (!DirAccess.DirExistsAbsolute(textureDir)) return;
-
-        var dir = DirAccess.Open(textureDir);
-        if (dir == null) return;
-
-        dir.ListDirBegin();
-        string folderName;
-        while ((folderName = dir.GetNext()) != "")
+        if (DirAccess.DirExistsAbsolute(textureDir))
         {
-            if (dir.CurrentIsDir() && folderName != "." && folderName != "..")
-            {
-                var subDir = DirAccess.Open(Path.Combine(textureDir, folderName));
-                if (subDir == null) continue;
-
-                subDir.ListDirBegin();
-                string fileName;
-                while ((fileName = subDir.GetNext()) != "")
+                var dir = DirAccess.Open(textureDir);
+                if (dir != null)
                 {
-                    if (subDir.CurrentIsDir()) continue;
-                    string fullPath = Path.Combine(textureDir, folderName, fileName);
-                    int idx = textureOption.ItemCount;
-                    textureOption.AddItem($"[{folderName}] {fileName}", idx);
-                    textureOption.SetItemMetadata(idx, fullPath);
+                    dir.ListDirBegin();
+                    string folderName;
+                    while ((folderName = dir.GetNext()) != "")
+                    {
+                        if (dir.CurrentIsDir() && folderName != "." && folderName != "..")
+                        {
+                            var subDir = DirAccess.Open(GodotPathCombine(textureDir, folderName));
+                            if (subDir == null) continue;
+
+                            subDir.ListDirBegin();
+                            string fileName;
+                            while ((fileName = subDir.GetNext()) != "")
+                            {
+                                if (subDir.CurrentIsDir()) continue;
+                                string fullPath = GodotPathCombine(textureDir, folderName, fileName);
+                                int idx = textureOption.ItemCount;
+                                textureOption.AddItem($"[{folderName}] {fileName}", idx);
+                                textureOption.SetItemMetadata(idx, fullPath);
+                            }
+                            subDir.ListDirEnd();
+                        }
+                    }
+                    dir.ListDirEnd();
                 }
-                subDir.ListDirEnd();
             }
-        }
-        dir.ListDirEnd();
     }
 
     private void ShowToast(string message)
