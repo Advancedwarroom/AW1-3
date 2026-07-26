@@ -59,6 +59,7 @@ public partial class TranslateGroup : Node
         CreateLanguagePanel();
 
         GD.Print($"[TranslateGroup] Language initialized: {GetLanguageDisplayName(CurrentLanguage)}");
+        RefreshAllUI(); // 初始扫描翻译场景树中所有中文文本
     }
 
     // ==================== 系统语言检测 ====================
@@ -287,17 +288,20 @@ public void SetLanguage(GameLanguage lang)
             }
         }
     }
-// 存储所有注册的控件
-private static System.Collections.Generic.List<(Control ctrl, string key)> _registered = new();
+// 存储所有注册的控件（key + 可选格式化参数）
+private static System.Collections.Generic.List<(Control ctrl, string key, object[] args)> _registered = new();
 
 // 设置文本并自动注册，语言切换时自动刷新
-public static void SetText(Control control, string key)
+// 支持动态参数：SetText(label, "回合 {0}", turn)
+public static void SetText(Control control, string key, params object[] args)
 {
-    if (control is Label lbl) lbl.Text = T(key);
-    else if (control is Button btn) btn.Text = T(key);
-    else if (control is RichTextLabel rtl) rtl.Text = T(key);
+    string text = args.Length > 0 ? TF(key, args) : T(key);
     
-    // 去重：如果同一个控件已经注册过，更新 key
+    if (control is Label lbl) lbl.Text = text;
+    else if (control is Button btn) btn.Text = text;
+    else if (control is RichTextLabel rtl) rtl.Text = text;
+    
+    // 去重：如果同一个控件已经注册过，更新 key 和 args
     for (int i = _registered.Count - 1; i >= 0; i--)
     {
         if (_registered[i].ctrl == control)
@@ -306,7 +310,7 @@ public static void SetText(Control control, string key)
             break;
         }
     }
-    _registered.Add((control, key));
+    _registered.Add((control, key, args));
 }
 
 // 语言切换时自动刷新所有注册的控件
@@ -314,17 +318,80 @@ private void RefreshAllRegistered()
 {
     for (int i = _registered.Count - 1; i >= 0; i--)
     {
-        var (ctrl, key) = _registered[i];
+        var (ctrl, key, args) = _registered[i];
         if (!IsInstanceValid(ctrl))
         {
-            _registered.RemoveAt(i); // 清理已销毁的控件
+            _registered.RemoveAt(i);
             continue;
         }
-        if (ctrl is Label lbl) lbl.Text = T(key);
-        else if (ctrl is Button btn) btn.Text = T(key);
-        else if (ctrl is RichTextLabel rtl) rtl.Text = T(key);
+        string text = args.Length > 0 ? TF(key, args) : T(key);
+        if (ctrl is Label lbl) lbl.Text = text;
+        else if (ctrl is Button btn) btn.Text = text;
+        else if (ctrl is RichTextLabel rtl) rtl.Text = text;
     }
 }
+
+// 遍历整个场景树，自动翻译所有包含中文的控件
+public void RefreshAllUI()
+{
+    var tree = GetTree();
+    if (tree == null) return;
+    RefreshNode(tree.Root);
+}
+
+private void RefreshNode(Node node)
+{
+    // Label
+    if (node is Label lbl)
+    {
+        string key = lbl.HasMeta("tr_key") ? (string)lbl.GetMeta("tr_key") : lbl.Text;
+        if (!lbl.HasMeta("tr_key") && ContainsChinese(key))
+            lbl.SetMeta("tr_key", key);
+        
+        if (lbl.HasMeta("tr_key"))
+            lbl.Text = Get((string)lbl.GetMeta("tr_key"));
+    }
+    // Button
+    else if (node is Button btn)
+    {
+        string key = btn.HasMeta("tr_key") ? (string)btn.GetMeta("tr_key") : btn.Text;
+        if (!btn.HasMeta("tr_key") && ContainsChinese(key))
+            btn.SetMeta("tr_key", key);
+        
+        if (btn.HasMeta("tr_key"))
+            btn.Text = Get((string)btn.GetMeta("tr_key"));
+    }
+    // RichTextLabel
+    else if (node is RichTextLabel rtl)
+    {
+        string key = rtl.HasMeta("tr_key") ? (string)rtl.GetMeta("tr_key") : rtl.Text;
+        if (!rtl.HasMeta("tr_key") && ContainsChinese(key))
+            rtl.SetMeta("tr_key", key);
+        
+        if (rtl.HasMeta("tr_key"))
+            rtl.Text = Get((string)rtl.GetMeta("tr_key"));
+    }
+    
+    // 递归子节点
+    foreach (Node child in node.GetChildren())
+        RefreshNode(child);
+}
+
+private bool ContainsChinese(string text)
+{
+    if (string.IsNullOrEmpty(text)) return false;
+    foreach (char c in text)
+        if (c >= '\u4e00' && c <= '\u9fff') return true;
+    return false;
+}
+
+// 静态快捷方法：带格式化参数
+public static string TF(string key, params object[] args)
+{
+    if (Instance == null) return string.Format(key, args);
+    return Instance.GetF(key, args);
+}
+
 public static string T(string key)
 {
     if (Instance == null) return key; 
