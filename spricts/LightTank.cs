@@ -157,13 +157,10 @@ public partial class LightTank : Infantry
 
     public void ShowIdleState()
     {
-        if (animSprite != null) { animSprite.Stop(); animSprite.Hide(); }
-        if (idleSprite != null)
-        {
-            idleSprite.Show();
-            idleSprite.Modulate = dim;
-        }
-        else if (animSprite != null)
+        // 修复：不使用固定贴图的 idleSprite，改用 animSprite 的静态帧
+        // 这样才能根据 team 显示正确的势力贴图（lighttank1/lighttank2）
+        if (idleSprite != null) idleSprite.Hide();
+        if (animSprite != null)
         {
             animSprite.Show();
             animSprite.Modulate = dim;
@@ -175,12 +172,14 @@ public partial class LightTank : Infantry
     private void FreezeToIdleDark()
     {
         breathTween?.Kill();
-        animSprite?.Stop();
-        animSprite?.Hide();
-        if (idleSprite != null)
+        // 修复：不使用固定贴图的 idleSprite，改用 animSprite 的静态帧
+        if (idleSprite != null) idleSprite.Hide();
+        if (animSprite != null)
         {
-            idleSprite.Show();
-            idleSprite.Modulate = dim;
+            animSprite.Show();
+            animSprite.Modulate = dim;
+            animSprite.Stop();
+            animSprite.Frame = 0;
         }
     }
 

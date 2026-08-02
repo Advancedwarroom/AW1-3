@@ -855,6 +855,14 @@ public override void _Ready()
         secondaryAntiArmor = false;
         secondaryAntiInfantry = true;
     }
+    // 修复：主武器单位也必须有副武器兜底，防止主武器弹药耗尽后无法攻击
+    if (hasPrimaryWeapon && !hasSecondaryWeapon)
+    {
+        hasSecondaryWeapon = true;
+        if (secondaryAttack == 0) secondaryAttack = 100;
+        secondaryAntiArmor = false;
+        secondaryAntiInfantry = true;
+    }
     if (hasPrimaryWeapon)
     {
         if (maxPrimaryAmmo == 0 && primaryHasLimitedAmmo) maxPrimaryAmmo = 99;
@@ -877,6 +885,8 @@ public override void _Ready()
 
     // === 子类差异化配置入口 ===
     ApplyUnitSpecificDefaults();
+    // 修复：子类可能修改了 defaultMovePoints，需要同步到 movePoints
+    movePoints = defaultMovePoints;
 
     UpdateTeamVisual();
     UpdateHpLabel();

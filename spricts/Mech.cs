@@ -159,13 +159,10 @@ public partial class Mech : Infantry
 
     public void ShowIdleState()
     {
-        if (animSprite != null) { animSprite.Stop(); animSprite.Hide(); }
-        if (idleSprite != null)
-        {
-            idleSprite.Show();
-            idleSprite.Modulate = dim;
-        }
-        else if (animSprite != null)
+        // 修复：不使用固定贴图的 idleSprite，改用 animSprite 的静态帧
+        // 这样才能根据 team 显示正确的势力贴图（mech1/mech2）
+        if (idleSprite != null) idleSprite.Hide();
+        if (animSprite != null)
         {
             animSprite.Show();
             animSprite.Modulate = dim;
