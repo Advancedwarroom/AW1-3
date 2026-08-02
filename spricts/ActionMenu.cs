@@ -75,6 +75,12 @@ public override void _Ready()
             healButton.Pressed += OnHealPressed;
         }
     }
+
+    // ✅ 订阅语言切换信号
+    if (TranslateGroup.Instance != null)
+    {
+        TranslateGroup.Instance.LanguageChanged += OnLanguageChanged;
+    }
 }
 
 
@@ -406,7 +412,7 @@ private void ShowTransportSelectionMenu(List<Infantry> transports)
         int dist = Mathf.Abs(currentUnit.grid.GridIndex.X - transport.grid.GridIndex.X)
                  + Mathf.Abs(currentUnit.grid.GridIndex.Y - transport.grid.GridIndex.Y);
         string transportType = transport.GetType().Name;
-        btn.Text = $"{transportType} (距离:{dist}) HP:{Mathf.CeilToInt(transport.health/10f)}";
+        btn.Text = $"{transportType} ({TranslateGroup.T("距离")}:{dist}) HP:{Mathf.CeilToInt(transport.health/10f)}";
 
         // 捕获变量避免闭包问题
         Infantry selectedTransport = transport;
@@ -775,7 +781,7 @@ private List<Grids> GetAdjacentGrids(Grids center)
             // ✅ 爆炸按钮：单位可自爆、未行动，且（一次性自爆 或 有自爆弹）时显示
             bool hasExplodeAmmo = !unit.explosionDestroysSelf ? unit.currentExplodeAmmo > 0 : true;
             explodeButton.Visible = unit.canExplode && !unit.hasActed && unit.state != UnitState.Acted && hasExplodeAmmo;
-            explodeButton.Text = isExplosionPreview ? TranslateGroup.T("确认爆炸") : TranslateGroup.T("爆炸");
+            TranslateGroup.SetText(explodeButton, isExplosionPreview ? "确认爆炸" : "爆炸");
         }
 
         if (illuminateButton != null)
@@ -1253,27 +1259,43 @@ private void OnSupplyPressed()
         closeInfoButton.Visible = true;
     }
 
+    private void OnLanguageChanged(int langCode)
+    {
+        // ✅ 语言切换时，如果信息面板开着，重新刷新
+        if (unitInfoLabel != null && unitInfoLabel.Visible)
+        {
+            if (currentUnit != null && currentWeapon == null)
+            {
+                ShowUnitInfo();
+            }
+            else if (currentWeapon != null && currentUnit == null)
+            {
+                ShowWeaponInfo(currentWeapon);
+            }
+        }
+    }
+
     private void ShowUnitInfo()
     {
         ZIndex = 200;
         if (currentUnit == null) return;
 
-        string infoText = $"单位名称: {currentUnit.Name}\n";
-        infoText += $"团队: {currentUnit.team}\n";
-        infoText += $"最大生命值: {currentUnit.maxHealth}\n";
-        infoText += $"生命值: {currentUnit.health}\n";
-        infoText += $"攻击力: {currentUnit.baseAttack}\n";
-        infoText += $"实时主武器攻击力: {currentUnit.attack}\n";
-        infoText += $"实时副武器攻击力: {currentUnit.secondaryAtk}\n";
-        infoText += $"防御力: {currentUnit.defense}\n";
+        string infoText = $"{TranslateGroup.T("单位名称")}: {currentUnit.Name}\n";
+        infoText += $"{TranslateGroup.T("团队")}: {currentUnit.team}\n";
+        infoText += $"{TranslateGroup.T("最大生命值")}: {currentUnit.maxHealth}\n";
+        infoText += $"{TranslateGroup.T("生命值")}: {currentUnit.health}\n";
+        infoText += $"{TranslateGroup.T("攻击力")}: {currentUnit.baseAttack}\n";
+        infoText += $"{TranslateGroup.T("实时主武器攻击力")}: {currentUnit.attack}\n";
+        infoText += $"{TranslateGroup.T("实时副武器攻击力")}: {currentUnit.secondaryAtk}\n";
+        infoText += $"{TranslateGroup.T("防御力")}: {currentUnit.defense}\n";
         string defenseBonusStr = (int)currentUnit.defenseBonusType switch
         {
             1 => TranslateGroup.T("受地形加成"),
             0 => TranslateGroup.T("不受地形加成"),
             _ => TranslateGroup.T("未知")
         };
-        infoText += $"防御类型: {defenseBonusStr}\n";
-        infoText += $"移动力: {currentUnit.movePoints}\n";
+        infoText += $"{TranslateGroup.T("防御类型")}: {defenseBonusStr}\n";
+        infoText += $"{TranslateGroup.T("移动力")}: {currentUnit.movePoints}\n";
 
         string unitType = currentUnit is FlyBomb ? TranslateGroup.T("飞弹") :
                 currentUnit is Oozium ? "Oozium" :
@@ -1289,27 +1311,27 @@ private void OnSupplyPressed()
                 currentUnit is PipeRunner ? TranslateGroup.T("管道炮") :
                 currentUnit is Infantry ? TranslateGroup.T("步兵") : "Unknown";
 
-        infoText += $"单位类型: {unitType}\n";
+        infoText += $"{TranslateGroup.T("单位类型")}: {unitType}\n";
 
 if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
 {
-    infoText += $"\n=== 可运输单位配置信息 ===\n";
+    infoText += $"\n=== {TranslateGroup.T("可运输单位配置信息")} ===\n";
 
     // 1. 可搭载单位种类
     string loadableTypes = currentUnit.canTransportUnitTypes != null && currentUnit.canTransportUnitTypes.Count > 0
         ? string.Join(", ", currentUnit.canTransportUnitTypes)
         : TranslateGroup.T("无");
-    infoText += $"可搭载单位: {loadableTypes}\n";
+    infoText += $"{TranslateGroup.T("可搭载单位")}: {loadableTypes}\n";
 
     // 2. 远程搭载
-    infoText += $"远程搭载: {(currentUnit.CanFarMounting ? TranslateGroup.T("✓ 已开启") : TranslateGroup.T("✗ 未开启"))}\n";
+    infoText += $"{TranslateGroup.T("远程搭载")}: {(currentUnit.CanFarMounting ? TranslateGroup.T("✓ 已开启") : TranslateGroup.T("✗ 未开启"))}\n";
     if (currentUnit.CanFarMounting)
     {
-        infoText += $"远程搭载距离: {currentUnit.minFarMountingDistance}-{currentUnit.maxFarMountingDistance}格\n";
+        infoText += $"{TranslateGroup.T("远程搭载距离")}: {currentUnit.minFarMountingDistance}-{currentUnit.maxFarMountingDistance}格\n";
     }
 
     // 3. 已搭载单位列表 - 用 maxTransportCapacity
-    infoText += $"\n[已搭载单位] {currentUnit.transportedUnits.Count}/{currentUnit.maxTransportCapacity}\n";
+    infoText += $"\n[{TranslateGroup.T("已搭载单位")}] {currentUnit.transportedUnits.Count}/{currentUnit.maxTransportCapacity}\n";
     if (currentUnit.transportedUnits.Count > 0)
     {
         foreach (var transportedUnit in currentUnit.transportedUnits)
@@ -1341,15 +1363,15 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             UnitOverlapType.Oozium => "Oozium",
             _ => "Unknown"
         };
-        infoText += $"范围类型: {overlapType}\n";
+        infoText += $"{TranslateGroup.T("范围类型")}: {overlapType}\n";
 
         string primaryWeaponStr;
         if (!currentUnit.hasPrimaryWeapon)
             primaryWeaponStr = TranslateGroup.T("无");
         else if (currentUnit.HasInfinitePrimaryAmmo)
-            primaryWeaponStr = $"有 (∞无限)";
+            primaryWeaponStr = $"{TranslateGroup.T("有")} (∞{TranslateGroup.T("无限")})";
         else
-            primaryWeaponStr = $"有 (弹药: {currentUnit.currentPrimaryAmmo}/{currentUnit.maxPrimaryAmmo})";
+            primaryWeaponStr = $"{TranslateGroup.T("有")} ({TranslateGroup.T("弹药")}: {currentUnit.currentPrimaryAmmo}/{currentUnit.maxPrimaryAmmo})";
 
         string secondaryWeaponStr = currentUnit.hasSecondaryWeapon ? TranslateGroup.T("有") : TranslateGroup.T("无");
 
@@ -1371,13 +1393,13 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             secondaryEffect = $"[{string.Join("/", effects)}]";
         }
 
-        infoText += $"主武器: {primaryWeaponStr} {primaryEffect}\n";
-        infoText += $"副武器: {secondaryWeaponStr} {secondaryEffect}\n";
+        infoText += $"{TranslateGroup.T("主武器")}: {primaryWeaponStr} {primaryEffect}\n";
+        infoText += $"{TranslateGroup.T("副武器")}: {secondaryWeaponStr} {secondaryEffect}\n";
 
         string attackRangeStr = currentUnit.useMinMaxAttackRange 
             ? $"{currentUnit.minAttackRange}-{currentUnit.maxAttackRange}" 
             : currentUnit.attackRange.ToString();
-        infoText += $"攻击范围: {attackRangeStr}\n";
+        infoText += $"{TranslateGroup.T("攻击范围")}: {attackRangeStr}\n";
 
         string state = currentUnit.state switch
         {
@@ -1386,7 +1408,7 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             UnitState.Acted => "Acted",
             _ => "Unknown"
         };
-        infoText += $"状态: {state}\n";
+        infoText += $"{TranslateGroup.T("状态")}: {state}\n";
 
         string posText = currentUnit.grid != null 
             ? $"(X:{currentUnit.grid.GridIndex.X},Y:{currentUnit.grid.GridIndex.Y})" 
@@ -1415,25 +1437,25 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             MoveType.Missile => TranslateGroup.T("导弹飞行"),
             _ => "Unknown"
         };
-        infoText += $"移动方式: {moveTypeStr}\n";
+        infoText += $"{TranslateGroup.T("移动方式")}: {moveTypeStr}\n";
         string fuelText = currentUnit.consumeFuel 
-            ? $"{currentUnit.fuel}/{currentUnit.maxFuel} (阈值:{currentUnit.lowFuelThreshold}, 日耗:{currentUnit.dailyFuelConsumption})" 
+            ? $"{currentUnit.fuel}/{currentUnit.maxFuel} ({TranslateGroup.T("阈值")}:{currentUnit.lowFuelThreshold}, {TranslateGroup.T("日耗")}:{currentUnit.dailyFuelConsumption})" 
             : TranslateGroup.T("无限");
-        infoText += $"燃料: {fuelText}\n";
+        infoText += $"{TranslateGroup.T("燃料")}: {fuelText}\n";
 
         // ✅ 自爆系统信息
         if (currentUnit.canExplode)
         {
-            infoText += $"\n=== 自爆系统 ===\n";
-            infoText += $"爆炸范围: {currentUnit.explosionMinRange}-{currentUnit.explosionMaxRange}格\n";
+            infoText += $"\n=== {TranslateGroup.T("自爆系统")} ===\n";
+            infoText += $"{TranslateGroup.T("爆炸范围")}: {currentUnit.explosionMinRange}-{currentUnit.explosionMaxRange}格\n";
             string damageModeStr = currentUnit.explosionDamageMode switch
             {
-                0 => $"固定值 {currentUnit.explosionFixedValue}",
-                1 => $"{currentUnit.explosionPercentValue * 100}%最大HP",
+                0 => $"{TranslateGroup.T("固定值")} {currentUnit.explosionFixedValue}",
+                1 => $"{currentUnit.explosionPercentValue * 100}%{TranslateGroup.T("最大")}HP",
                 2 => TranslateGroup.T("攻击公式"),
                 _ => TranslateGroup.T("未知")
             };
-            infoText += $"伤害模式: {damageModeStr}\n";
+            infoText += $"{TranslateGroup.T("伤害模式")}: {damageModeStr}\n";
             string targetModeStr = currentUnit.explosionTargetMode switch
             {
                 0 => TranslateGroup.T("所有单位"),
@@ -1441,36 +1463,36 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
                 2 => TranslateGroup.T("仅友方"),
                 _ => TranslateGroup.T("未知")
             };
-            infoText += $"目标筛选: {targetModeStr}\n";
-            infoText += $"摧毁自身: {(currentUnit.explosionDestroysSelf ? "✓" : "✗")}\n";
-            infoText += $"可击杀: {(currentUnit.explosionCanKill ? "✓" : TranslateGroup.T("✗ (保留1HP)"))}\n";
-            infoText += $"影响兵器: {(currentUnit.explosionAffectsWeapons ? "✓" : "✗")}\n";
-            infoText += $"回血可超上限: {(currentUnit.explosionCanExceedMaxHealth ? "✓" : "✗")}\n";
+            infoText += $"{TranslateGroup.T("目标筛选")}: {targetModeStr}\n";
+            infoText += $"{TranslateGroup.T("摧毁自身")}: {(currentUnit.explosionDestroysSelf ? "✓" : "✗")}\n";
+            infoText += $"{TranslateGroup.T("可击杀")}: {(currentUnit.explosionCanKill ? "✓" : TranslateGroup.T("✗ (保留1HP)"))}\n";
+            infoText += $"{TranslateGroup.T("影响兵器")}: {(currentUnit.explosionAffectsWeapons ? "✓" : "✗")}\n";
+            infoText += $"{TranslateGroup.T("回血可超上限")}: {(currentUnit.explosionCanExceedMaxHealth ? "✓" : "✗")}\n";
         }
 
         // ✅ 照明模块信息
         if (currentUnit.canIlluminate)
         {
-            infoText += $"\n=== 照明模块 ===\n";
-            infoText += $"照明弹: {currentUnit.currentFlareAmmo}/{currentUnit.maxFlareAmmo}\n";
-            infoText += $"投射射程: {currentUnit.minLaunchRange}-{currentUnit.maxLaunchRange}格\n";
-            infoText += $"照明覆盖: {currentUnit.minIlluminationRange}-{currentUnit.maxIlluminationRange}格\n";
-            infoText += $"持续回合: {currentUnit.flareDurationTurns}大回合\n";
-            infoText += $"移动后可照明: {(currentUnit.canIlluminateAfterMove ? "✓" : "✗")}\n";
+            infoText += $"\n=== {TranslateGroup.T("照明模块")} ===\n";
+            infoText += $"{TranslateGroup.T("照明弹")}: {currentUnit.currentFlareAmmo}/{currentUnit.maxFlareAmmo}\n";
+            infoText += $"{TranslateGroup.T("投射射程")}: {currentUnit.minLaunchRange}-{currentUnit.maxLaunchRange}格\n";
+            infoText += $"{TranslateGroup.T("照明覆盖")}: {currentUnit.minIlluminationRange}-{currentUnit.maxIlluminationRange}格\n";
+            infoText += $"{TranslateGroup.T("持续回合")}: {currentUnit.flareDurationTurns}大回合\n";
+            infoText += $"{TranslateGroup.T("移动后可照明")}: {(currentUnit.canIlluminateAfterMove ? "✓" : "✗")}\n";
         }
 
         if (currentUnit.grid != null)
         {
-            infoText += $"\n=== 自爆系统 ===\n";
-            infoText += $"爆炸范围: {currentUnit.explosionMinRange}-{currentUnit.explosionMaxRange}格\n";
+            infoText += $"\n=== {TranslateGroup.T("自爆系统")} ===\n";
+            infoText += $"{TranslateGroup.T("爆炸范围")}: {currentUnit.explosionMinRange}-{currentUnit.explosionMaxRange}格\n";
             string damageModeStr = currentUnit.explosionDamageMode switch
             {
-                0 => $"固定值 {currentUnit.explosionFixedValue}",
-                1 => $"{currentUnit.explosionPercentValue * 100}%最大HP",
+                0 => $"{TranslateGroup.T("固定值")} {currentUnit.explosionFixedValue}",
+                1 => $"{currentUnit.explosionPercentValue * 100}%{TranslateGroup.T("最大")}HP",
                 2 => TranslateGroup.T("攻击公式"),
                 _ => TranslateGroup.T("未知")
             };
-            infoText += $"伤害模式: {damageModeStr}\n";
+            infoText += $"{TranslateGroup.T("伤害模式")}: {damageModeStr}\n";
             string targetModeStr = currentUnit.explosionTargetMode switch
             {
                 0 => TranslateGroup.T("所有单位"),
@@ -1478,62 +1500,62 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
                 2 => TranslateGroup.T("仅友方"),
                 _ => TranslateGroup.T("未知")
             };
-            infoText += $"目标筛选: {targetModeStr}\n";
-            infoText += $"摧毁自身: {(currentUnit.explosionDestroysSelf ? "✓" : "✗")}\n";
-            infoText += $"可击杀: {(currentUnit.explosionCanKill ? "✓" : TranslateGroup.T("✗ (保留1HP)"))}\n";
-            infoText += $"影响兵器: {(currentUnit.explosionAffectsWeapons ? "✓" : "✗")}\n";
-            infoText += $"回血可超上限: {(currentUnit.explosionCanExceedMaxHealth ? "✓" : "✗")}\n";
+            infoText += $"{TranslateGroup.T("目标筛选")}: {targetModeStr}\n";
+            infoText += $"{TranslateGroup.T("摧毁自身")}: {(currentUnit.explosionDestroysSelf ? "✓" : "✗")}\n";
+            infoText += $"{TranslateGroup.T("可击杀")}: {(currentUnit.explosionCanKill ? "✓" : TranslateGroup.T("✗ (保留1HP)"))}\n";
+            infoText += $"{TranslateGroup.T("影响兵器")}: {(currentUnit.explosionAffectsWeapons ? "✓" : "✗")}\n";
+            infoText += $"{TranslateGroup.T("回血可超上限")}: {(currentUnit.explosionCanExceedMaxHealth ? "✓" : "✗")}\n";
         }
 
         if (currentUnit.grid != null)
         {
-            infoText += $"\n=== 地形信息 ===\n";
-            infoText += $"地形类型: {currentUnit.grid.gridType}\n";
+            infoText += $"\n=== {TranslateGroup.T("地形信息")} ===\n";
+            infoText += $"{TranslateGroup.T("地形类型")}: {currentUnit.grid.gridType}\n";
             string terrainDefenseText = currentUnit.grid.GetTerrainDefenseDescription();
             if ((int)currentUnit.defenseBonusType == 0)
-                infoText += $"地形防御: {terrainDefenseText} (单位不受加成)\n";
+                infoText += $"{TranslateGroup.T("地形防御")}: {terrainDefenseText} (单位不受加成)\n";
             else
-                infoText += $"地形防御: {terrainDefenseText}\n";
+                infoText += $"{TranslateGroup.T("地形防御")}: {terrainDefenseText}\n";
 
             // ✅ 新增：显示格子自定义伤害系统信息
-            infoText += $"\n=== 格子自定义效果 ===\n";
+            infoText += $"\n=== {TranslateGroup.T("格子自定义效果")} ===\n";
 
             // 血量相关
-            infoText += $"[血量系统]\n";
-            infoText += $"  可摧毁单位: {(currentUnit.grid.canDestroyUnit ? "✓" : TranslateGroup.T("✗ (锁血1点)"))}\n";
+            infoText += $"[{TranslateGroup.T("血量系统")}]\n";
+            infoText += $"  {TranslateGroup.T("可摧毁单位")}: {(currentUnit.grid.canDestroyUnit ? "✓" : TranslateGroup.T("✗ (锁血1点)"))}\n";
             if (currentUnit.grid.fixedDamagePerTurn != 0)
-                infoText += $"  固定伤害/回合: {currentUnit.grid.fixedDamagePerTurn} ({(currentUnit.grid.fixedDamagePerTurn > 0 ? TranslateGroup.T("扣血") : TranslateGroup.T("回血"))})\n";
+                infoText += $"  {TranslateGroup.T("固定伤害")}/回合: {currentUnit.grid.fixedDamagePerTurn} ({(currentUnit.grid.fixedDamagePerTurn > 0 ? TranslateGroup.T("扣血") : TranslateGroup.T("回血"))})\n";
             if (currentUnit.grid.fixedAttackPerTurn != 0)
-                infoText += $"  固定攻击/回合: {currentUnit.grid.fixedAttackPerTurn} ({(currentUnit.grid.fixedAttackPerTurn > 0 ? TranslateGroup.T("扣血(经防御)") : TranslateGroup.T("回血"))})\n";
-            infoText += $"  可超血量上限: {(currentUnit.grid.canOverMaxHealth ? "✓" : "✗")}\n";
+                infoText += $"  {TranslateGroup.T("固定攻击")}/回合: {currentUnit.grid.fixedAttackPerTurn} ({(currentUnit.grid.fixedAttackPerTurn > 0 ? TranslateGroup.T("扣血(经防御)") : TranslateGroup.T("回血"))})\n";
+            infoText += $"  {TranslateGroup.T("可超血量上限")}: {(currentUnit.grid.canOverMaxHealth ? "✓" : "✗")}\n";
 
             // 弹药相关
-            infoText += $"\n[弹药系统]\n";
+            infoText += $"\n[{TranslateGroup.T("弹药系统")}]\n";
             if (currentUnit.grid.fixedAmmoChangePerTurn != 0)
             {
-                string ammoChangeText = currentUnit.grid.fixedAmmoChangePerTurn > 0 ? $"+{currentUnit.grid.fixedAmmoChangePerTurn} (补充)" : $"{currentUnit.grid.fixedAmmoChangePerTurn} (消耗)";
-                infoText += $"  弹药变化/回合: {ammoChangeText}\n";
+                string ammoChangeText = currentUnit.grid.fixedAmmoChangePerTurn > 0 ? $"+{currentUnit.grid.fixedAmmoChangePerTurn} ({TranslateGroup.T("补充")})" : $"{currentUnit.grid.fixedAmmoChangePerTurn} ({TranslateGroup.T("消耗")})";
+                infoText += $"  {TranslateGroup.T("弹药变化")}/回合: {ammoChangeText}\n";
             }
             else
             {
-                infoText += $"  弹药变化/回合: 无\n";
+                infoText += $"  {TranslateGroup.T("弹药变化")}/回合: 无\n";
             }
-            infoText += $"  可超弹药上限: {(currentUnit.grid.ammoCanOverMax ? "✓" : "✗")}\n";
-            infoText += $"  可归零: {(currentUnit.grid.ammoCanReachZero ? "✓" : TranslateGroup.T("✗ (强制剩1)"))}\n";
+            infoText += $"  {TranslateGroup.T("可超弹药上限")}: {(currentUnit.grid.ammoCanOverMax ? "✓" : "✗")}\n";
+            infoText += $"  {TranslateGroup.T("可归零")}: {(currentUnit.grid.ammoCanReachZero ? "✓" : TranslateGroup.T("✗ (强制剩1)"))}\n";
 
             // 燃料相关
-            infoText += $"\n[燃料系统]\n";
+            infoText += $"\n[{TranslateGroup.T("燃料系统")}]\n";
             if (currentUnit.grid.fixedFuelChangePerTurn != 0)
             {
-                string fuelChangeText = currentUnit.grid.fixedFuelChangePerTurn > 0 ? $"+{currentUnit.grid.fixedFuelChangePerTurn} (补充)" : $"{currentUnit.grid.fixedFuelChangePerTurn} (消耗)";
-                infoText += $"  燃料变化/回合: {fuelChangeText}\n";
+                string fuelChangeText = currentUnit.grid.fixedFuelChangePerTurn > 0 ? $"+{currentUnit.grid.fixedFuelChangePerTurn} ({TranslateGroup.T("补充")})" : $"{currentUnit.grid.fixedFuelChangePerTurn} ({TranslateGroup.T("消耗")})";
+                infoText += $"  {TranslateGroup.T("燃料变化")}/回合: {fuelChangeText}\n";
             }
             else
             {
-                infoText += $"  燃料变化/回合: 无\n";
+                infoText += $"  {TranslateGroup.T("燃料变化")}/回合: 无\n";
             }
-            infoText += $"  可超燃料上限: {(currentUnit.grid.fuelCanOverMax ? "✓" : "✗")}\n";
-            infoText += $"  可归零: {(currentUnit.grid.fuelCanReachZero ? "✓" : TranslateGroup.T("✗ (强制剩1)"))}\n";
+            infoText += $"  {TranslateGroup.T("可超燃料上限")}: {(currentUnit.grid.fuelCanOverMax ? "✓" : "✗")}\n";
+            infoText += $"  {TranslateGroup.T("可归零")}: {(currentUnit.grid.fuelCanReachZero ? "✓" : TranslateGroup.T("✗ (强制剩1)"))}\n";
         }
 
         if (currentUnit.grid?.city != null)
@@ -1545,45 +1567,45 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
                 "Player2" => TranslateGroup.T("🔵 Player2 占领"),
                 _ => TranslateGroup.T("无归属（无法补给）")
             };
-            infoText += $"CITY归属: {ownerText}\n";
+            infoText += $"{TranslateGroup.T("CITY归属")}: {ownerText}\n";
         }
 
         string captureAbility = currentUnit.captureAbility == CaptureAbility.CanCapture ? TranslateGroup.T("可以占领") : TranslateGroup.T("不能占领");
-        infoText += $"占领能力: {captureAbility}\n";
+        infoText += $"{TranslateGroup.T("占领能力")}: {captureAbility}\n";
         if (currentUnit.captureAbility == CaptureAbility.CanCapture && currentUnit.grid?.city != null)
         {
-            infoText += $"占领力: {currentUnit.GetCapturePower()}\n";
-            infoText += $"占领消耗: {currentUnit.grid.city?.capturePointsRequired ?? 20}\n";
+            infoText += $"{TranslateGroup.T("占领力")}: {currentUnit.GetCapturePower()}\n";
+            infoText += $"{TranslateGroup.T("占领消耗")}: {currentUnit.grid.city?.capturePointsRequired ?? 20}\n";
             if (currentUnit.currentCaptureProgress > 0)
             {
-                infoText += $"当前占领进度: {currentUnit.currentCaptureProgress}/{currentUnit.grid.city?.capturePointsRequired ?? 20}\n";
+                infoText += $"{TranslateGroup.T("当前占领进度")}: {currentUnit.currentCaptureProgress}/{currentUnit.grid.city?.capturePointsRequired ?? 20}\n";
                 if (currentUnit.capturingGrid != null)
                 {
-                    infoText += $"占领目标: ({currentUnit.capturingGrid.GridIndex.X},{currentUnit.capturingGrid.GridIndex.Y})\n";
+                    infoText += $"{TranslateGroup.T("占领目标")}: ({currentUnit.capturingGrid.GridIndex.X},{currentUnit.capturingGrid.GridIndex.Y})\n";
                 }
             }
         }
         
         // ========== ✅ 新增：战争迷雾视野信息 ==========
-        infoText += $"\n=== 视野能力 ===\n";
+        infoText += $"{TranslateGroup.T("视野能力")} ";
 
         // 基础视野
         int actualVision = currentUnit.ActualVisionRange;
-        infoText += $"基础视野: {actualVision}格";
+        infoText += $"{TranslateGroup.T("基础视野")}: {actualVision}{TranslateGroup.T("格")}";
         if (!currentUnit.useConfigVision && currentUnit.visionRange >= 0)
-            infoText += $" (自定义:{currentUnit.visionRange})";
+            infoText += $" ({TranslateGroup.T("自定义")}:{currentUnit.visionRange})";
         else
-            infoText += $" (配置表)";
+            infoText += $" ({TranslateGroup.T("配置表")})";
         infoText += "\n";
 
         // 地形视野加成状态
         if (currentUnit.overrideGlobalTerrainBonus)
         {
-            infoText += $"地形加成: 使用专属矩阵 ({currentUnit.unitTerrainVisionBonus?.Count ?? 0}项)\n";
+            infoText += $"{TranslateGroup.T("地形加成")}: {TranslateGroup.T("使用专属矩阵")} ({currentUnit.unitTerrainVisionBonus?.Count ?? 0}{TranslateGroup.T("项")})\n";
         }
         else
         {
-            infoText += TranslateGroup.T("地形加成: 使用全局默认\n");
+            infoText += $"{TranslateGroup.T("地形加成")}: {TranslateGroup.T("使用全局默认")}\n";
         }
 
         // 如果当前在格子上，显示当前地形的实际加成
@@ -1591,11 +1613,11 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
         {
             int terrainBonus = currentUnit.GetTerrainVisionBonus(currentUnit.grid.gridType);
             string sign = terrainBonus > 0 ? "+" : "";
-            infoText += $"当前地形({currentUnit.grid.gridType}): {sign}{terrainBonus}格\n";
-            infoText += $"实际视野: {actualVision + terrainBonus}格\n";
+            infoText += $"{TranslateGroup.T("当前地形")}({currentUnit.grid.gridType}): {sign}{terrainBonus}{TranslateGroup.T("格")}\n";
+            infoText += $"{TranslateGroup.T("实际视野")}: {actualVision + terrainBonus}{TranslateGroup.T("格")}\n";
         }
 
-infoText += $"所在位置: {posText}\n";
+infoText += $"{TranslateGroup.T("所在位置")}: {posText}\n";
 
         unitInfoLabel.Text = infoText;
         unitInfoLabel.Visible = true;
@@ -1614,93 +1636,93 @@ private void ShowWeaponInfo(Weapon weapon)
         ZIndex = 200;
         string info = "";
 
-        info += $"[兵器] {weapon.Name}\n";
-        info += $"团队: {weapon.team}\n";
+        info += $"[{TranslateGroup.T("兵器")}] {weapon.Name}\n";
+        info += $"{TranslateGroup.T("团队")}: {weapon.team}\n";
 
         // ✅ 修复：兵器血量显示格式（1-99格，不是百分比）
         int hpBars = Mathf.CeilToInt((float)weapon.health / 10f);
         hpBars = Mathf.Clamp(hpBars, 1, 99);
-        info += $"血量: {weapon.health}/{weapon.maxHealth} (显示{hpBars}格)\n";
+        info += $"{TranslateGroup.T("血量")}: {weapon.health}/{weapon.maxHealth} (显示{hpBars}格)\n";
 
-        info += $"状态: {(weapon.hasActed ? TranslateGroup.T("已行动") : TranslateGroup.T("待机"))}\n";
-        info += $"每回合攻击次数: {weapon.remainingAttacks}/{weapon.maxAttacksPerTurn}\n";
-        info += $"可旋转: {(weapon.canRotate ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
-        info += $"可攻击兵器: {(weapon.CanAttackWeapon ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+        info += $"{TranslateGroup.T("状态")}: {(weapon.hasActed ? TranslateGroup.T("已行动") : TranslateGroup.T("待机"))}\n";
+        info += $"{TranslateGroup.T("每回合攻击次数")}: {weapon.remainingAttacks}/{weapon.maxAttacksPerTurn}\n";
+        info += $"{TranslateGroup.T("可旋转")}: {(weapon.canRotate ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+        info += $"{TranslateGroup.T("可攻击兵器")}: {(weapon.CanAttackWeapon ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
 
         if (weapon is BlackCannon cannon)
         {
-            info += $"\n=== 黑炮专用配置 ===\n";
-            info += $"射程深度: {cannon.maxAttackDepth}格\n";
-            info += $"伤害模式: {(cannon.useModifiedDamage ? TranslateGroup.T("改良模式") : TranslateGroup.T("传统模式"))}\n";
+            info += $"{TranslateGroup.T("黑炮专用配置")}";
+            info += $"{TranslateGroup.T("射程深度")}: {cannon.maxAttackDepth}格\n";
+            info += $"{TranslateGroup.T("伤害模式")}: {(cannon.useModifiedDamage ? TranslateGroup.T("改良模式") : TranslateGroup.T("传统模式"))}\n";
 
             // ✅ 新增：弹药系统完整信息
-            info += $"[弹药系统]\n";
+            info += $"[{TranslateGroup.T("弹药系统")}]";
             if (cannon.useAmmoSystem)
             {
-                info += $"弹药: {cannon.currentAmmo}/{cannon.maxAmmo}\n";
-                info += $"补给状态: {(cannon.currentAmmo >= cannon.maxAmmo ? TranslateGroup.T("已满") : TranslateGroup.T("可补给"))}\n";
+                info += $"{TranslateGroup.T("弹药")}: {cannon.currentAmmo}/{cannon.maxAmmo}\n";
+                info += $"{TranslateGroup.T("补给状态")}: {(cannon.currentAmmo >= cannon.maxAmmo ? TranslateGroup.T("已满") : TranslateGroup.T("可补给"))}\n";
             }
             else
             {
-                info += $"弹药: 无限 (∞)\n";
+                info += $"{TranslateGroup.T("弹药")}: 无限 (∞)\n";
             }
 
             // ✅ 新增：冷却系统完整信息
-            info += $"[冷却系统]\n";
+            info += $"[{TranslateGroup.T("冷却系统")}]";
             if (cannon.useCooldownSystem)
             {
-                info += $"冷却周期: {cannon.cooldownTurns}回合\n";
-                info += $"周期攻击次数: {cannon.attacksPerCooldown}次\n";
-                info += $"存次数: {(cannon.storeAttacks ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
-                info += $"当前周期进度: {cannon.turnsSinceLastAttack}/{cannon.cooldownTurns}回合\n";
-                info += $"周期剩余次数: {cannon.attacksRemainingInCycle}次\n";
-                info += $"冷却就绪: {(cannon.cooldownReady ? TranslateGroup.T("✓ 是") : TranslateGroup.T("✗ 否"))}\n";
+                info += $"{TranslateGroup.T("冷却周期")}: {cannon.cooldownTurns}回合\n";
+                info += $"{TranslateGroup.T("周期攻击次数")}: {cannon.attacksPerCooldown}次\n";
+                info += $"{TranslateGroup.T("存次数")}: {(cannon.storeAttacks ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+                info += $"{TranslateGroup.T("当前周期进度")}: {cannon.turnsSinceLastAttack}/{cannon.cooldownTurns}回合\n";
+                info += $"{TranslateGroup.T("周期剩余次数")}: {cannon.attacksRemainingInCycle}次\n";
+                info += $"{TranslateGroup.T("冷却就绪")}: {(cannon.cooldownReady ? TranslateGroup.T("✓ 是") : TranslateGroup.T("✗ 否"))}\n";
 
                 if (!cannon.cooldownReady)
                 {
-                    info += $"还需等待: {cannon.cooldownTurns - cannon.turnsSinceLastAttack}回合\n";
+                    info += $"{TranslateGroup.T("还需等待")}: {cannon.cooldownTurns - cannon.turnsSinceLastAttack}回合\n";
                 }
             }
             else
             {
-                info += $"冷却: 无（每回合重置）\n";
-                info += $"每回合次数: {weapon.maxAttacksPerTurn}次\n";
+                info += $"{TranslateGroup.T("冷却")}: {TranslateGroup.T("无（每回合重置）")}";
+                info += $"{TranslateGroup.T("每回合次数")}: {weapon.maxAttacksPerTurn}{TranslateGroup.T("次")}";
             }
 
             // ✅ 新增：综合攻击状态
-            info += $"[攻击状态]\n";
-            info += $"可攻击: {(cannon.CanAttack() ? TranslateGroup.T("✓ 是") : TranslateGroup.T("✗ 否"))}\n";
+            info += $"[{TranslateGroup.T("攻击状态")}]";
+            info += $"{TranslateGroup.T("可攻击")}: {(cannon.CanAttack() ? TranslateGroup.T("✓ 是") : TranslateGroup.T("✗ 否"))}\n";
             if (!cannon.CanAttack())
             {
                 if (cannon.useAmmoSystem && cannon.currentAmmo <= 0)
-                    info += $"原因: 弹药耗尽\n";
+                    info += $"{TranslateGroup.T("原因")}: 弹药耗尽\n";
                 if (cannon.useCooldownSystem && !cannon.cooldownReady)
-                    info += $"原因: 冷却中 ({cannon.turnsSinceLastAttack}/{cannon.cooldownTurns}回合)\n";
+                    info += $"{TranslateGroup.T("原因")}: 冷却中 ({cannon.turnsSinceLastAttack}/{cannon.cooldownTurns}回合)\n";
                 if (cannon.useCooldownSystem && cannon.attacksRemainingInCycle <= 0)
-                    info += $"原因: 周期次数已用完\n";
+                    info += $"{TranslateGroup.T("原因")}: 周期次数已用完\n";
             }
 
             // 伤害配置
             if (!cannon.useModifiedDamage)
             {
-                info += $"[传统伤害]\n";
-                info += $"固定伤害: {cannon.fixedDamagePercent * 100:F0}%\n";
-                info += $"可摧毁: {(cannon.CanDestroy ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+                info += $"[{TranslateGroup.T("传统伤害")}]";
+                info += $"{TranslateGroup.T("固定伤害")}: {cannon.fixedDamagePercent * 100:F0}%\n";
+                info += $"{TranslateGroup.T("可摧毁")}: {(cannon.CanDestroy ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
             }
             else
             {
-                info += $"[改良伤害]\n";
-                info += $"血量变化: {cannon.modifiedHealthPercent * 100:F0}% ({(cannon.modifiedHealthPercent > 0 ? TranslateGroup.T("扣血") : cannon.modifiedHealthPercent < 0 ? TranslateGroup.T("回血") : TranslateGroup.T("无变化"))})\n";
-                info += $"弹药变化: {cannon.modifiedAmmoPercent * 100:F0}% ({(cannon.modifiedAmmoPercent > 0 ? TranslateGroup.T("消耗") : cannon.modifiedAmmoPercent < 0 ? TranslateGroup.T("补充") : TranslateGroup.T("无变化"))})\n";
-                info += $"燃料变化: {cannon.modifiedFuelPercent * 100:F0}% ({(cannon.modifiedFuelPercent > 0 ? TranslateGroup.T("消耗") : cannon.modifiedFuelPercent < 0 ? TranslateGroup.T("补充") : TranslateGroup.T("无变化"))})\n";
-                info += $"可超血量上限: {(cannon.canOverMaxHp ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
-                info += $"可摧毁: {(cannon.CanDestroy ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+                info += $"[{TranslateGroup.T("改良伤害")}]";
+                info += $"{TranslateGroup.T("血量变化")}: {cannon.modifiedHealthPercent * 100:F0}% ({(cannon.modifiedHealthPercent > 0 ? TranslateGroup.T("扣血") : cannon.modifiedHealthPercent < 0 ? TranslateGroup.T("回血") : TranslateGroup.T("无变化"))})\n";
+                info += $"{TranslateGroup.T("弹药变化")}: {cannon.modifiedAmmoPercent * 100:F0}% ({(cannon.modifiedAmmoPercent > 0 ? TranslateGroup.T("消耗") : cannon.modifiedAmmoPercent < 0 ? TranslateGroup.T("补充") : TranslateGroup.T("无变化"))})\n";
+                info += $"{TranslateGroup.T("燃料变化")}: {cannon.modifiedFuelPercent * 100:F0}% ({(cannon.modifiedFuelPercent > 0 ? TranslateGroup.T("消耗") : cannon.modifiedFuelPercent < 0 ? TranslateGroup.T("补充") : TranslateGroup.T("无变化"))})\n";
+                info += $"{TranslateGroup.T("可超血量上限")}: {(cannon.canOverMaxHp ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+                info += $"{TranslateGroup.T("可摧毁")}: {(cannon.CanDestroy ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
             }
 
-            info += $"[其他配置]\n";
-            info += $"朝向: {cannon.direction}\n";
-            info += $"可攻击兵器: {(cannon.CanAttackWeapon ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
-            info += $"目标选择: {cannon.targetSelectionMode switch 
+            info += $"[{TranslateGroup.T("其他配置")}]";
+            info += $"{TranslateGroup.T("朝向")}: {cannon.direction}\n";
+            info += $"{TranslateGroup.T("可攻击兵器")}: {(cannon.CanAttackWeapon ? TranslateGroup.T("是") : TranslateGroup.T("否"))}\n";
+            info += $"{TranslateGroup.T("目标选择")}: {cannon.targetSelectionMode switch 
             { 
                 BlackCannon.TargetSelectionMode.AllSelect => TranslateGroup.T("所有单位"),
                 BlackCannon.TargetSelectionMode.OnlyEnemyUnits => TranslateGroup.T("仅敌方单位"),
@@ -1708,14 +1730,14 @@ private void ShowWeaponInfo(Weapon weapon)
                 _ => TranslateGroup.T("未知")
             }}\n";
 
-            info += $"[操作说明]\n";
-            info += $"• 左键点击: 选择/显示攻击范围\n";
-            info += $"• R键: 旋转方向\n";
-            info += $"• 攻击范围: 三角形区域，深度{cannon.maxAttackDepth}格\n";
+            info += $"[{TranslateGroup.T("操作说明")}]";
+            info += $"• {TranslateGroup.T("左键点击")}: {TranslateGroup.T("选择/显示攻击范围")}";
+            info += $"• {TranslateGroup.T("R键")}: {TranslateGroup.T("旋转方向")}";
+            info += $"• {TranslateGroup.T("攻击范围")}: {TranslateGroup.T("三角形区域")}，{TranslateGroup.T("深度")}{cannon.maxAttackDepth}{TranslateGroup.T("格")}";
 
             if (cannon.useAmmoSystem)
             {
-                info += $"• 需要APC在范围内补给弹药\n";
+                info += $"• {TranslateGroup.T("需要APC在范围内补给弹药")}";
             }
         }
 
@@ -1758,7 +1780,7 @@ else if (weapon is Laser laser)
 
         // 标题
         var title = new Label();
-        title.Text = $"目标有 {targetUnit.Name}";
+        title.Text = $"{TranslateGroup.T("目标有")} {targetUnit.Name}";
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 18);
         title.AddThemeColorOverride("font_color", Colors.Yellow);
@@ -1800,7 +1822,7 @@ else if (weapon is Laser laser)
 
         // 切换单位按钮
         var switchBtn = new Button();
-        switchBtn.Text = $"🔄 切换到{targetUnit.Name}";
+        switchBtn.Text = $"🔄 {TranslateGroup.T("切换到")}{targetUnit.Name}";
         switchBtn.CustomMinimumSize = new Godot.Vector2(200, 35);
         switchBtn.Pressed += () => {
             dialog.QueueFree();
@@ -1818,7 +1840,7 @@ else if (weapon is Laser laser)
         if (transport != null && transport.CanTransportUnit(movingUnit))
         {
             var mountBtn = new Button();
-            mountBtn.Text = $"🚛 搭载到{transport.Name}";
+            mountBtn.Text = $"🚛 {TranslateGroup.T("搭载到")}{transport.Name}";
             mountBtn.CustomMinimumSize = new Godot.Vector2(200, 35);
             mountBtn.Pressed += () => {
                 dialog.QueueFree();

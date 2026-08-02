@@ -280,7 +280,7 @@ public partial class ExtraSave : Node
             }
             catch (Exception e)
             {
-                GD.PrintErr($"[ExtraSave] 加载失败: {e.Message}，创建新数据");
+                GD.PrintErr($"[ExtraSave] {TranslateGroup.T("加载失败")}: {e.Message}，{TranslateGroup.T("创建新数据")}");
                 Data = new ExtraSaveData();
             }
         }
@@ -308,7 +308,7 @@ public partial class ExtraSave : Node
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[ExtraSave] 保存失败: {e.Message}");
+            GD.PrintErr($"[ExtraSave] {TranslateGroup.T("保存失败")}: {e.Message}");
         }
 
         // 同时保存自定义移动方式和地形
@@ -807,8 +807,8 @@ public partial class ExtraSave : Node
 
         var data = new SavedUnitData
         {
-            slotName = $"单位{slotIndex + 1}",
-            displayName = customName ?? unit.Name ?? $"单位{slotIndex + 1}",
+            slotName = $"{TranslateGroup.T("单位")}{slotIndex + 1}",
+            displayName = customName ?? unit.Name ?? $"{TranslateGroup.T("单位")}{slotIndex + 1}",
             scenePath = GetScenePathForInstance(unit),
             typeName = unit.GetType().Name,
             team = unit.team,
@@ -830,8 +830,8 @@ public partial class ExtraSave : Node
 
         var data = new SavedWeaponData
         {
-            slotName = $"兵器{slotIndex + 1}",
-            displayName = customName ?? weapon.Name ?? $"兵器{slotIndex + 1}",
+            slotName = $"{TranslateGroup.T("兵器")}{slotIndex + 1}",
+            displayName = customName ?? weapon.Name ?? $"{TranslateGroup.T("兵器")}{slotIndex + 1}",
             scenePath = GetScenePathForInstance(weapon),
             typeName = weapon.GetType().Name,
             team = weapon.team,
@@ -862,8 +862,8 @@ public partial class ExtraSave : Node
 
         var data = new SavedFacilityData
         {
-            slotName = $"设施{slotIndex + 1}",
-            displayName = customName ?? facility.Name ?? $"设施{slotIndex + 1}",
+            slotName = $"{TranslateGroup.T("设施")}{slotIndex + 1}",
+            displayName = customName ?? facility.Name ?? $"{TranslateGroup.T("设施")}{slotIndex + 1}",
             scenePath = GetScenePathForInstance(facility),
             typeName = facility.GetType().Name,
             team = facility.facilityTeam,
@@ -883,8 +883,8 @@ public partial class ExtraSave : Node
 
         var data = new SavedGridTerrainData
         {
-            slotName = $"地形{slotIndex + 1}",
-            displayName = customName ?? $"地形{slotIndex + 1}",
+            slotName = $"{TranslateGroup.T("地形")}{slotIndex + 1}",
+            displayName = customName ?? $"{TranslateGroup.T("地形")}{slotIndex + 1}",
             savedTimestamp = DateTimeOffset.Now.ToUnixTimeSeconds(),
             lastUsedTimestamp = DateTimeOffset.Now.ToUnixTimeSeconds(),
             gridType = grid.gridType,
@@ -1177,7 +1177,7 @@ public partial class ExtraSave : Node
             Error err = image.Load(sourcePath);
             if (err != Error.Ok)
             {
-                GD.PrintErr($"[ExtraSave] 加载图片失败: {err}");
+                GD.PrintErr($"[ExtraSave] {TranslateGroup.T("加载图片失败")}: {err}");
                 return "ERROR_LOAD_FAILED";
             }
 
@@ -1186,7 +1186,7 @@ public partial class ExtraSave : Node
             int h = image.GetHeight();
             if (w != h)
             {
-                GD.PrintErr($"[ExtraSave] 图片尺寸 {w}×{h} 不是正方形，无法自动resize到 {MAX_TEXTURE_SIZE}×{MAX_TEXTURE_SIZE}");
+                GD.PrintErr($"[ExtraSave] {TranslateGroup.T("图片尺寸")} {w}×{h} {TranslateGroup.T("不是正方形，无法自动")}resize{TranslateGroup.T("到")} {MAX_TEXTURE_SIZE}×{MAX_TEXTURE_SIZE}");
                 return "ERROR_NOT_SQUARE";
             }
 
@@ -1195,18 +1195,18 @@ public partial class ExtraSave : Node
             {
                 if (w < 2 || h < 2)
                 {
-                    GD.PrintErr($"[ExtraSave] 图片尺寸 {w}×{h} 过小，无法resize");
+                    GD.PrintErr($"[ExtraSave] {TranslateGroup.T("图片尺寸")} {w}×{h} {TranslateGroup.T("过小，无法")}resize");
                     return "ERROR_TOO_SMALL";
                 }
                 image.Resize(MAX_TEXTURE_SIZE, MAX_TEXTURE_SIZE, Image.Interpolation.Nearest);
-                GD.Print($"[ExtraSave] 图片已自动resize: {w}×{h} -> {MAX_TEXTURE_SIZE}×{MAX_TEXTURE_SIZE}");
+                GD.Print($"[ExtraSave] {TranslateGroup.T("图片已自动")}resize: {w}×{h} -> {MAX_TEXTURE_SIZE}×{MAX_TEXTURE_SIZE}");
             }
 
             // 生成目标路径
             string ext = Path.GetExtension(sourcePath).ToLower();
             if (ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".gif")
             {
-                GD.PrintErr($"[ExtraSave] 不支持的格式: {ext}");
+                GD.PrintErr($"[ExtraSave] {TranslateGroup.T("不支持的格式")}: {ext}");
                 return null;
             }
 
@@ -1223,7 +1223,7 @@ public partial class ExtraSave : Node
                 err = image.SavePng(targetPath);
                 if (err != Error.Ok)
                 {
-                    GD.PrintErr($"[ExtraSave] 保存resize后图片失败: {err}");
+                    GD.PrintErr($"[ExtraSave] {TranslateGroup.T("保存")}resize{TranslateGroup.T("后图片失败")}: {err}");
                     return null;
                 }
             }
@@ -1236,12 +1236,12 @@ public partial class ExtraSave : Node
                 targetFile.StoreBuffer(buffer);
             }
 
-            GD.Print($"[ExtraSave] 贴图已保存: {targetPath}");
+            GD.Print($"[ExtraSave] {TranslateGroup.T("贴图已保存")}: {targetPath}");
             return targetPath;
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[ExtraSave] 处理贴图失败: {e.Message}");
+            GD.PrintErr($"[ExtraSave] {TranslateGroup.T("处理贴图失败")}: {e.Message}");
             return null;
         }
     }
@@ -1399,7 +1399,7 @@ public partial class ExtraSave : Node
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[ExtraSave] 保存自定义移动方式失败: {e.Message}");
+            GD.PrintErr($"[ExtraSave] {TranslateGroup.T("保存自定义移动方式失败")}: {e.Message}");
         }
     }
 
@@ -1437,7 +1437,7 @@ public partial class ExtraSave : Node
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[ExtraSave] 加载自定义移动方式失败: {e.Message}");
+            GD.PrintErr($"[ExtraSave] {TranslateGroup.T("加载自定义移动方式失败")}: {e.Message}");
         }
     }
 
@@ -1503,7 +1503,7 @@ public partial class ExtraSave : Node
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[ExtraSave] 保存自定义地形失败: {e.Message}");
+            GD.PrintErr($"[ExtraSave] {TranslateGroup.T("保存自定义地形失败")}: {e.Message}");
         }
     }
 
@@ -1543,7 +1543,7 @@ public partial class ExtraSave : Node
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[ExtraSave] 加载自定义地形失败: {e.Message}");
+            GD.PrintErr($"[ExtraSave] {TranslateGroup.T("加载自定义地形失败")}: {e.Message}");
         }
     }
 
@@ -1555,8 +1555,8 @@ public partial class ExtraSave : Node
 
         var mapData = new SavedMapData
         {
-            slotName = $"地图{slotIndex + 1}",
-            displayName = customName ?? $"地图{slotIndex + 1}",
+            slotName = $"{TranslateGroup.T("地图")}{slotIndex + 1}",
+            displayName = customName ?? $"{TranslateGroup.T("地图")}{slotIndex + 1}",
             savedTimestamp = DateTimeOffset.Now.ToUnixTimeSeconds(),
             lastUsedTimestamp = DateTimeOffset.Now.ToUnixTimeSeconds(),
             width = gridMgr.map?.GetLength(0) ?? 0,
@@ -1917,7 +1917,7 @@ public partial class ExtraSave : Node
     {
         if (slotIndex >= 0 && slotIndex < Data.savedUnits.Count)
         {
-            Data.savedUnits[slotIndex] = new SavedUnitData { slotName = $"单位{slotIndex + 1}" };
+            Data.savedUnits[slotIndex] = new SavedUnitData { slotName = $"{TranslateGroup.T("单位")}{slotIndex + 1}" };
             SaveAllData();
         }
     }
@@ -1925,7 +1925,7 @@ public partial class ExtraSave : Node
     {
         if (slotIndex >= 0 && slotIndex < Data.savedWeapons.Count)
         {
-            Data.savedWeapons[slotIndex] = new SavedWeaponData { slotName = $"兵器{slotIndex + 1}" };
+            Data.savedWeapons[slotIndex] = new SavedWeaponData { slotName = $"{TranslateGroup.T("兵器")}{slotIndex + 1}" };
             SaveAllData();
         }
     }
@@ -1933,7 +1933,7 @@ public partial class ExtraSave : Node
     {
         if (slotIndex >= 0 && slotIndex < Data.savedFacilities.Count)
         {
-            Data.savedFacilities[slotIndex] = new SavedFacilityData { slotName = $"设施{slotIndex + 1}" };
+            Data.savedFacilities[slotIndex] = new SavedFacilityData { slotName = $"{TranslateGroup.T("设施")}{slotIndex + 1}" };
             SaveAllData();
         }
     }
@@ -1941,7 +1941,7 @@ public partial class ExtraSave : Node
     {
         if (slotIndex >= 0 && slotIndex < Data.savedGridTerrains.Count)
         {
-            Data.savedGridTerrains[slotIndex] = new SavedGridTerrainData { slotName = $"地形{slotIndex + 1}" };
+            Data.savedGridTerrains[slotIndex] = new SavedGridTerrainData { slotName = $"{TranslateGroup.T("地形")}{slotIndex + 1}" };
             SaveAllData();
         }
     }
@@ -1949,7 +1949,7 @@ public partial class ExtraSave : Node
     {
         if (slotIndex >= 0 && slotIndex < Data.savedMaps.Count)
         {
-            Data.savedMaps[slotIndex] = new SavedMapData { slotName = $"地图{slotIndex + 1}" };
+            Data.savedMaps[slotIndex] = new SavedMapData { slotName = $"{TranslateGroup.T("地图")}{slotIndex + 1}" };
             SaveAllData();
         }
     }

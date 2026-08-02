@@ -366,7 +366,7 @@ public partial class CustomConfigUI : Control
         var nameHBox = new HBoxContainer();
         nameHBox.AddThemeConstantOverride("separation", 8);
         var nameLabel = new Label();
-        TranslateGroup.SetText(nameLabel, "显示名称:");
+        TranslateGroup.SetText(nameLabel, $"显示{TranslateGroup.T("名称")}:");
         nameLabel.CustomMinimumSize = new Vector2(80, 28);
         nameHBox.AddChild(nameLabel);
         var nameEdit = new LineEdit();
@@ -698,7 +698,7 @@ public partial class CustomConfigUI : Control
         var nameHBox = new HBoxContainer();
         nameHBox.AddThemeConstantOverride("separation", 8);
         var nameLabel = new Label();
-        TranslateGroup.SetText(nameLabel, "显示名称:");
+        TranslateGroup.SetText(nameLabel, $"显示{TranslateGroup.T("名称")}:");
         nameLabel.CustomMinimumSize = new Vector2(80, 28);
         nameHBox.AddChild(nameLabel);
         var nameEdit = new LineEdit();
@@ -941,7 +941,7 @@ public partial class CustomConfigUI : Control
         foreach (var category in categories)
         {
             var catBtn = new Button();
-            catBtn.Text = $"🎨 上传{category}贴图";
+            catBtn.Text = $"🎨 {TranslateGroup.T("上传")}{category}{TranslateGroup.T("贴图")}";
             catBtn.CustomMinimumSize = new Vector2(0, 40);
             catBtn.AddThemeFontSizeOverride("font_size", 13);
             catBtn.Pressed += () => ShowTextureUploadDialog(category);
@@ -1036,7 +1036,7 @@ public partial class CustomConfigUI : Control
         dialog.FileMode = FileDialog.FileModeEnum.OpenFile;
         dialog.Access = FileDialog.AccessEnum.Filesystem;
         dialog.Filters = new string[] { "*.png ; PNG Images", "*.jpg ; JPG Images", "*.jpeg ; JPEG Images", "*.gif ; GIF Images", "*.webp ; WebP Images" };
-        dialog.Title = $"选择{category}贴图 (建议32×32)";
+        dialog.Title = $"{TranslateGroup.T("选择")}{category}{TranslateGroup.T("贴图")} ({TranslateGroup.T("建议")}32×32)";
         dialog.Size = new Vector2I(800, 600);
 
         dialog.FileSelected += (path) => {
@@ -1056,7 +1056,7 @@ public partial class CustomConfigUI : Control
             int h = image.GetHeight();
             if (w != h)
             {
-                ShowToast($"❌ 尺寸 {w}×{h} 不是正方形！\n请裁剪为正方形后重新上传");
+                ShowToast($"❌ {TranslateGroup.T("尺寸")} {w}×{h} {TranslateGroup.T("不是正方形！")}\n{TranslateGroup.T("请裁剪为正方形后重新上传")}");
                 dialog.QueueFree();
                 return;
             }
@@ -1064,7 +1064,7 @@ public partial class CustomConfigUI : Control
             {
                 // ✅ 自动resize到32x32，不再直接return
                 image.Resize(32, 32, Image.Interpolation.Lanczos);
-                ShowToast($"⚠️ 尺寸 {w}×{h} 非标准，已自动resize到 32×32");
+                ShowToast($"⚠️ {TranslateGroup.T("尺寸")} {w}×{h} {TranslateGroup.T("非标准，已自动")}resize{TranslateGroup.T("到")} 32×32");
             }
 
             // ✅ 先保存resize后的图片到临时路径，再传给ProcessUploadedTexture
@@ -1079,7 +1079,7 @@ public partial class CustomConfigUI : Control
             string savedPath = extraSave?.ProcessUploadedTexture(tempPath, category, $"custom_{DateTime.Now:yyyyMMddHHmmss}");
             if (!string.IsNullOrEmpty(savedPath) && !savedPath.StartsWith("ERROR"))
             {
-                ShowToast($"✅ 贴图上传成功！\n{Path.GetFileName(savedPath)}");
+                ShowToast($"✅ {TranslateGroup.T("贴图上传成功！")}\n{Path.GetFileName(savedPath)}");
                 RefreshUploadedTextureList();
                 RefreshApplyTextureList(); // ✅ 同时刷新应用列表
             }
@@ -1124,7 +1124,7 @@ public partial class CustomConfigUI : Control
         vbox.AddThemeConstantOverride("separation", 10);
 
         var title = new Label();
-        title.Text = $"🎨 为 {targetId} 应用贴图";
+        title.Text = $"🎨 {TranslateGroup.T("为")} {targetId} {TranslateGroup.T("应用贴图")}";
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 16);
         title.AddThemeColorOverride("font_color", Colors.Yellow);
@@ -1245,7 +1245,7 @@ public partial class CustomConfigUI : Control
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[CustomConfigUI] 贴图应用异常: {e.Message}");
+            GD.PrintErr($"[CustomConfigUI] {TranslateGroup.T("贴图应用异常")}: {e.Message}");
         }
 
         ShowToast(success ? TranslateGroup.T("✅ 贴图应用成功！") : TranslateGroup.T("❌ 贴图应用失败"));
@@ -1337,7 +1337,7 @@ public partial class CustomConfigUI : Control
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[CustomConfigUI] 刷新运行时贴图失败: {e.Message}");
+            GD.PrintErr($"[CustomConfigUI] {TranslateGroup.T("刷新运行时贴图失败")}: {e.Message}");
         }
     }
 
@@ -1660,7 +1660,7 @@ public partial class CustomConfigUI : Control
 
         // 标题
         var title = new Label();
-        title.Text = $"{category} 槽位 {slotIndex + 1}";
+        title.Text = $"{category} {TranslateGroup.T("槽位")} {slotIndex + 1}";
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 18);
         title.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f));
@@ -1672,7 +1672,7 @@ public partial class CustomConfigUI : Control
 
         // 保存按钮
         var saveBtn = new Button();
-        saveBtn.Text = isEmpty ? $"💾 保存{category}" : $"💾 覆盖保存";
+        saveBtn.Text = isEmpty ? $"💾 {TranslateGroup.T("保存")}{category}" : $"💾 {TranslateGroup.T("覆盖保存")}";
         saveBtn.CustomMinimumSize = new Vector2(0, 48);
         saveBtn.AddThemeFontSizeOverride("font_size", 14);
         var saveStyle = new StyleBoxFlat();
@@ -1685,7 +1685,7 @@ public partial class CustomConfigUI : Control
                 if (editorSaveSlots != null)
                 {
                     editorSaveSlots.SaveMapToSlot(slotIndex);
-                    ShowToast($"✅ 地图已保存到槽位{slotIndex + 1}");
+                    ShowToast($"✅ {TranslateGroup.T("地图已保存到槽位")}{slotIndex + 1}");
                 }
             }
             else
@@ -1695,7 +1695,7 @@ public partial class CustomConfigUI : Control
                     if (isEmpty)
                     {
                         editorSaveSlots.SaveToSlot(slotIndex, GetEditorSlotType(category));
-                        ShowToast($"💾 请点击地图上的{category}来保存");
+                        ShowToast($"💾 {TranslateGroup.T("请点击地图上的")}{category}{TranslateGroup.T("来保存")}");
                     }
                     else
                     {
@@ -1710,7 +1710,7 @@ public partial class CustomConfigUI : Control
 
         // 加载按钮（空槽禁用）
         var loadBtn = new Button();
-        loadBtn.Text = $"📂 加载{category}";
+        loadBtn.Text = $"📂 {TranslateGroup.T("加载")}{category}";
         loadBtn.CustomMinimumSize = new Vector2(0, 48);
         loadBtn.AddThemeFontSizeOverride("font_size", 14);
         var loadStyle = new StyleBoxFlat();
@@ -1732,7 +1732,7 @@ public partial class CustomConfigUI : Control
                 if (editorSaveSlots != null && !isEmpty)
                 {
                     editorSaveSlots.LoadFromSlot(slotIndex, GetEditorSlotType(category));
-                    ShowToast($"📂 请点击地图上的格子来加载{category}");
+                    ShowToast($"📂 {TranslateGroup.T("请点击地图上的格子来加载")}{category}");
                 }
             }
             overlay.QueueFree();
@@ -1847,7 +1847,7 @@ private string GetEditorSlotType(string category)
         vbox.AddThemeConstantOverride("separation", 10);
 
         var title = new Label();
-        title.Text = $"💾 保存{category}到槽位{slotIndex + 1}";
+        title.Text = $"💾 {TranslateGroup.T("保存")}{category}{TranslateGroup.T("到槽位")}{slotIndex + 1}";
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 16);
         title.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
@@ -1856,7 +1856,7 @@ private string GetEditorSlotType(string category)
         var nameHBox = new HBoxContainer();
         nameHBox.AddThemeConstantOverride("separation", 8);
         var nameLabel = new Label();
-        TranslateGroup.SetText(nameLabel, "自定义名称:");
+        TranslateGroup.SetText(nameLabel, $"自定义{TranslateGroup.T("名称")}:");
         nameHBox.AddChild(nameLabel);
         var nameEdit = new LineEdit();
         nameEdit.CustomMinimumSize = new Vector2(200, 28);
@@ -1910,7 +1910,7 @@ private string GetEditorSlotType(string category)
                                 var unit = te.selectedGrid.infantries[0];
                                 if (!string.IsNullOrEmpty(finalName)) unit.Name = finalName; // ✅ 应用名称到实例
                                 extraSave?.SaveUnit(unit, slotIndex, finalName);
-                                ShowToast($"✅ 单位已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                                ShowToast($"✅ {TranslateGroup.T("单位已保存到槽位")}{slotIndex + 1}" + (finalName != null ? $" {TranslateGroup.T("名称")}:{finalName}" : ""));
                             }
                             else
                             {
@@ -1924,7 +1924,7 @@ private string GetEditorSlotType(string category)
                                 var weapon = te.selectedGrid.weapon;
                                 if (!string.IsNullOrEmpty(finalName)) weapon.Name = finalName;
                                 extraSave?.SaveWeapon(weapon, slotIndex, finalName);
-                                ShowToast($"✅ 兵器已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                                ShowToast($"✅ {TranslateGroup.T("兵器已保存到槽位")}{slotIndex + 1}" + (finalName != null ? $" {TranslateGroup.T("名称")}:{finalName}" : ""));
                             }
                             else
                             {
@@ -1938,7 +1938,7 @@ private string GetEditorSlotType(string category)
                                 var facility = te.selectedGrid.city;
                                 if (!string.IsNullOrEmpty(finalName)) facility.Name = finalName;
                                 extraSave?.SaveFacility(facility, slotIndex, finalName);
-                                ShowToast($"✅ 设施已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                                ShowToast($"✅ {TranslateGroup.T("设施已保存到槽位")}{slotIndex + 1}" + (finalName != null ? $" {TranslateGroup.T("名称")}:{finalName}" : ""));
                             }
                             else
                             {
@@ -1950,7 +1950,7 @@ private string GetEditorSlotType(string category)
             if (te?.selectedGrid != null)
                             {
                                 extraSave?.SaveGridTerrain(te.selectedGrid, slotIndex, finalName);
-                                ShowToast($"✅ 地形已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                                ShowToast($"✅ {TranslateGroup.T("地形已保存到槽位")}{slotIndex + 1}" + (finalName != null ? $" {TranslateGroup.T("名称")}:{finalName}" : ""));
                             }
                             else
                             {
@@ -1960,7 +1960,7 @@ private string GetEditorSlotType(string category)
         else if (category == TranslateGroup.T("地图"))
         {
             extraSave?.SaveCurrentMap(slotIndex, finalName, gameManager, te?.gridManager);
-                            ShowToast($"✅ 地图已保存到槽位{slotIndex + 1}" + (finalName != null ? $" 名称:{finalName}" : ""));
+                            ShowToast($"✅ {TranslateGroup.T("地图已保存到槽位")}{slotIndex + 1}" + (finalName != null ? $" {TranslateGroup.T("名称")}:{finalName}" : ""));
         }
 
         RefreshSaveSlotTab();
@@ -1968,7 +1968,7 @@ private string GetEditorSlotType(string category)
 
     private void ShowLoadDialog(int slotIndex, string category)
     {
-        ShowToast($"加载{category}槽位{slotIndex + 1}...");
+        ShowToast($"{TranslateGroup.T("加载")}{category}{TranslateGroup.T("槽位")}{slotIndex + 1}...");
 
         var te = terrainEditor;
         if (te == null)
@@ -2064,13 +2064,13 @@ private string GetEditorSlotType(string category)
         }
         catch (Exception e)
         {
-            GD.PrintErr($"[CustomConfigUI] 收藏切换异常: {e.Message}");
+            GD.PrintErr($"[CustomConfigUI] {TranslateGroup.T("收藏切换异常")}: {e.Message}");
         }
 
         if (success)
-            ShowToast($"✅ {category}槽位{slotIndex + 1} 收藏状态已切换");
+            ShowToast($"✅ {category}{TranslateGroup.T("槽位")}{slotIndex + 1} {TranslateGroup.T("收藏状态已切换")}");
         else
-            ShowToast($"❌ 收藏失败（可能已达上限{ExtraSave.MAX_FAVORITES}个）");
+            ShowToast($"❌ {TranslateGroup.T("收藏失败（可能已达上限")}{ExtraSave.MAX_FAVORITES}{TranslateGroup.T("个）")}");
 
         RefreshSaveSlotTab();
     }
@@ -2096,7 +2096,7 @@ private string GetEditorSlotType(string category)
         vbox.AddThemeConstantOverride("separation", 10);
 
         var title = new Label();
-        title.Text = $"✏️ 重命名{category}{slotIndex + 1}";
+        title.Text = $"✏️ {TranslateGroup.T("重命名")}{category}{slotIndex + 1}";
         title.HorizontalAlignment = HorizontalAlignment.Center;
         title.AddThemeFontSizeOverride("font_size", 16);
         vbox.AddChild(title);
@@ -2178,7 +2178,7 @@ private string GetEditorSlotType(string category)
             extraSave?.ClearMapSlot(slotIndex);
         }
 
-        ShowToast($"✅ {category}槽位{slotIndex + 1} 已清除");
+        ShowToast($"✅ {category}{TranslateGroup.T("槽位")}{slotIndex + 1} {TranslateGroup.T("已清除")}");
         RefreshSaveSlotTab();
     }
 
@@ -2306,7 +2306,7 @@ private string GetEditorSlotType(string category)
         if (terrainEditor != null)
         {
             terrainEditor.SetTextureApplyMode(pendingApplyTexturePath, pendingApplyTargetType);
-            ShowToast($"🖱️ 点击地图上的{pendingApplyTargetType}替换贴图，ESC取消");
+            ShowToast($"🖱️ {TranslateGroup.T("点击地图上的")}{pendingApplyTargetType}{TranslateGroup.T("替换贴图，")}ESC{TranslateGroup.T("取消")}");
             Hide();
         }
         else

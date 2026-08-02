@@ -432,7 +432,7 @@ public partial class MapEditorHelper : Node
         shapeCurrentPos = new Vector2I(-1, -1);
         isDraggingShapeEdge = false;
         ShowActionButtons(true);
-        UpdateStatusHint($"图形填充: {shape} | 点击确定中心，拖拽调整大小，按确认填充");
+        UpdateStatusHint($"{TranslateGroup.T("图形填充")}: {shape} | {TranslateGroup.T("点击确定中心，拖拽调整大小，按确认填充")}");
     }
 
     public void OnGridClickForShapeFill(Grids grid)
@@ -575,7 +575,7 @@ public partial class MapEditorHelper : Node
             g.UpdateTerrainIcon();
         }
         PushAction(batchRecord);
-        UpdateStatusHint($"已填充 {affected.Count} 个格子");
+        UpdateStatusHint($"{TranslateGroup.T("已填充")} {affected.Count} {TranslateGroup.T("个格子")}");
     }
 
     private void CancelShapeFillMode()
@@ -594,7 +594,7 @@ public partial class MapEditorHelper : Node
         CancelAllModes();
         IsAreaFillMode = true;
         areaFillIncludeAdjacent = includeAdjacent;
-        UpdateStatusHint($"区域填充: 点击目标格子，相邻相同地形替换为 {areaFillNewTerrain}");
+        UpdateStatusHint($"{TranslateGroup.T("区域填充")}: {TranslateGroup.T("点击目标格子，相邻相同地形替换为")} {areaFillNewTerrain}");
     }
 
     private void StartTerrainFillMode()
@@ -602,7 +602,7 @@ public partial class MapEditorHelper : Node
         CancelAllModes();
         IsTerrainFillMode = true;
         areaFillIncludeAdjacent = false;
-        UpdateStatusHint($"地形填充: 点击目标格子，全图相同地形替换为 {areaFillNewTerrain}");
+        UpdateStatusHint($"{TranslateGroup.T("地形填充")}: {TranslateGroup.T("点击目标格子，全图相同地形替换为")} {areaFillNewTerrain}");
     }
 
     public void OnGridClickForAreaFill(Grids grid)
@@ -670,7 +670,7 @@ public partial class MapEditorHelper : Node
             g.UpdateTerrainIcon();
         }
         PushAction(batchRecord);
-        UpdateStatusHint($"已填充 {toFill.Count} 个格子");
+        UpdateStatusHint($"{TranslateGroup.T("已填充")} {toFill.Count} {TranslateGroup.T("个格子")}");
         CancelAllModes();
     }
 
@@ -679,7 +679,7 @@ public partial class MapEditorHelper : Node
     {
         var dialog = new AcceptDialog();
         dialog.Title = TranslateGroup.T("⚠️ 确认覆盖全图?");
-        dialog.DialogText = $"这将把所有格子变为 {clearMapTerrain}，并删除所有单位/兵器/设施！\n\n确定要继续吗？";
+        dialog.DialogText = $"{TranslateGroup.T("这将把所有格子变为")} {clearMapTerrain}，{TranslateGroup.T("并删除所有单位")}/{TranslateGroup.T("兵器")}/{TranslateGroup.T("设施！")}\n\n{TranslateGroup.T("确定要继续吗？")}";
         dialog.Size = new Vector2I(400, 200);
         dialog.GetOkButton().Text = TranslateGroup.T("确认覆盖");
         dialog.GetOkButton().AddThemeColorOverride("font_color", Colors.Red);
@@ -728,7 +728,7 @@ public partial class MapEditorHelper : Node
             }
         }
         PushAction(batchRecord);
-        UpdateStatusHint($"全图已覆盖为 {clearMapTerrain}");
+        UpdateStatusHint($"{TranslateGroup.T("全图已覆盖为")} {clearMapTerrain}");
     }
 
     // ========== 选区复制粘贴（矩形 + 不规则） ==========
@@ -802,13 +802,13 @@ public partial class MapEditorHelper : Node
             {
                 irregularSelectedCells.Remove(pos);
                 grid.SelfModulate = Colors.White;
-                UpdateStatusHint($"已取消 ({pos.X},{pos.Y}) | 当前共 {irregularSelectedCells.Count} 格");
+                UpdateStatusHint($"{TranslateGroup.T("已取消")} ({pos.X},{pos.Y}) | {TranslateGroup.T("当前共")} {irregularSelectedCells.Count} {TranslateGroup.T("格")}");
             }
             else
             {
                 irregularSelectedCells.Add(pos);
                 grid.SelfModulate = irregularSelectColor;
-                UpdateStatusHint($"已选中 ({pos.X},{pos.Y}) | 当前共 {irregularSelectedCells.Count} 格");
+                UpdateStatusHint($"{TranslateGroup.T("已选中")} ({pos.X},{pos.Y}) | {TranslateGroup.T("当前共")} {irregularSelectedCells.Count} {TranslateGroup.T("格")}");
             }
         }
     }
@@ -845,7 +845,7 @@ public partial class MapEditorHelper : Node
         };
 
         ManageSelectionClipboard(selection);
-        UpdateStatusHint($"矩形选区已保存: {cells.Count} 格 | 共 {selectionClipboard.Count}/5 个选区");
+        UpdateStatusHint($"{TranslateGroup.T("矩形选区已保存")}: {cells.Count} {TranslateGroup.T("格")} | {TranslateGroup.T("共")} {selectionClipboard.Count}/5 {TranslateGroup.T("个选区")}");
     }
 
     private void CreateIrregularSelection()
@@ -880,7 +880,7 @@ public partial class MapEditorHelper : Node
 
         ManageSelectionClipboard(selection);
         ClearIrregularPreview();
-        UpdateStatusHint($"不规则选区已保存: {cells.Count} 格 | 共 {selectionClipboard.Count}/5 个选区");
+        UpdateStatusHint($"{TranslateGroup.T("不规则选区已保存")}: {cells.Count} {TranslateGroup.T("格")} | {TranslateGroup.T("共")} {selectionClipboard.Count}/5 {TranslateGroup.T("个选区")}");
     }
 
     private SelectionCellData CreateCellData(Grids grid, Vector2I relativePos)
@@ -958,7 +958,7 @@ public partial class MapEditorHelper : Node
             hbox.AddChild(typeLabel);
 
             var infoLabel = new Label();
-            infoLabel.Text = $"[{i+1}] {sel.bounds.Size.X}x{sel.bounds.Size.Y} | {sel.cells.Count}格";
+            infoLabel.Text = $"[{i+1}] {sel.bounds.Size.X}x{sel.bounds.Size.Y} | {sel.cells.Count}{TranslateGroup.T("格")}";
             infoLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             hbox.AddChild(infoLabel);
 
@@ -1067,7 +1067,7 @@ public partial class MapEditorHelper : Node
         }
 
         PushAction(batchRecord);
-        UpdateStatusHint($"已粘贴 {currentPasteSelection.cells.Count} 个格子");
+        UpdateStatusHint($"{TranslateGroup.T("已粘贴")} {currentPasteSelection.cells.Count} {TranslateGroup.T("个格子")}");
         CancelAllModes();
     }
 
@@ -1111,9 +1111,9 @@ public partial class MapEditorHelper : Node
     {
         IsSymmetryMode = true;
         CurrentSymmetryAxis = axis;
-        UpdateStatusHint($"对称放置已开启: {axis} | 点击格子设置对称轴");
+        UpdateStatusHint($"{TranslateGroup.T("对称放置已开启")}: {axis} | {TranslateGroup.T("点击格子设置对称轴")}");
         var btn = helperPanel?.GetNodeOrNull<Button>("HelperVBox/SymmetryBtn");
-        if (btn != null) btn.Text = $"🔀 对称: {axis}";
+        if (btn != null) btn.Text = $"🔀 {TranslateGroup.T("对称")}: {axis}";
     }
 
     public void OnGridClickForSymmetry(Grids grid)
@@ -1122,7 +1122,7 @@ public partial class MapEditorHelper : Node
         if (symmetryAxisLine < 0)
         {
             symmetryAxisLine = CurrentSymmetryAxis == SymmetryAxis.Vertical ? grid.GridIndex.X : grid.GridIndex.Y;
-            UpdateStatusHint($"对称轴已设置在 {symmetryAxisLine}，现在放置单位会自动镜像");
+            UpdateStatusHint($"{TranslateGroup.T("对称轴已设置在")} {symmetryAxisLine}，{TranslateGroup.T("现在放置单位会自动镜像")}");
             ShowSymmetryPreview();
         }
     }
@@ -1212,7 +1212,7 @@ public partial class MapEditorHelper : Node
         UndoAction(action);
         currentHistoryIndex--;
         UpdateHistoryLabel();
-        UpdateStatusHint($"已撤销: {action.actionType}");
+        UpdateStatusHint($"{TranslateGroup.T("已撤销")}: {action.actionType}");
     }
 
     public void Redo()
@@ -1222,7 +1222,7 @@ public partial class MapEditorHelper : Node
         var action = actionHistory[currentHistoryIndex];
         RedoAction(action);
         UpdateHistoryLabel();
-        UpdateStatusHint($"已前进: {action.actionType}");
+        UpdateStatusHint($"{TranslateGroup.T("已前进")}: {action.actionType}");
     }
 
     private void UndoAction(EditorActionRecord action)
@@ -1332,7 +1332,7 @@ public partial class MapEditorHelper : Node
     {
         var label = helperPanel?.GetNodeOrNull<Label>("HelperVBox/HistoryLabel");
         if (label != null)
-            label.Text = $"历史: {currentHistoryIndex + 1}/{actionHistory.Count}";
+            label.Text = $"{TranslateGroup.T("历史")}: {currentHistoryIndex + 1}/{actionHistory.Count}";
     }
 
     // ========== 贴图替换 ==========
@@ -1411,7 +1411,7 @@ public partial class MapEditorHelper : Node
     {
         pendingTextureTargetType = targetType;
         terrainEditor?.SetTextureApplyMode("", targetType);
-        UpdateStatusHint($"贴图替换模式: 选择贴图文件，然后点击地图上的 {targetType} 来替换");
+        UpdateStatusHint($"{TranslateGroup.T("贴图替换模式")}: {TranslateGroup.T("选择贴图文件，然后点击地图上的")} {targetType} {TranslateGroup.T("来替换")}");
     }
 
     public void OnEntityClickForTextureReplace(Node entity)

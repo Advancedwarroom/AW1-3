@@ -45,7 +45,7 @@ public partial class EditorSaveSlots : Node
         pendingSaveType = type;
         var typeName = type switch { "unit" => TranslateGroup.T("单位"), "weapon" => TranslateGroup.T("兵器"), "facility" => TranslateGroup.T("设施"), "grid" => TranslateGroup.T("地形"), _ => type };
         if (terrainEditor != null)
-            terrainEditor.spawnHintLabel.Text = $"💾 请点击地图上的{typeName}来保存到槽位 {index + 1}";
+            terrainEditor.spawnHintLabel.Text = $"💾 {TranslateGroup.T("请点击地图上的")}{typeName}{TranslateGroup.T("来保存到槽位")} {index + 1}";
     }
 
     public void OnGridClickedForSave(Grids grid)
@@ -64,7 +64,7 @@ public partial class EditorSaveSlots : Node
                     EnsureListSize(data.savedUnits, ExtraSave.MAX_SLOTS);
                     data.savedUnits[index] = saved;
                     if (terrainEditor != null)
-                        terrainEditor.spawnHintLabel.Text = $"✅ 单位已保存到槽位 {index + 1}";
+                        terrainEditor.spawnHintLabel.Text = $"✅ {TranslateGroup.T("单位已保存到槽位")} {index + 1}";
                 }
                 break;
             case "weapon":
@@ -74,7 +74,7 @@ public partial class EditorSaveSlots : Node
                     EnsureListSize(data.savedWeapons, ExtraSave.MAX_SLOTS);
                     data.savedWeapons[index] = saved;
                     if (terrainEditor != null)
-                        terrainEditor.spawnHintLabel.Text = $"✅ 兵器已保存到槽位 {index + 1}";
+                        terrainEditor.spawnHintLabel.Text = $"✅ {TranslateGroup.T("兵器已保存到槽位")} {index + 1}";
                 }
                 break;
             case "facility":
@@ -84,7 +84,7 @@ public partial class EditorSaveSlots : Node
                     EnsureListSize(data.savedFacilities, ExtraSave.MAX_SLOTS);
                     data.savedFacilities[index] = saved;
                     if (terrainEditor != null)
-                        terrainEditor.spawnHintLabel.Text = $"✅ 设施已保存到槽位 {index + 1}";
+                        terrainEditor.spawnHintLabel.Text = $"✅ {TranslateGroup.T("设施已保存到槽位")} {index + 1}";
                 }
                 break;
             case "grid":
@@ -93,7 +93,7 @@ public partial class EditorSaveSlots : Node
                     EnsureListSize(data.savedGridTerrains, ExtraSave.MAX_SLOTS);
                     data.savedGridTerrains[index] = saved;
                     if (terrainEditor != null)
-                        terrainEditor.spawnHintLabel.Text = $"✅ 地形已保存到槽位 {index + 1}";
+                        terrainEditor.spawnHintLabel.Text = $"✅ {TranslateGroup.T("地形已保存到槽位")} {index + 1}";
                 }
                 break;
         }
@@ -110,7 +110,7 @@ public partial class EditorSaveSlots : Node
         pendingLoadType = type;
         var typeName = type switch { "unit" => TranslateGroup.T("单位"), "weapon" => TranslateGroup.T("兵器"), "facility" => TranslateGroup.T("设施"), "grid" => TranslateGroup.T("地形"), _ => type };
         if (terrainEditor != null)
-            terrainEditor.spawnHintLabel.Text = $"📂 请点击地图上的格子来加载{typeName}到槽位 {index + 1}";
+            terrainEditor.spawnHintLabel.Text = $"📂 {TranslateGroup.T("请点击地图上的格子来加载")}{typeName}{TranslateGroup.T("到槽位")} {index + 1}";
     }
 
     public void OnGridClickedForLoad(Grids grid)
@@ -145,7 +145,7 @@ public partial class EditorSaveSlots : Node
         extraSave.SaveAllData();
         EmitSignal(SignalName.SlotDataChanged, type);
         if (terrainEditor != null)
-            terrainEditor.spawnHintLabel.Text = $"✅ 已加载到地图";
+            terrainEditor.spawnHintLabel.Text = $"✅ {TranslateGroup.T("已加载到地图")}";
     }
 
     // ========== 地图保存/加载（public，供CustomConfigUI调用） ==========
