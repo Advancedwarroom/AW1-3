@@ -109,9 +109,10 @@ public partial class CustomConfigUI : Control
 
     private void CreateMainPanel()
     {
+        var viewportSize = GetViewport().GetVisibleRect().Size;
         mainPanel = new Panel();
         mainPanel.Name = "CustomConfigPanel";
-        mainPanel.CustomMinimumSize = new Vector2(500, 700);
+        mainPanel.CustomMinimumSize = new Vector2(500, Mathf.Min(700, viewportSize.Y * 0.85f));
         mainPanel.SetAnchorsPreset(LayoutPreset.Center);
         mainPanel.ZIndex = 1500;
 
@@ -167,7 +168,7 @@ public partial class CustomConfigUI : Control
         // Tab容器
         tabContainer = new TabContainer();
         tabContainer.Position = new Vector2(10, 85);
-        tabContainer.Size = new Vector2(480, 600);
+        tabContainer.Size = new Vector2(480, mainPanel.CustomMinimumSize.Y - 95);
         mainPanel.AddChild(tabContainer);
     }
 
@@ -927,11 +928,23 @@ public partial class CustomConfigUI : Control
         permStatus.AddThemeColorOverride("font_color", ExtraSave.HasGalleryPermission() ? new Color(0.3f, 1, 0.3f) : new Color(1, 0.3f, 0.3f));
         container.AddChild(permStatus);
 
+        // ✅ 剪贴板备用方案（手机权限问题时的替代）
+        var clipboardBtn = new Button();
+        TranslateGroup.SetText(clipboardBtn, "📋 从剪贴板粘贴图片");
+        clipboardBtn.CustomMinimumSize = new Vector2(0, 40);
+        clipboardBtn.AddThemeFontSizeOverride("font_size", 13);
+        var cbStyle = new StyleBoxFlat();
+        cbStyle.BgColor = new Color(0.4f, 0.5f, 0.3f, 0.9f);
+        cbStyle.SetCornerRadiusAll(8);
+        clipboardBtn.AddThemeStyleboxOverride("normal", cbStyle);
+        clipboardBtn.Pressed += ShowClipboardCategoryDialog;
+        container.AddChild(clipboardBtn);
+
         container.AddChild(new HSeparator());
 
         // 上传说明
         var infoLabel = new Label();
-        TranslateGroup.SetText(infoLabel, "📋 上传要求:\n• 尺寸: 32×32 像素\n• 格式: PNG / JPG / GIF\n• 非标准尺寸将被拒绝");
+        TranslateGroup.SetText(infoLabel, "📋 上传要求:\n• 尺寸: 32×32 像素\n• 格式: PNG / JPG / GIF\n• 非标准尺寸将被拒绝\n• 权限问题请用剪贴板粘贴");
         infoLabel.AddThemeFontSizeOverride("font_size", 12);
         infoLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
         container.AddChild(infoLabel);
@@ -1026,9 +1039,24 @@ public partial class CustomConfigUI : Control
 
     private void ShowTextureUploadDialog(string category)
     {
+        // ✅ 权限预检：如果没有权限，先请求并延迟打开
         if (!ExtraSave.HasGalleryPermission())
         {
-            ShowToast(TranslateGroup.T("请先请求相册访问权限"));
+            ExtraSave.RequestGalleryPermission();
+            ShowToast(TranslateGroup.T("权限请求已发送，请允许后重试，或使用剪贴板粘贴"));
+            // 延迟1秒后自动重试
+            var timer = new Timer();
+            timer.WaitTime = 1.0f;
+            timer.OneShot = true;
+            timer.Timeout += () => {
+                if (ExtraSave.HasGalleryPermission())
+                {
+                    ShowTextureUploadDialog(category);
+                }
+                timer.QueueFree();
+            };
+            AddChild(timer);
+            timer.Start();
             return;
         }
 
@@ -2383,7 +2411,348 @@ private string GetEditorSlotType(string category)
     }
 
     // 占位方法
-    private void ShowEditMoveTypeDialog(string id) { }
-    private void ShowBuiltInMoveTypeCosts(string id) { }
+    private void ShowEditMoveTypeDialog(string moveTypeId)
+    {
+        if (extraSave?.CustomMoveTypes == null || !extraSave.CustomMoveTypes.ContainsKey(moveTypeId))
+            return;
+
+        var customMove = extraSave.CustomMoveTypes[moveTypeId];
+
+        var dialog = new Panel();
+        dialog.CustomMinimumSize = new Vector2(400, 500);
+        dialog.SetAnchorsPreset(LayoutPreset.Center);
+        dialog.ZIndex = 1600;
+
+        var style = new StyleBoxFlat();
+        style.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.98f);
+        style.SetCornerRadiusAll(12);
+        style.SetBorderWidthAll(2);
+        style.BorderColor = new Color(0.4f, 0.7f, 0.9f);
+        dialog.AddThemeStyleboxOverride("panel", style);
+
+        var vbox = new VBoxContainer();
+        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.AddThemeConstantOverride("margin_left", 15);
+        vbox.AddThemeConstantOverride("margin_right", 15);
+        vbox.AddThemeConstantOverride("margin_top", 15);
+        vbox.AddThemeConstantOverride("margin_bottom", 15);
+        vbox.AddThemeConstantOverride("separation", 10);
+
+        var title = new Label();
+        title.Text = $"✏️ {TranslateGroup.T("编辑")} {customMove.displayName}";
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 18);
+        title.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+        vbox.AddChild(title);
+
+        var nameHBox = new HBoxContainer();
+        nameHBox.AddThemeConstantOverride("separation", 8);
+        var nameLabel = new Label();
+        TranslateGroup.SetText(nameLabel, "显示名称:");
+        nameLabel.CustomMinimumSize = new Vector2(80, 28);
+        nameHBox.AddChild(nameLabel);
+        var nameEdit = new LineEdit();
+        nameEdit.Text = customMove.displayName;
+        nameEdit.CustomMinimumSize = new Vector2(200, 28);
+        nameHBox.AddChild(nameEdit);
+        vbox.AddChild(nameHBox);
+
+        var costLabel = new Label();
+        TranslateGroup.SetText(costLabel, "=== 地形移动消耗配置 ===");
+        costLabel.AddThemeFontSizeOverride("font_size", 14);
+        costLabel.AddThemeColorOverride("font_color", Colors.Yellow);
+        vbox.AddChild(costLabel);
+
+        var hintLabel = new Label();
+        TranslateGroup.SetText(hintLabel, "未配置 = 999 (不可移动)");
+        hintLabel.AddThemeFontSizeOverride("font_size", 10);
+        hintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
+        vbox.AddChild(hintLabel);
+
+        var costScroll = new ScrollContainer();
+        costScroll.CustomMinimumSize = new Vector2(0, 250);
+
+        var costContainer = new VBoxContainer();
+        costContainer.Name = "EditCostContainer";
+        costContainer.AddThemeConstantOverride("separation", 4);
+
+        foreach (var terrain in ExtraSave.BuiltInTerrainTypes)
+        {
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 8);
+
+            var tLabel = new Label();
+            tLabel.Text = terrain;
+            tLabel.CustomMinimumSize = new Vector2(120, 24);
+            tLabel.AddThemeFontSizeOverride("font_size", 11);
+            row.AddChild(tLabel);
+
+            var spinBox = new SpinBox();
+            spinBox.Name = $"Cost_{terrain}";
+            spinBox.MinValue = 0;
+            spinBox.MaxValue = 999;
+            int cost = customMove.moveCosts.GetValueOrDefault(terrain, 999);
+            spinBox.Value = cost;
+            spinBox.CustomMinimumSize = new Vector2(80, 24);
+            spinBox.AddThemeFontSizeOverride("font_size", 11);
+            row.AddChild(spinBox);
+
+            costContainer.AddChild(row);
+        }
+
+        costScroll.AddChild(costContainer);
+        vbox.AddChild(costScroll);
+
+        var btnHBox = new HBoxContainer();
+        btnHBox.AddThemeConstantOverride("separation", 10);
+
+        var confirmBtn = new Button();
+        TranslateGroup.SetText(confirmBtn, "✅ 确认修改");
+        confirmBtn.CustomMinimumSize = new Vector2(120, 36);
+        confirmBtn.Pressed += () => {
+            var costs = new Dictionary<string, int>();
+            foreach (var child in costContainer.GetChildren())
+            {
+                if (child is HBoxContainer row)
+                {
+                    var spinBox = row.GetChildren().OfType<SpinBox>().FirstOrDefault();
+                    if (spinBox != null)
+                    {
+                        string terrainId = spinBox.Name.ToString().Replace("Cost_", "");
+                        costs[terrainId] = (int)spinBox.Value;
+                    }
+                }
+            }
+            extraSave?.AddCustomMoveType(moveTypeId, nameEdit.Text.Trim(), costs);
+            dialog.QueueFree();
+            RefreshCustomMoveTypeList();
+            ShowToast(TranslateGroup.T("自定义移动方式已更新！"));
+        };
+        btnHBox.AddChild(confirmBtn);
+
+        var cancelBtn = new Button();
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
+        cancelBtn.CustomMinimumSize = new Vector2(120, 36);
+        cancelBtn.Pressed += () => dialog.QueueFree();
+        btnHBox.AddChild(cancelBtn);
+
+        vbox.AddChild(btnHBox);
+        dialog.AddChild(vbox);
+        AddChild(dialog);
+        MakeMenuDraggable(dialog);
+    }
+    private void ShowBuiltInMoveTypeCosts(string moveTypeId)
+    {
+        var dialog = new Panel();
+        dialog.CustomMinimumSize = new Vector2(400, 500);
+        dialog.SetAnchorsPreset(LayoutPreset.Center);
+        dialog.ZIndex = 1600;
+
+        var style = new StyleBoxFlat();
+        style.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.98f);
+        style.SetCornerRadiusAll(12);
+        style.SetBorderWidthAll(2);
+        style.BorderColor = new Color(0.4f, 0.7f, 0.9f);
+        dialog.AddThemeStyleboxOverride("panel", style);
+
+        var vbox = new VBoxContainer();
+        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.AddThemeConstantOverride("margin_left", 15);
+        vbox.AddThemeConstantOverride("margin_right", 15);
+        vbox.AddThemeConstantOverride("margin_top", 15);
+        vbox.AddThemeConstantOverride("margin_bottom", 15);
+        vbox.AddThemeConstantOverride("separation", 10);
+
+        var title = new Label();
+        title.Text = $"📊 {moveTypeId} - {TranslateGroup.T("移动消耗")}";
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 18);
+        title.AddThemeColorOverride("font_color", Colors.Yellow);
+        vbox.AddChild(title);
+
+        var hint = new Label();
+        TranslateGroup.SetText(hint, "内置移动方式的消耗由游戏逻辑决定");
+        hint.AddThemeFontSizeOverride("font_size", 11);
+        hint.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
+        vbox.AddChild(hint);
+
+        var scroll = new ScrollContainer();
+        scroll.CustomMinimumSize = new Vector2(0, 300);
+
+        var costContainer = new VBoxContainer();
+        costContainer.AddThemeConstantOverride("separation", 4);
+
+        foreach (var terrain in ExtraSave.BuiltInTerrainTypes)
+        {
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 8);
+
+            var tLabel = new Label();
+            tLabel.Text = terrain;
+            tLabel.CustomMinimumSize = new Vector2(150, 24);
+            tLabel.AddThemeFontSizeOverride("font_size", 11);
+            row.AddChild(tLabel);
+
+            var costLabel = new Label();
+            int cost = extraSave?.GetMoveCost(moveTypeId, terrain) ?? -1;
+            if (cost < 0)
+                costLabel.Text = TranslateGroup.T("内置逻辑");
+            else
+                costLabel.Text = cost == 999 ? "∞ (不可移动)" : cost.ToString();
+            costLabel.AddThemeFontSizeOverride("font_size", 11);
+            costLabel.AddThemeColorOverride("font_color", cost < 0 ? Colors.Gray : (cost == 999 ? Colors.Red : Colors.Green));
+            row.AddChild(costLabel);
+
+            costContainer.AddChild(row);
+        }
+
+        scroll.AddChild(costContainer);
+        vbox.AddChild(scroll);
+
+        var createBtn = new Button();
+        TranslateGroup.SetText(createBtn, "➕ 基于此创建自定义移动方式");
+        createBtn.CustomMinimumSize = new Vector2(0, 40);
+        createBtn.Pressed += () => {
+            dialog.QueueFree();
+            ShowNewMoveTypeDialogBasedOn(moveTypeId);
+        };
+        vbox.AddChild(createBtn);
+
+        var closeBtn = new Button();
+        TranslateGroup.SetText(closeBtn, "❌ 关闭");
+        closeBtn.Pressed += () => dialog.QueueFree();
+        vbox.AddChild(closeBtn);
+
+        dialog.AddChild(vbox);
+        AddChild(dialog);
+        MakeMenuDraggable(dialog);
+    }
+
+    private void ShowNewMoveTypeDialogBasedOn(string baseMoveTypeId)
+    {
+        ShowNewMoveTypeDialog();
+        CallDeferred(nameof(SetNewMoveTypeIdHint), baseMoveTypeId);
+    }
+
+    private void SetNewMoveTypeIdHint(string baseId)
+    {
+        GD.Print($"基于 {baseId} 创建自定义移动方式");
+    }
     private void ShowEditTerrainTypeDialog(string id) { }
+
+    // ==================== 剪贴板贴图粘贴 ====================
+
+    private void ShowClipboardCategoryDialog()
+    {
+        var dialog = new Panel();
+        dialog.CustomMinimumSize = new Vector2(350, 320);
+        dialog.SetAnchorsPreset(LayoutPreset.Center);
+        dialog.ZIndex = 1600;
+
+        var style = new StyleBoxFlat();
+        style.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.98f);
+        style.SetCornerRadiusAll(12);
+        style.SetBorderWidthAll(2);
+        style.BorderColor = new Color(0.4f, 0.7f, 0.9f);
+        dialog.AddThemeStyleboxOverride("panel", style);
+
+        var vbox = new VBoxContainer();
+        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.AddThemeConstantOverride("margin_left", 15);
+        vbox.AddThemeConstantOverride("margin_right", 15);
+        vbox.AddThemeConstantOverride("margin_top", 15);
+        vbox.AddThemeConstantOverride("margin_bottom", 15);
+        vbox.AddThemeConstantOverride("separation", 10);
+
+        var title = new Label();
+        TranslateGroup.SetText(title, "📋 选择粘贴分类");
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeFontSizeOverride("font_size", 16);
+        title.AddThemeColorOverride("font_color", Colors.Yellow);
+        vbox.AddChild(title);
+
+        var hint = new Label();
+        TranslateGroup.SetText(hint, "请选择剪贴板图片要保存到的分类");
+        hint.AddThemeFontSizeOverride("font_size", 11);
+        hint.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
+        vbox.AddChild(hint);
+
+        var categories = new[] { TranslateGroup.T("单位"), TranslateGroup.T("兵器"), TranslateGroup.T("设施"), TranslateGroup.T("地形"), TranslateGroup.T("移动方式") };
+        foreach (var cat in categories)
+        {
+            var btn = new Button();
+            btn.Text = $"🎨 {cat}";
+            btn.CustomMinimumSize = new Vector2(0, 36);
+            btn.AddThemeFontSizeOverride("font_size", 12);
+            btn.Pressed += () => {
+                dialog.QueueFree();
+                PasteTextureFromClipboard(cat);
+            };
+            vbox.AddChild(btn);
+        }
+
+        var cancelBtn = new Button();
+        TranslateGroup.SetText(cancelBtn, "❌ 取消");
+        cancelBtn.CustomMinimumSize = new Vector2(0, 36);
+        cancelBtn.AddThemeFontSizeOverride("font_size", 12);
+        cancelBtn.Pressed += () => dialog.QueueFree();
+        vbox.AddChild(cancelBtn);
+
+        dialog.AddChild(vbox);
+        AddChild(dialog);
+        MakeMenuDraggable(dialog);
+    }
+
+    private void PasteTextureFromClipboard(string category)
+    {
+        try
+        {
+            var image = DisplayServer.ClipboardGetImage();
+            if (image == null || image.IsEmpty())
+            {
+                ShowToast(TranslateGroup.T("❌ 剪贴板中没有图片，请先复制图片"));
+                return;
+            }
+
+            int w = image.GetWidth();
+            int h = image.GetHeight();
+            if (w != h)
+            {
+                ShowToast($"❌ {TranslateGroup.T("尺寸")} {w}×{h} {TranslateGroup.T("不是正方形！")}\n{TranslateGroup.T("请裁剪为正方形后重新复制")}");
+                return;
+            }
+            if (w != 32 || h != 32)
+            {
+                image.Resize(32, 32, Image.Interpolation.Lanczos);
+                ShowToast($"⚠️ {TranslateGroup.T("尺寸")} {w}×{h} {TranslateGroup.T("非标准，已自动")}resize{TranslateGroup.T("到")} 32×32");
+            }
+
+            string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"clipboard_{Guid.NewGuid()}.png");
+            image.SavePng(tempPath);
+
+            string savedPath = extraSave?.ProcessUploadedTexture(tempPath, category, $"clipboard_{DateTime.Now:yyyyMMddHHmmss}");
+            if (!string.IsNullOrEmpty(savedPath) && !savedPath.StartsWith("ERROR"))
+            {
+                ShowToast($"✅ {TranslateGroup.T("剪贴板贴图保存成功！")}\n{System.IO.Path.GetFileName(savedPath)}");
+                RefreshUploadedTextureList();
+                RefreshApplyTextureList();
+            }
+            else
+            {
+                string errorMsg = savedPath switch
+                {
+                    "ERROR_NOT_SQUARE" => TranslateGroup.T("❌ 贴图不是正方形，请裁剪后重新复制"),
+                    "ERROR_TOO_SMALL" => TranslateGroup.T("❌ 贴图尺寸过小，无法resize"),
+                    "ERROR_LOAD_FAILED" => TranslateGroup.T("❌ 贴图加载失败"),
+                    _ => TranslateGroup.T("❌ 贴图保存失败")
+                };
+                ShowToast(errorMsg);
+            }
+        }
+        catch (Exception e)
+        {
+            GD.PrintErr($"[CustomConfigUI] {TranslateGroup.T("剪贴板粘贴异常")}: {e.Message}");
+            ShowToast(TranslateGroup.T("❌ 剪贴板读取失败，可能当前平台不支持"));
+        }
+    }
 }

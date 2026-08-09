@@ -167,15 +167,22 @@ public partial class MapEditorHelper : Node
 
         helperPanel = new Panel();
         helperPanel.Name = "HelperPanel";
-        helperPanel.CustomMinimumSize = new Vector2(300, 580);
+        var vpSize = GetViewport().GetVisibleRect().Size;
+        helperPanel.CustomMinimumSize = new Vector2(300, Mathf.Min(580, vpSize.Y * 0.8f));
         helperPanel.Visible = false;
         helperPanel.MouseFilter = Control.MouseFilterEnum.Pass;
         AddChild(helperPanel);
 
+        var scroll = new ScrollContainer();
+        scroll.Name = "HelperScroll";
+        scroll.SetAnchorsPreset(LayoutPreset.FullRect);
+        helperPanel.AddChild(scroll);
+
         var vbox = new VBoxContainer();
         vbox.Name = "HelperVBox";
         vbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        helperPanel.AddChild(vbox);
+        vbox.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        scroll.AddChild(vbox);
 
         var titleBar = new HBoxContainer();
         titleBar.Name = "TitleBar";
