@@ -795,6 +795,8 @@ public virtual bool ConsumePrimaryAmmo()
     public bool isAttacked;
     public Label hpLabel;
     public Sprite2D sprite;
+    [Export] public AnimatedSprite2D animSprite;   // ✅ 供子类使用（AnimatedSprite2D模式）
+    [Export] public Sprite2D idleSprite;            // ✅ 供子类使用（静态贴图）
 
     public  Color normal = Colors.White;
     public  Color dim = new Color(0.7f, 0.7f, 0.7f, 1.0f);
@@ -816,6 +818,16 @@ public override void _Ready()
         if (sprite == null)
             sprite = GetChildOrNull<Sprite2D>(0);
     }
+
+    // ✅ 动画组件自动获取（子类不再需要重复写）
+    if (animSprite == null)
+        animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
+    if (animSprite == null)
+        animSprite = GetNodeOrNull<AnimatedSprite2D>("Base2D");
+    if (idleSprite == null)
+        idleSprite = GetNodeOrNull<Sprite2D>("Sprite2D");
+    if (idleSprite == null)
+        idleSprite = GetNodeOrNull<Sprite2D>("BaseSprite");
 
     actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
     hpLabel = GetNodeOrNull<Label>("HpLabel");
@@ -883,15 +895,26 @@ public override void _Ready()
     // 初始化攻防表
     InitializeDefaultMatrix();
 
-    // === 子类差异化配置入口 ===
+    // === 从 UnitRegistry 读取配置（优先）===
+    ApplyUnitRegistryConfig();
+    // === 子类差异化配置入口（覆盖 UnitRegistry）===
     ApplyUnitSpecificDefaults();
     // 修复：子类可能修改了 defaultMovePoints，需要同步到 movePoints
     movePoints = defaultMovePoints;
 
     UpdateTeamVisual();
     UpdateHpLabel();
-    if (sprite != null && IsInstanceValid(sprite))
+    // ✅ 动画单位优先用 animSprite 初始化，回退到 sprite
+    if (animSprite != null && IsInstanceValid(animSprite))
+    {
+        string animName = GetIdleAnimName();
+        ShowAnimState(animName);
         StartBreath();
+    }
+    else if (sprite != null && IsInstanceValid(sprite))
+    {
+        StartBreath();
+    }
 
         // ========== ✅ 战争迷雾视野初始化 ==========
         if (visionRange < 0 && useConfigVision)
@@ -921,6 +944,91 @@ public override void _Ready()
 
 // ========== 子类覆盖：单位特有默认值 ==========
 public virtual void ApplyUnitSpecificDefaults() { }
+
+// ✅ 从 UnitRegistry 读取兵种配置
+protected virtual void ApplyUnitRegistryConfig()
+{
+    string unitId = this.GetType().Name;
+    var config = UnitRegistry.Get(unitId);
+    if (config == null) return;
+
+    // 基础属性
+    if (config.MoveType != default) moveType = config.MoveType;
+    if (config.MovePoints > 0) defaultMovePoints = config.MovePoints;
+    if (config.Cost > 0) cost = config.Cost;
+    if (!string.IsNullOrEmpty(config.DisplayName) && string.IsNullOrEmpty(Name))
+        Name = config.DisplayName;
+
+    // 武器 - 主
+    hasPrimaryWeapon = config.HasPrimaryWeapon;
+    if (config.HasPrimaryWeapon)
+    {
+        maxPrimaryAmmo = config.MaxPrimaryAmmo;
+        primaryHasLimitedAmmo = config.PrimaryHasLimitedAmmo;
+        if (currentPrimaryAmmo <= 0) currentPrimaryAmmo = maxPrimaryAmmo;
+        primaryAntiArmor = config.PrimaryAntiArmor;
+        primaryAntiInfantry = config.PrimaryAntiInfantry;
+    }
+    if (config.BaseAttack > 0) baseAttack = config.BaseAttack;
+
+    // 武器 - 副
+    hasSecondaryWeapon = config.HasSecondaryWeapon;
+    if (config.HasSecondaryWeapon && config.SecondaryAttack > 0)
+        secondaryAttack = config.SecondaryAttack;
+    secondaryAntiArmor = config.SecondaryAntiArmor;
+    secondaryAntiInfantry = config.SecondaryAntiInfantry;
+
+    // 射程
+    if (config.UseMinMaxAttackRange)
+    {
+        useMinMaxAttackRange = true;
+        minAttackRange = config.MinAttackRange;
+        maxAttackRange = config.MaxAttackRange;
+        attackRange = maxAttackRange;
+    }
+    canAttackAfterMoving = config.CanAttackAfterMoving;
+    cannotCounterWhenAttacked = config.CannotCounterWhenAttacked;
+    canCounterWhenDefending = config.CanCounterWhenDefending;
+    canCounterAtRange = config.CanCounterAtRange;
+
+    // 燃料
+    if (config.MaxFuel != 99) maxFuel = config.MaxFuel;
+    consumeFuel = config.ConsumeFuel;
+    if (config.DailyFuelConsumption > 0) dailyFuelConsumption = config.DailyFuelConsumption;
+    destroyOnOutOfFuel = config.DestroyOnOutOfFuel;
+    if (config.LowFuelThreshold != 15) lowFuelThreshold = config.LowFuelThreshold;
+
+    // 防御
+    if (config.BaseDefense > 0) baseDefense = config.BaseDefense;
+    if (config.CounterMul != 0.5f) counterMul = config.CounterMul;
+
+    // 占领
+    captureAbility = config.CaptureAbility;
+    if (config.CapturePower > 0) capturePower = config.CapturePower;
+
+    // 特殊能力
+    canDevour = config.CanDevour;
+    if (config.CanIlluminate) canIlluminate = true;
+
+    // 重叠规则
+    overlapType = config.OverlapType;
+    attackType = config.AttackType;
+    isArmoredUnit = config.IsArmoredUnit;
+    IsAirUnit = config.IsAirUnit;
+
+    // 搭载
+    if (config.CanTransportUnits)
+    {
+        canTransportUnits = true;
+        canSupplyUnits = config.CanSupplyUnits;
+        maxTransportCapacity = config.MaxTransportCapacity;
+        if (config.TransportUnitTypes != null && config.TransportUnitTypes.Length > 0)
+            canTransportUnitTypes = new Godot.Collections.Array<string>(config.TransportUnitTypes);
+    }
+
+    // 视野
+    if (config.VisionRange >= 0) visionRange = config.VisionRange;
+}
 
 // ========== 子类覆盖：动画名称映射 ==========
 protected virtual string GetIdleAnimName() => null;
@@ -979,18 +1087,29 @@ public virtual void UpdateTeamVisual()
 
 public override void _Process(double delta)
 {
-    
+    // ✅ noFuelIcon 闪烁（从子类抽到基类统一处理）
+    if (noFuelIcon != null)
+    {
+        if (!consumeFuel)
+            noFuelIcon.Visible = false;
+        else if (fuel <= 0)
+            noFuelIcon.Visible = true;
+        else if (fuel <= lowFuelThreshold)
+            noFuelIcon.Visible = (Time.GetTicksMsec() / 500) % 2 == 0;
+        else
+            noFuelIcon.Visible = false;
+    }
 
-
+    // noAmmoIcon 闪烁
     if (noAmmoIcon != null)
     {
-        if (!hasPrimaryWeapon) 
+        if (!hasPrimaryWeapon)
             noAmmoIcon.Visible = false;
-        else if (!CanUsePrimaryWeapon()) 
+        else if (!CanUsePrimaryWeapon())
             noAmmoIcon.Visible = true;
-        else if (currentPrimaryAmmo <= 3) 
+        else if (currentPrimaryAmmo <= 3)
             noAmmoIcon.Visible = (Time.GetTicksMsec() / 500) % 2 == 0;
-        else 
+        else
             noAmmoIcon.Visible = false;
     }
 }
@@ -1739,7 +1858,14 @@ public void StartBreath()
         return;
 
     breathTween?.Kill();
-    sprite.Scale = Vector2.One;
+
+    // ✅ 支持 animSprite 和 sprite 两种模式
+    Node target = animSprite != null && IsInstanceValid(animSprite) ? animSprite : sprite;
+    if (target == null || !IsInstanceValid(target))
+        return;
+
+    if (target is Node2D node2d)
+        node2d.Scale = Vector2.One;
 
     breathTween = CreateTween();
     if (breathTween == null) return;
@@ -1747,9 +1873,9 @@ public void StartBreath()
     breathTween.SetLoops();
     breathTween.SetProcessMode(Tween.TweenProcessMode.Idle);
 
-    breathTween.TweenProperty(sprite, "scale", Vector2.One * 1.05f, 1.2f)
+    breathTween.TweenProperty(target, "scale", Vector2.One * 1.05f, 1.2f)
                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-    breathTween.TweenProperty(sprite, "scale", Vector2.One, 1.2f)
+    breathTween.TweenProperty(target, "scale", Vector2.One, 1.2f)
                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 }
 
@@ -1761,7 +1887,9 @@ public void StopBreath()
         return;
 
     breathTween?.Kill();
-    sprite.Scale = Vector2.One;
+    Node target = animSprite != null && IsInstanceValid(animSprite) ? animSprite : sprite;
+    if (target is Node2D node2d)
+        node2d.Scale = Vector2.One;
 }
 
 public virtual void UpdateHpLabel()
@@ -1955,7 +2083,7 @@ public virtual void SetWaitVisual(bool waiting)
         originalGrid = null;
         
         // 视觉变暗（但可能用不同颜色表示占领中？）
-        SetWaitVisual(true);
+        FreezeToIdleDark();
     }
 
 protected virtual void ShowCaptureEffect()
@@ -2013,6 +2141,9 @@ protected virtual void ShowCaptureCompleteEffect()
     }
 public virtual void OnMoveSelected()
 {
+    if (consumeFuel && fuel <= 0) return;
+    EnsureGridBound();
+    ShowAnimState("move");
     StopBreath();
     var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     if (gm == null)
@@ -2027,6 +2158,110 @@ public virtual void OnMoveSelected()
     
     gm.gridManager.ShowMoveRange(this);
 }
+
+    // ========== ✅ 通用视觉方法（从子类抽到基类）==========
+    public virtual void ShowAnimState(string animName)
+    {
+        if (animSprite != null)
+        {
+            if (idleSprite != null) idleSprite.Hide();
+            animSprite.Show();
+            animSprite.Modulate = normal;
+            string actualAnim = animName;
+            if (animSprite.SpriteFrames != null && !animSprite.SpriteFrames.HasAnimation(actualAnim))
+                actualAnim = GetIdleAnimName();
+            if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation(actualAnim))
+                animSprite.Play(actualAnim);
+        }
+        else if (sprite != null)
+        {
+            sprite.Modulate = normal;
+        }
+    }
+
+    public virtual void ShowIdleState()
+    {
+        if (animSprite != null)
+        {
+            if (idleSprite != null) idleSprite.Hide();
+            animSprite.Show();
+            string idleAnimName = GetIdleAnimName();
+            if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation(idleAnimName))
+                animSprite.Animation = idleAnimName;
+            else if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation("idle"))
+                animSprite.Animation = "idle";
+            animSprite.Frame = 0;
+            animSprite.Stop();
+            animSprite.Modulate = dim;
+        }
+        else if (sprite != null)
+        {
+            sprite.Modulate = dim;
+        }
+    }
+
+    public virtual void FreezeToIdleDark()
+    {
+        StopBreath();
+        if (animSprite != null)
+        {
+            if (idleSprite != null) idleSprite.Hide();
+            animSprite.Show();
+            string idleAnimName = GetIdleAnimName();
+            if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation(idleAnimName))
+                animSprite.Animation = idleAnimName;
+            else if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation("idle"))
+                animSprite.Animation = "idle";
+            animSprite.Frame = 0;
+            animSprite.Stop();
+            animSprite.Modulate = dim;
+        }
+        else if (sprite != null)
+        {
+            sprite.Modulate = dim;
+        }
+    }
+
+    public virtual void RestoreAnimAndBreath()
+    {
+        string animName = GetIdleAnimName();
+        ShowAnimState(animName);
+        StartBreath();
+    }
+
+    public virtual void EnsureGridBound()
+    {
+        if (grid != null && IsInstanceValid(grid))
+        {
+            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            if (gm?.unitManager != null)
+            {
+                var expectedPos = gm.unitManager.GridToWorld(grid.GridIndex);
+                if (Position.DistanceTo(expectedPos) > 1) Position = expectedPos;
+            }
+            return;
+        }
+        var gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gameManager?.unitManager != null)
+        {
+            bool bound = gameManager.unitManager.BindUnitToGrid(this, true);
+            if (!bound || grid == null)
+            {
+                var gridPos = gameManager.unitManager.WorldToGrid(Position);
+                if (gameManager.unitManager.IsValidGrid(gridPos))
+                {
+                    var targetGrid = gameManager.gridManager.map[gridPos.X, gridPos.Y];
+                    if (targetGrid != null)
+                    {
+                        grid = targetGrid;
+                        if (!targetGrid.infantries.Contains(this)) targetGrid.infantries.Add(this);
+                        if (targetGrid.infantry == null) targetGrid.infantry = this;
+                        Position = targetGrid.Position;
+                    }
+                }
+            }
+        }
+    }
 
     public virtual void OnAttackSelected()
     {
@@ -2043,12 +2278,11 @@ public virtual void OnMoveSelected()
             return;
         }
 
+        EnsureGridBound();
+        ShowAnimState("attack");
         StopBreath();
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.gridManager.ShowAttackRange(this);
-
-        if (sprite != null)
-            sprite.Modulate = new Color(0.7f, 0.7f, 0.7f, 1.0f);
     }
     
 // Infantry.cs - 修改 AttackTarget 方法
@@ -2090,7 +2324,7 @@ public void AttackTarget(Node target)
         weapon.TakeDamage(damage);
 
         state = UnitState.Acted;
-        SetWaitVisual(true);
+        FreezeToIdleDark();
 
         // 清理UI
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -2128,12 +2362,21 @@ public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weapon
         StopBreath();
         isMoved = true;
         isAttacked = true;
+        state = UnitState.Acted;
         movePoints = defaultMovePoints;
-        SetWaitVisual(true);
+        FreezeToIdleDark();
+        originalGrid = null;
+    {
+        StopBreath();
+        isMoved = true;
+        isAttacked = true;
+        movePoints = defaultMovePoints;
+        FreezeToIdleDark();
         originalGrid = null;
 
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.ClearSelectedInfantry();
+    }
     }
 
     // ✅ 修改 InputClick - 移动后点击任何单位都触发回退
