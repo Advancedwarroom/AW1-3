@@ -28,6 +28,10 @@ public partial class CustomConfigUI : Control
     private VBoxContainer textureUploadPanel;
     private VBoxContainer saveSlotPanel;
 
+    // ✅ 贴图Tab的控件引用（避免运行时查找失败）
+    private OptionButton applyTextureSelect;
+    private OptionButton targetTypeSelect;
+
     public override void _Ready()
     {
         AddToGroup("custom_config_ui");
@@ -112,7 +116,11 @@ public partial class CustomConfigUI : Control
         var viewportSize = GetViewport().GetVisibleRect().Size;
         mainPanel = new Panel();
         mainPanel.Name = "CustomConfigPanel";
-        mainPanel.CustomMinimumSize = new Vector2(500, Mathf.Min(700, viewportSize.Y * 0.85f));
+
+        // ✅ 自适应屏幕：手机端缩小面板，确保不超出屏幕
+        float panelWidth = Mathf.Min(500, viewportSize.X * 0.95f);
+        float panelHeight = Mathf.Min(700, viewportSize.Y * 0.85f);
+        mainPanel.CustomMinimumSize = new Vector2(panelWidth, panelHeight);
         mainPanel.SetAnchorsPreset(LayoutPreset.Center);
         mainPanel.ZIndex = 1500;
 
@@ -128,7 +136,7 @@ public partial class CustomConfigUI : Control
         // ✅ 拖拽手柄
         var dragHandle = new Panel();
         dragHandle.Name = "DragHandle";
-        dragHandle.CustomMinimumSize = new Vector2(500, 35);
+        dragHandle.CustomMinimumSize = new Vector2(panelWidth, 35);
         dragHandle.Position = new Vector2(0, 0);
         var handleStyle = new StyleBoxFlat();
         handleStyle.BgColor = new Color(0.3f, 0.3f, 0.4f, 0.5f);
@@ -148,7 +156,7 @@ public partial class CustomConfigUI : Control
         // 标题栏
         var titleBar = new HBoxContainer();
         titleBar.Position = new Vector2(10, 40);
-        titleBar.Size = new Vector2(480, 40);
+        titleBar.Size = new Vector2(panelWidth - 20, 40);
 
         var title = new Label();
         TranslateGroup.SetText(title, "⚙️ 自定义配置中心");
@@ -168,7 +176,7 @@ public partial class CustomConfigUI : Control
         // Tab容器
         tabContainer = new TabContainer();
         tabContainer.Position = new Vector2(10, 85);
-        tabContainer.Size = new Vector2(480, mainPanel.CustomMinimumSize.Y - 95);
+        tabContainer.Size = new Vector2(panelWidth - 20, panelHeight - 95);
         mainPanel.AddChild(tabContainer);
     }
 
@@ -999,23 +1007,23 @@ public partial class CustomConfigUI : Control
         textureSelectLabel.CustomMinimumSize = new Vector2(80, 28);
         textureSelectHBox.AddChild(textureSelectLabel);
 
-        var textureOptionBtn = new OptionButton();
-        textureOptionBtn.Name = "ApplyTextureSelect";
-        textureOptionBtn.CustomMinimumSize = new Vector2(180, 28);
-        textureOptionBtn.AddThemeFontSizeOverride("font_size", 11);
-        textureSelectHBox.AddChild(textureOptionBtn);
+        applyTextureSelect = new OptionButton();
+        applyTextureSelect.Name = "ApplyTextureSelect";
+        applyTextureSelect.CustomMinimumSize = new Vector2(180, 28);
+        applyTextureSelect.AddThemeFontSizeOverride("font_size", 11);
+        textureSelectHBox.AddChild(applyTextureSelect);
 
         // 选择目标类型
-        var targetTypeOption = new OptionButton();
-        targetTypeOption.Name = "TargetTypeSelect";
-        targetTypeOption.AddItem(TranslateGroup.T("单位"), 0);
-        targetTypeOption.AddItem(TranslateGroup.T("兵器"), 1);
-        targetTypeOption.AddItem(TranslateGroup.T("设施"), 2);
-        targetTypeOption.AddItem(TranslateGroup.T("地形"), 3);
-        targetTypeOption.AddItem(TranslateGroup.T("移动方式"), 4);
-        targetTypeOption.CustomMinimumSize = new Vector2(100, 28);
-        targetTypeOption.AddThemeFontSizeOverride("font_size", 11);
-        textureSelectHBox.AddChild(targetTypeOption);
+        targetTypeSelect = new OptionButton();
+        targetTypeSelect.Name = "TargetTypeSelect";
+        targetTypeSelect.AddItem(TranslateGroup.T("单位"), 0);
+        targetTypeSelect.AddItem(TranslateGroup.T("兵器"), 1);
+        targetTypeSelect.AddItem(TranslateGroup.T("设施"), 2);
+        targetTypeSelect.AddItem(TranslateGroup.T("地形"), 3);
+        targetTypeSelect.AddItem(TranslateGroup.T("移动方式"), 4);
+        targetTypeSelect.CustomMinimumSize = new Vector2(100, 28);
+        targetTypeSelect.AddThemeFontSizeOverride("font_size", 11);
+        textureSelectHBox.AddChild(targetTypeSelect);
 
         container.AddChild(textureSelectHBox);
 
@@ -1037,29 +1045,36 @@ public partial class CustomConfigUI : Control
         return panel;
     }
 
+    // ✅ 移动端文件选择回调存储
+    private string _pendingTextureCategory = "";
+
     private void ShowTextureUploadDialog(string category)
     {
-        // ✅ 权限预检：如果没有权限，先请求并延迟打开
-        if (!ExtraSave.HasGalleryPermission())
+        // ✅ 移动端：使用系统原生文件对话框，避免 FileDialog 在手机上闪退
+        if (OS.GetName() == "Android" || OS.GetName() == "iOS")
         {
-            ExtraSave.RequestGalleryPermission();
-            ShowToast(TranslateGroup.T("权限请求已发送，请允许后重试，或使用剪贴板粘贴"));
-            // 延迟1秒后自动重试
-            var timer = new Timer();
-            timer.WaitTime = 1.0f;
-            timer.OneShot = true;
-            timer.Timeout += () => {
-                if (ExtraSave.HasGalleryPermission())
-                {
-                    ShowTextureUploadDialog(category);
-                }
-                timer.QueueFree();
-            };
-            AddChild(timer);
-            timer.Start();
+            _pendingTextureCategory = category;
+            if (!ExtraSave.HasGalleryPermission())
+            {
+                ExtraSave.RequestGalleryPermission();
+                ShowToast(TranslateGroup.T("权限请求已发送，请允许后重试"));
+                return;
+            }
+
+            var filters = new string[] { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp" };
+            DisplayServer.FileDialogShow(
+                $"{TranslateGroup.T("选择")}{category}{TranslateGroup.T("贴图")}",
+                OS.GetSystemDir(OS.SystemDir.Pictures),
+                "",
+                false,
+                DisplayServer.FileDialogMode.OpenFile,
+                filters,
+                new Callable(this, nameof(OnMobileTextureFileSelected))
+            );
             return;
         }
 
+        // ✅ 桌面端：使用 Godot FileDialog
         var dialog = new FileDialog();
         dialog.FileMode = FileDialog.FileModeEnum.OpenFile;
         dialog.Access = FileDialog.AccessEnum.Filesystem;
@@ -1069,14 +1084,31 @@ public partial class CustomConfigUI : Control
 
         dialog.FileSelected += (path) => {
             if (string.IsNullOrEmpty(path)) { dialog.QueueFree(); return; }
+            ProcessTextureUpload(path, category);
+            dialog.QueueFree();
+        };
 
+        dialog.Canceled += () => dialog.QueueFree();
+        AddChild(dialog);
+        dialog.PopupCentered();
+    }
+
+    private void OnMobileTextureFileSelected(bool status, string[] selectedPaths)
+    {
+        if (!status || selectedPaths == null || selectedPaths.Length == 0) return;
+        ProcessTextureUpload(selectedPaths[0], _pendingTextureCategory);
+    }
+
+    private void ProcessTextureUpload(string path, string category)
+    {
+        try
+        {
             // 验证尺寸
             var image = new Image();
             Error err = image.Load(path);
             if (err != Error.Ok)
             {
                 ShowToast(TranslateGroup.T("❌ 图片加载失败"));
-                dialog.QueueFree();
                 return;
             }
 
@@ -1085,17 +1117,14 @@ public partial class CustomConfigUI : Control
             if (w != h)
             {
                 ShowToast($"❌ {TranslateGroup.T("尺寸")} {w}×{h} {TranslateGroup.T("不是正方形！")}\n{TranslateGroup.T("请裁剪为正方形后重新上传")}");
-                dialog.QueueFree();
                 return;
             }
             if (w != 32 || h != 32)
             {
-                // ✅ 自动resize到32x32，不再直接return
                 image.Resize(32, 32, Image.Interpolation.Lanczos);
                 ShowToast($"⚠️ {TranslateGroup.T("尺寸")} {w}×{h} {TranslateGroup.T("非标准，已自动")}resize{TranslateGroup.T("到")} 32×32");
             }
 
-            // ✅ 先保存resize后的图片到临时路径，再传给ProcessUploadedTexture
             string tempPath = path;
             if (w != 32 || h != 32)
             {
@@ -1103,13 +1132,12 @@ public partial class CustomConfigUI : Control
                 image.SavePng(tempPath);
             }
 
-            // 保存
             string savedPath = extraSave?.ProcessUploadedTexture(tempPath, category, $"custom_{DateTime.Now:yyyyMMddHHmmss}");
             if (!string.IsNullOrEmpty(savedPath) && !savedPath.StartsWith("ERROR"))
             {
                 ShowToast($"✅ {TranslateGroup.T("贴图上传成功！")}\n{Path.GetFileName(savedPath)}");
                 RefreshUploadedTextureList();
-                RefreshApplyTextureList(); // ✅ 同时刷新应用列表
+                RefreshApplyTextureList();
             }
             else
             {
@@ -1122,12 +1150,12 @@ public partial class CustomConfigUI : Control
                 };
                 ShowToast(errorMsg);
             }
-            dialog.QueueFree();
-        };
-
-        dialog.Canceled += () => dialog.QueueFree();
-        AddChild(dialog);
-        dialog.PopupCentered();
+        }
+        catch (Exception e)
+        {
+            GD.PrintErr($"[CustomConfigUI] {TranslateGroup.T("贴图处理异常")}: {e.Message}");
+            ShowToast(TranslateGroup.T("❌ 贴图处理失败"));
+        }
     }
 
     private void ShowTextureApplyDialog(string category, string targetId)
@@ -2289,12 +2317,12 @@ private string GetEditorSlotType(string category)
     // ✅ 贴图应用模式
     private void StartTextureApplyMode()
     {
-        var textureOption = textureUploadPanel?.GetNodeOrNull<OptionButton>("ApplyTextureSelect");
-        var targetTypeOption = textureUploadPanel?.GetNodeOrNull<OptionButton>("TargetTypeSelect");
+        var textureOption = applyTextureSelect;
+        var targetTypeOption = this.targetTypeSelect;
 
-        if (textureOption == null || targetTypeOption == null) 
+        if (textureOption == null || targetTypeOption == null || !IsInstanceValid(textureOption) || !IsInstanceValid(targetTypeOption))
         {
-            ShowToast(TranslateGroup.T("❌ UI组件未初始化"));
+            ShowToast(TranslateGroup.T("❌ UI组件未初始化，请重新打开面板"));
             return;
         }
         if (textureOption.Selected < 0 || textureOption.Selected >= textureOption.ItemCount) 
@@ -2345,8 +2373,8 @@ private string GetEditorSlotType(string category)
 
     private void RefreshApplyTextureList()
     {
-        var textureOption = textureUploadPanel?.GetNodeOrNull<OptionButton>("ApplyTextureSelect");
-        if (textureOption == null) return;
+        var textureOption = applyTextureSelect;
+        if (textureOption == null || !IsInstanceValid(textureOption)) return;
 
         textureOption.Clear();
 
@@ -2543,89 +2571,114 @@ private string GetEditorSlotType(string category)
     }
     private void ShowBuiltInMoveTypeCosts(string moveTypeId)
     {
-        var dialog = new Panel();
-        dialog.CustomMinimumSize = new Vector2(400, 500);
-        dialog.SetAnchorsPreset(LayoutPreset.Center);
-        dialog.ZIndex = 1600;
-
-        var style = new StyleBoxFlat();
-        style.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.98f);
-        style.SetCornerRadiusAll(12);
-        style.SetBorderWidthAll(2);
-        style.BorderColor = new Color(0.4f, 0.7f, 0.9f);
-        dialog.AddThemeStyleboxOverride("panel", style);
-
-        var vbox = new VBoxContainer();
-        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
-        vbox.AddThemeConstantOverride("margin_left", 15);
-        vbox.AddThemeConstantOverride("margin_right", 15);
-        vbox.AddThemeConstantOverride("margin_top", 15);
-        vbox.AddThemeConstantOverride("margin_bottom", 15);
-        vbox.AddThemeConstantOverride("separation", 10);
-
-        var title = new Label();
-        title.Text = $"📊 {moveTypeId} - {TranslateGroup.T("移动消耗")}";
-        title.HorizontalAlignment = HorizontalAlignment.Center;
-        title.AddThemeFontSizeOverride("font_size", 18);
-        title.AddThemeColorOverride("font_color", Colors.Yellow);
-        vbox.AddChild(title);
-
-        var hint = new Label();
-        TranslateGroup.SetText(hint, "内置移动方式的消耗由游戏逻辑决定");
-        hint.AddThemeFontSizeOverride("font_size", 11);
-        hint.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
-        vbox.AddChild(hint);
-
-        var scroll = new ScrollContainer();
-        scroll.CustomMinimumSize = new Vector2(0, 300);
-
-        var costContainer = new VBoxContainer();
-        costContainer.AddThemeConstantOverride("separation", 4);
-
-        foreach (var terrain in ExtraSave.BuiltInTerrainTypes)
+        GD.Print($"[CustomConfigUI] 打开内置移动方式消耗: {moveTypeId}");
+        try
         {
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", 8);
+            var dialog = new Panel();
+            dialog.Name = $"BuiltInMoveCosts_{moveTypeId}";
+            // ✅ 自适应屏幕大小
+            var viewportSize = GetViewport().GetVisibleRect().Size;
+            float dlgWidth = Mathf.Min(420, viewportSize.X * 0.9f);
+            float dlgHeight = Mathf.Min(550, viewportSize.Y * 0.8f);
+            dialog.CustomMinimumSize = new Vector2(dlgWidth, dlgHeight);
+            dialog.Size = new Vector2(dlgWidth, dlgHeight);
+            dialog.SetAnchorsPreset(LayoutPreset.Center);
+            dialog.ZIndex = 1600;
 
-            var tLabel = new Label();
-            tLabel.Text = terrain;
-            tLabel.CustomMinimumSize = new Vector2(150, 24);
-            tLabel.AddThemeFontSizeOverride("font_size", 11);
-            row.AddChild(tLabel);
+            var style = new StyleBoxFlat();
+            style.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.98f);
+            style.SetCornerRadiusAll(12);
+            style.SetBorderWidthAll(2);
+            style.BorderColor = new Color(0.4f, 0.7f, 0.9f);
+            dialog.AddThemeStyleboxOverride("panel", style);
 
-            var costLabel = new Label();
-            int cost = extraSave?.GetMoveCost(moveTypeId, terrain) ?? -1;
-            if (cost < 0)
-                costLabel.Text = TranslateGroup.T("内置逻辑");
-            else
-                costLabel.Text = cost == 999 ? "∞ (不可移动)" : cost.ToString();
-            costLabel.AddThemeFontSizeOverride("font_size", 11);
-            costLabel.AddThemeColorOverride("font_color", cost < 0 ? Colors.Gray : (cost == 999 ? Colors.Red : Colors.Green));
-            row.AddChild(costLabel);
+            var vbox = new VBoxContainer();
+            vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+            vbox.AddThemeConstantOverride("margin_left", 15);
+            vbox.AddThemeConstantOverride("margin_right", 15);
+            vbox.AddThemeConstantOverride("margin_top", 15);
+            vbox.AddThemeConstantOverride("margin_bottom", 15);
+            vbox.AddThemeConstantOverride("separation", 10);
 
-            costContainer.AddChild(row);
+            var title = new Label();
+            title.Text = $"📊 {moveTypeId} - {TranslateGroup.T("移动消耗")}";
+            title.HorizontalAlignment = HorizontalAlignment.Center;
+            title.AddThemeFontSizeOverride("font_size", 18);
+            title.AddThemeColorOverride("font_color", Colors.Yellow);
+            vbox.AddChild(title);
+
+            var hint = new Label();
+            TranslateGroup.SetText(hint, "内置移动方式的消耗由游戏逻辑决定，可基于此创建自定义版本");
+            hint.AddThemeFontSizeOverride("font_size", 11);
+            hint.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
+            hint.AutowrapMode = TextServer.AutowrapMode.Word;
+            vbox.AddChild(hint);
+
+            var scroll = new ScrollContainer();
+            scroll.SizeFlagsVertical = SizeFlags.ExpandFill;
+            scroll.CustomMinimumSize = new Vector2(0, dlgHeight * 0.55f);
+
+            var costContainer = new VBoxContainer();
+            costContainer.AddThemeConstantOverride("separation", 6);
+
+            foreach (var terrain in ExtraSave.BuiltInTerrainTypes)
+            {
+                var row = new HBoxContainer();
+                row.AddThemeConstantOverride("separation", 8);
+
+                var tLabel = new Label();
+                tLabel.Text = terrain;
+                tLabel.CustomMinimumSize = new Vector2(150, 24);
+                tLabel.AddThemeFontSizeOverride("font_size", 11);
+                row.AddChild(tLabel);
+
+                var costLabel = new Label();
+                int cost = extraSave?.GetMoveCost(moveTypeId, terrain) ?? -1;
+                if (cost < 0)
+                    costLabel.Text = TranslateGroup.T("内置逻辑");
+                else
+                    costLabel.Text = cost == 999 ? "∞ (不可移动)" : cost.ToString();
+                costLabel.AddThemeFontSizeOverride("font_size", 11);
+                costLabel.AddThemeColorOverride("font_color", cost < 0 ? Colors.Gray : (cost == 999 ? Colors.Red : Colors.Green));
+                row.AddChild(costLabel);
+
+                costContainer.AddChild(row);
+            }
+
+            scroll.AddChild(costContainer);
+            vbox.AddChild(scroll);
+
+            var createBtn = new Button();
+            TranslateGroup.SetText(createBtn, "➕ 基于此创建自定义移动方式");
+            createBtn.CustomMinimumSize = new Vector2(0, 44);
+            createBtn.AddThemeFontSizeOverride("font_size", 13);
+            var createStyle = new StyleBoxFlat();
+            createStyle.BgColor = new Color(0.2f, 0.5f, 0.3f, 0.9f);
+            createStyle.SetCornerRadiusAll(8);
+            createBtn.AddThemeStyleboxOverride("normal", createStyle);
+            createBtn.Pressed += () => {
+                dialog.QueueFree();
+                ShowNewMoveTypeDialogBasedOn(moveTypeId);
+            };
+            vbox.AddChild(createBtn);
+
+            var closeBtn = new Button();
+            TranslateGroup.SetText(closeBtn, "❌ 关闭");
+            closeBtn.CustomMinimumSize = new Vector2(0, 40);
+            closeBtn.AddThemeFontSizeOverride("font_size", 12);
+            closeBtn.Pressed += () => dialog.QueueFree();
+            vbox.AddChild(closeBtn);
+
+            dialog.AddChild(vbox);
+            AddChild(dialog);
+            MakeMenuDraggable(dialog);
+            GD.Print($"[CustomConfigUI] 内置移动方式消耗对话框已显示: {moveTypeId}");
         }
-
-        scroll.AddChild(costContainer);
-        vbox.AddChild(scroll);
-
-        var createBtn = new Button();
-        TranslateGroup.SetText(createBtn, "➕ 基于此创建自定义移动方式");
-        createBtn.CustomMinimumSize = new Vector2(0, 40);
-        createBtn.Pressed += () => {
-            dialog.QueueFree();
-            ShowNewMoveTypeDialogBasedOn(moveTypeId);
-        };
-        vbox.AddChild(createBtn);
-
-        var closeBtn = new Button();
-        TranslateGroup.SetText(closeBtn, "❌ 关闭");
-        closeBtn.Pressed += () => dialog.QueueFree();
-        vbox.AddChild(closeBtn);
-
-        dialog.AddChild(vbox);
-        AddChild(dialog);
-        MakeMenuDraggable(dialog);
+        catch (Exception e)
+        {
+            GD.PrintErr($"[CustomConfigUI] ShowBuiltInMoveTypeCosts 异常: {e.Message}\n{e.StackTrace}");
+            ShowToast(TranslateGroup.T("❌ 打开消耗面板失败"));
+        }
     }
 
     private void ShowNewMoveTypeDialogBasedOn(string baseMoveTypeId)
