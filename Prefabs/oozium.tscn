@@ -34,8 +34,7 @@ shape = SubResource("RectangleShape2D_n88l3")
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=655078691]
 position = Vector2(16, 16)
 sprite_frames = ExtResource("2_ejik0")
-animation = &"breath"
-frame_progress = 0.975943
+animation = &"oozium1"
 
 [node name="HpLabel" type="Label" parent="." unique_id=1676126936]
 offset_left = 16.0

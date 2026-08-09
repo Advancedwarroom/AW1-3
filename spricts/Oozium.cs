@@ -64,11 +64,26 @@ public override void _Ready()
     }
 }
     
-    // ✅ 播放呼吸动画
+    // ✅ 播放呼吸动画（根据队伍颜色选择不同动画）
     public void StartBreathAnimation()
     {
-        if (animSprite != null && animSprite.SpriteFrames.HasAnimation("breath"))
+        if (animSprite == null || animSprite.SpriteFrames == null) return;
+
+        // 根据队伍选择呼吸动画：红色=oozium2, 蓝色=oozium3, 中立=oozium1
+        string animName = team switch
         {
+            "Player1" => "oozium2",
+            "Player2" => "oozium3",
+            _ => "oozium1" // Player0 / Neutral / 其他
+        };
+
+        if (animSprite.SpriteFrames.HasAnimation(animName))
+        {
+            animSprite.Play(animName);
+        }
+        else if (animSprite.SpriteFrames.HasAnimation("breath"))
+        {
+            // fallback 到旧的通用 breath 动画
             animSprite.Play("breath");
         }
     }
