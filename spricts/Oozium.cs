@@ -31,7 +31,7 @@ public partial class Oozium : Infantry
         animSprite?.Stop();
     }
 
-    public override void OnMoveSelected()
+    public void OnMoveSelected()
     {
         StopBreathAnimation();
         if (animSprite?.SpriteFrames.HasAnimation("move") == true)
@@ -40,7 +40,7 @@ public partial class Oozium : Infantry
         gm?.gridManager.ShowMoveRange(this);
     }
 
-    public override void OnAttackSelected()
+    public void OnAttackSelected()
     {
         StopBreathAnimation();
         if (animSprite?.SpriteFrames.HasAnimation("attack") == true)

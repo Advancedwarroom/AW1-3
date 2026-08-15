@@ -756,46 +756,28 @@ private Button CreateTemplateButton(UnitTemplate template)
     teamHBox.Position = new Vector2(180, 12);
     teamHBox.Size = new Vector2(100, 26);
     teamHBox.AddThemeConstantOverride("separation", 4);
+    teamHBox.Name = "TeamHBox";  // ✅ 用于后续刷新
 
-    var p1Btn = new Button();
-    p1Btn.Text = "P1";
-    p1Btn.CustomMinimumSize = new Vector2(36, 24);
-    p1Btn.AddThemeFontSizeOverride("font_size", 10);
-    p1Btn.Pressed += () => {
-        template.Team = "Player1";
-        UpdateTemplateTeamIndicator(btn, "Player1");
-    };
-    teamHBox.AddChild(p1Btn);
-
-    var p2Btn = new Button();
-    p2Btn.Text = "P2";
-    p2Btn.CustomMinimumSize = new Vector2(36, 24);
-    p2Btn.AddThemeFontSizeOverride("font_size", 10);
-    p2Btn.Pressed += () => {
-        template.Team = "Player2";
-        UpdateTemplateTeamIndicator(btn, "Player2");
-    };
-    teamHBox.AddChild(p2Btn);
-
-    var p0Btn = new Button();
-    p0Btn.Text = "P0";
-    p0Btn.CustomMinimumSize = new Vector2(30, 24);
-    p0Btn.AddThemeFontSizeOverride("font_size", 10);
-    p0Btn.Pressed += () => {
-        template.Team = "Player0";
-        UpdateTemplateTeamIndicator(btn, "Player0");
-    };
-    teamHBox.AddChild(p0Btn);
-
-    var pN1Btn = new Button();
-    pN1Btn.Text = "P-1";
-    pN1Btn.CustomMinimumSize = new Vector2(30, 24);
-    pN1Btn.AddThemeFontSizeOverride("font_size", 10);
-    pN1Btn.Pressed += () => {
-        template.Team = "Player";
-        UpdateTemplateTeamIndicator(btn, "Player");
-    };
-    teamHBox.AddChild(pN1Btn);
+    // ✅ 动态生成所有活跃势力的选择按钮
+    foreach (var faction in TeamHelper.GetActiveFactions())
+    {
+        string fid = faction.Id;
+        string shortName = TeamHelper.GetTeamShortName(fid);
+        var fBtn = new Button();
+        fBtn.Text = shortName;
+        fBtn.CustomMinimumSize = new Vector2(32, 24);
+        fBtn.AddThemeFontSizeOverride("font_size", 9);
+        // 用势力主色作为按钮色调提示
+        var fStyle = new StyleBoxFlat();
+        fStyle.BgColor = faction.PrimaryColor.Darkened(0.3f);
+        fStyle.SetCornerRadiusAll(4);
+        fBtn.AddThemeStyleboxOverride("normal", fStyle);
+        fBtn.Pressed += () => {
+            template.Team = fid;
+            UpdateTemplateTeamIndicator(btn, fid);
+        };
+        teamHBox.AddChild(fBtn);
+    }
 
     btn.AddChild(teamHBox);
 
@@ -840,20 +822,8 @@ private void UpdateTemplateTeamIndicator(Button btn, string team)
         teamLabel.AddThemeFontSizeOverride("font_size", 10);
         btn.AddChild(teamLabel);
     }
-    teamLabel.Text = team switch {
-        "Player1" => "🔴P1",
-        "Player2" => "🔵P2",
-        "Player0" => "⚪P0",
-        "Player" => "🟣P-1",
-        _ => team
-    };
-    teamLabel.AddThemeColorOverride("font_color", team switch {
-        "Player1" => new Color(1, 0.3f, 0.3f),
-        "Player2" => new Color(0.3f, 0.5f, 1f),
-        "Player0" => new Color(0.7f, 0.7f, 0.7f),
-        "Player" => new Color(0.7f, 0.4f, 0.9f),
-        _ => Colors.White
-    });
+    teamLabel.Text = TeamHelper.GetTeamShortName(team);
+    teamLabel.AddThemeColorOverride("font_color", TeamHelper.GetTeamColor(team));
 }
 
 private void ResetTemplateButtonStyle(Button btn)
@@ -3277,7 +3247,17 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (weapon.animSprite.SpriteFrames.HasAnimation(animName))
                 {
                     weapon.animSprite.Play(animName);
-                    weapon.animSprite.Modulate = TeamHelper.GetTeamColor(weapon.team);
+                    // ✅ 优先通过Shader tone设置势力色
+                    if (weapon.animSprite.Material is ShaderMaterial shaderMat)
+                        shaderMat.SetShaderParameter("tone", TeamHelper.GetTeamColor(weapon.team));
+                    else
+                    {
+                        // ✅ 优先通过Shader tone设置势力色
+                        if (weapon.animSprite.Material is ShaderMaterial shaderMat2)
+                            shaderMat2.SetShaderParameter("tone", TeamHelper.GetTeamColor(weapon.team));
+                        else
+                            weapon.animSprite.Modulate = TeamHelper.GetTeamColor(weapon.team);
+                    }
                 }
             }
             else
@@ -3285,8 +3265,8 @@ private void OnPropertyChanged(object target, string propertyName)
                 if (weapon.animSprite.SpriteFrames.HasAnimation(teamPrefix))
                 {
                     weapon.animSprite.Play(teamPrefix);
-                    weapon.animSprite.Modulate = TeamHelper.GetTeamColor(weapon.team);
                 }
+                // ✅ 势力色由Shader统一处理（weapon._Ready中已应用Material）
             }
 
             weapon.UpdateHpLabel();

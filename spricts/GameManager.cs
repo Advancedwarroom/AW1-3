@@ -122,6 +122,11 @@ public partial class GameManager : Node
     {   
 
         AddToGroup("game_manager");
+        
+        // ✅ 初始化势力系统（动态调色板 + 多势力支持）
+        TeamHelper.InitializeDefaults();
+        TeamHelper.LoadFactionsFromExtraSave();
+        
         RequestStoragePermissionsIfNeeded();
         CallDeferred(nameof(DeferredInit));
         turnEndLabel = GetTree().CurrentScene.GetNodeOrNull<Label>("TurnEndLabel");
@@ -1797,12 +1802,7 @@ public void RestartGame()
 
 
 
-            unit.OnTurnEnd();
-            var turnEndMethod = unit.GetType().GetMethod("OnTurnEnd");
-if (turnEndMethod != null && turnEndMethod.DeclaringType != typeof(Infantry))
-{
-    turnEndMethod.Invoke(unit, null);
-}
+            unit.OnTurnEnd();  // ✅ 虚方法多态已自动调用最终版本，无需反射
 
             if (unit.hpLabel != null)
             {

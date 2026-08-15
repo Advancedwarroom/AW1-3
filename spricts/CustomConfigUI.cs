@@ -27,6 +27,7 @@ public partial class CustomConfigUI : Control
     private VBoxContainer terrainTypePanel;
     private VBoxContainer textureUploadPanel;
     private VBoxContainer saveSlotPanel;
+    private FactionConfigPanel factionConfigPanel;
 
     // ✅ 贴图Tab的控件引用（避免运行时查找失败）
     private OptionButton applyTextureSelect;
@@ -42,6 +43,12 @@ public partial class CustomConfigUI : Control
         CreateMainPanel();
         CreateTabs();
         CreateOpenButton(); // ✅ 创建编辑模式入口按钮
+        
+        // ✅ 势力配置Tab切换时自动刷新
+        tabContainer.TabChanged += (long idx) => {
+            if (idx == 4) factionConfigPanel?.RefreshList();
+        };
+        
         Hide();
 
         // 延迟获取其他引用（确保目标节点已 _Ready）
@@ -201,6 +208,12 @@ public partial class CustomConfigUI : Control
         saveSlotPanel = CreateSaveSlotTab();
         tabContainer.AddChild(saveSlotPanel);
         tabContainer.SetTabTitle(3, TranslateGroup.T("💾 保存/加载"));
+        
+        // 5. 势力配置
+        factionConfigPanel = new FactionConfigPanel();
+        factionConfigPanel.Name = "FactionConfig";
+        tabContainer.AddChild(factionConfigPanel);
+        tabContainer.SetTabTitle(4, TranslateGroup.T("🏴 势力配置"));
     }
 
     // ==================== 自定义移动方式Tab ====================

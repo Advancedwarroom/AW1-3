@@ -124,12 +124,21 @@ public partial class Weapon : Node2D
         // 子类可覆盖，用于旋转时更新大贴图位置
     }
 
+    // ✅ 双图层组件
+    [Export] public Sprite2D baseSprite;
+    [Export] public Sprite2D normalSprite;
+
     public override void _Ready()
     {
         ZIndex = 10;
         AddToGroup("weapons");
         hpLabel = GetNodeOrNull<Label>("HpLabel");
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
+        // ✅ 双图层组件自动获取
+        if (baseSprite == null)
+            baseSprite = GetNodeOrNull<Sprite2D>("BaseSprite");
+        if (normalSprite == null)
+            normalSprite = GetNodeOrNull<Sprite2D>("NormalSprite");
         UpdateHpLabel();
         if (hpLabel != null)
         {
@@ -147,8 +156,43 @@ public partial class Weapon : Node2D
         {
             isPublicVisionWeapon = true;
         }
+        
+        // ✅ 应用调色板Shader
+        ApplyPaletteMaterial();
+        
         var area2D = GetNodeOrNull<Area2D>("Area2D");
         if (area2D != null) area2D.InputEvent += OnInputEvent;
+    }
+    
+    /// <summary>
+    /// ✅ 为兵器应用调色板Shader（双图层 + 兼容模式）
+    /// </summary>
+    protected virtual void ApplyPaletteMaterial()
+    {
+        // ✅ 双图层方案
+        if (baseSprite != null && IsInstanceValid(baseSprite) &&
+            normalSprite != null && IsInstanceValid(normalSprite))
+        {
+            var baseMat = FactionPaletteManager.GetBaseLayerMaterial(team);
+            if (baseMat != null)
+            {
+                baseSprite.Material = (ShaderMaterial)baseMat.Duplicate();
+                baseSprite.Show();
+            }
+            normalSprite.Material = null;
+            normalSprite.Show();
+            return;
+        }
+        
+        // Fallback：兼容模式
+        var mat = FactionPaletteManager.GetMaterial(team);
+        if (mat == null) return;
+        
+        if (animSprite != null && IsInstanceValid(animSprite))
+        {
+            var animMat = (ShaderMaterial)mat.Duplicate();
+            animSprite.Material = animMat;
+        }
     }
 
     public virtual void OnTurnStart()
@@ -286,23 +330,69 @@ public partial class Weapon : Node2D
 
     public virtual void SetVisualDark() 
     { 
+        // ✅ 双图层方案：只变暗 BaseSprite
+        if (baseSprite != null && IsInstanceValid(baseSprite))
+        {
+            if (baseSprite.Material is ShaderMaterial baseMat)
+            {
+                baseMat.SetShaderParameter("tone", new Color(0.6f, 0.6f, 0.6f, 1.0f));
+            }
+            else
+            {
+                baseSprite.Modulate = new Color(0.6f, 0.6f, 0.6f, 1.0f);
+            }
+            return;
+        }
+        
         if (animSprite != null) 
         {
-            Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
-                ? TeamHelper.GetTeamColor(team) * 0.7f
-                : new Color(0.5f, 0.5f, 0.5f, 1f);
-            tint.A = 1f;
-            animSprite.Modulate = tint;
+            // ✅ LUT模式：通过Shader tone参数变暗
+            if (animSprite.Material is ShaderMaterial shaderMat)
+            {
+                shaderMat.SetShaderParameter("tone", new Color(0.6f, 0.6f, 0.6f, 1.0f));
+            }
+            else
+            {
+                // Fallback: 旧模式
+                Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
+                    ? TeamHelper.GetTeamColor(team) * 0.7f
+                    : new Color(0.5f, 0.5f, 0.5f, 1f);
+                tint.A = 1f;
+                animSprite.Modulate = tint;
+            }
         }
     }
     public virtual void SetVisualNormal() 
     { 
+        // ✅ 双图层方案：恢复 BaseSprite tone
+        if (baseSprite != null && IsInstanceValid(baseSprite))
+        {
+            if (baseSprite.Material is ShaderMaterial baseMat)
+            {
+                baseMat.SetShaderParameter("tone", new Color(1f, 1f, 1f, 1f));
+            }
+            else
+            {
+                baseSprite.Modulate = Colors.White;
+            }
+            return;
+        }
+        
         if (animSprite != null) 
         {
-            Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
-                ? TeamHelper.GetTeamColor(team)
-                : Colors.White;
-            animSprite.Modulate = tint;
+            // ✅ LUT模式：恢复Shader tone为正常
+            if (animSprite.Material is ShaderMaterial shaderMat)
+            {
+                shaderMat.SetShaderParameter("tone", new Color(1f, 1f, 1f, 1f));
+            }
+            else
+            {
+                // Fallback: 旧模式
+                Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
+                    ? TeamHelper.GetTeamColor(team)
+                    : Colors.White;
+                animSprite.Modulate = tint;
+            }
         }
     }
     public virtual bool CanAttack() { return !hasActed && remainingAttacks > 0; }

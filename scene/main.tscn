@@ -2520,6 +2520,8 @@ texture = ExtResource("15_jcbur")
 
 [node name="LightTank3" parent="UnitManager/Units" unique_id=488045069 instance=ExtResource("14_v2gmf")]
 position = Vector2(608, 480)
+defaultMovePoints = 10
+movePoints = 10
 team = "Player2"
 
 [node name="APC1" parent="UnitManager/Units" unique_id=1999259536 instance=ExtResource("18_fdqew")]

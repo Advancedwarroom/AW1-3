@@ -72,7 +72,7 @@ public partial class APC : Infantry
         base.OnDestroyed();
     }
 
-    public override void OnMoveSelected()
+    public void OnMoveSelected()
     {
         if (consumeFuel && fuel <= 0) return;
         ShowAnimState("move");
