@@ -3,7 +3,7 @@ using Godot;
 
 public partial class Recon : Infantry
 {
-    protected override string GetIdleAnimName() => team == "Player2" ? "Recon2" : "Recon1";
+    public override string GetIdleAnimName() => team == "Player2" ? "Recon2" : "Recon1";
 
     public override int CalculateDamageAgainstWeapon(Weapon target, WeaponType weaponType)
     {

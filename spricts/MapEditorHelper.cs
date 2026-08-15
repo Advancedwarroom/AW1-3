@@ -1494,11 +1494,13 @@ public partial class MapEditorHelper : Node
             record.oldUnitData = SerializeUnit(inf);
             var sprite = inf.GetNodeOrNull<Sprite2D>("Sprite2D");
             if (sprite != null) sprite.Texture = texture;
-            // ✅ 支持AnimatedSprite2D单位（Mech/Flare等）
-            if (inf is Mech mech && mech.animSprite != null)
-                terrainEditor?.ApplyFramesToAnimSprite(mech.animSprite, gifFrames ?? new List<Texture2D>{texture}, inf.team == "Player2" ? "mech2" : "mech1");
-            else if (inf is Flare flare && flare.animSprite != null)
-                terrainEditor?.ApplyFramesToAnimSprite(flare.animSprite, gifFrames ?? new List<Texture2D>{texture}, inf.team == "Player2" ? "Flare2" : "Flare1");
+            // ✅ 通用：任何有 animSprite 的单位
+            if (inf.animSprite != null && IsInstanceValid(inf.animSprite))
+            {
+                string animName = inf.GetIdleAnimName();
+                if (!string.IsNullOrEmpty(animName))
+                    terrainEditor?.ApplyFramesToAnimSprite(inf.animSprite, gifFrames ?? new List<Texture2D>{texture}, animName);
+            }
         }
         else if (entity is Weapon wp)
         {

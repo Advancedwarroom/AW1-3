@@ -45,11 +45,6 @@ public void RefreshUnitList()
             
             AllUnits.Add(unit);
             BindUnitToGrid(unit);
-            
-            // 如果是 Oozium，输出日志确认
-            if (unit is Oozium oozium && IsInstanceValid(oozium))
-            {
-            }
         }
     }
 }

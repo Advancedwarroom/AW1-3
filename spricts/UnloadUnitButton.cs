@@ -113,29 +113,19 @@ public partial class UnloadUnitButton : Control
     // 智能获取单位的动画组件
     private AnimatedSprite2D GetSourceAnim(Infantry u)
     {
-        // 1. 直接检查已知的动画字段
-        if (u is Mech m && m.animSprite != null) 
+        // 1. 基类 animSprite（迁移后统一走这里）
+        if (u.animSprite != null && IsInstanceValid(u.animSprite))
+            return u.animSprite;
+        
+        // 2. 反射获取子类可能自定义的字段（如 MdTank.MdSprite）
+        var mdField = u.GetType().GetField("MdSprite", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        if (mdField != null)
         {
-            return m.animSprite;
-        }
-        if (u is LightTank t && t.animSprite != null) 
-        {
-            return t.animSprite;
-        }
-        if (u is APC a && a.animSprite != null) 
-        {
-            return a.animSprite;
-        }
-        if (u is Oozium o && o.animSprite != null) 
-        {
-            return o.animSprite;
-        }
-        if (u is Artillery ar && ar.animSprite != null) 
-        {
-            return ar.animSprite;
+            var md = mdField.GetValue(u) as AnimatedSprite2D;
+            if (md != null && IsInstanceValid(md)) return md;
         }
         
-        // 2. 递归查找所有子节点
+        // 3. 递归查找所有子节点
         var foundAnim = FindAnimRecursive(u);
         if (foundAnim != null)
         {

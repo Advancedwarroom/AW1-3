@@ -12,5 +12,5 @@ public partial class MdTank : Infantry
             animSprite = MdSprite;
     }
 
-    protected override string GetIdleAnimName() => team == "Player2" ? "Md2" : "Md1";
+    public override string GetIdleAnimName() => team == "Player2" ? "Md2" : "Md1";
 }

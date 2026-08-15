@@ -493,7 +493,7 @@ private void InitializeCooldownState()
         string anim = GetAnimName();
         if (animSprite.SpriteFrames.HasAnimation(anim))
             animSprite.Play(anim);
-        else;
+        
     }
 
     // 计算三角形攻击范围内的所有格子
@@ -1026,7 +1026,7 @@ public override void TakeDamage(int damage)
             {
             }
         }
-        catch (System.Exception e)
+        catch (System.Exception)
         {
         }
     }

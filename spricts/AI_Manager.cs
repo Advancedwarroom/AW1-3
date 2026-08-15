@@ -164,7 +164,7 @@ public partial class AI_Manager : Node
         }
 
         // 2. 如果是APC（运输车），不是只剩APC的情况 → 向敌人前线靠近（搭载步兵）
-        if (unit is APC)
+        if (unit.canTransportUnits)
         {
             AITransportMove(unit);
             return;
@@ -248,7 +248,7 @@ public partial class AI_Manager : Node
         var units = gameManager.unitManager?.AllUnits
             ?.Where(u => IsInstanceValid(u) && u.team == team).ToList() ?? new List<Infantry>();
         if (units.Count == 0) return false;
-        return units.All(u => u is APC || u.attackType == AttackType.NoAttack);
+        return units.All(u => u.canTransportUnits || u.attackType == AttackType.NoAttack);
     }
 
     private void AIEvade(Infantry unit)
@@ -291,7 +291,7 @@ public partial class AI_Manager : Node
     {
         // APC：向最近的己方步兵移动（搭载），或者向敌人靠近
         var allies = gameManager.unitManager?.AllUnits
-            ?.Where(u => IsInstanceValid(u) && u.team == unit.team && u != unit && u is Infantry && !(u is APC))
+            ?.Where(u => IsInstanceValid(u) && u.team == unit.team && u != u && !u.canTransportUnits)
             .ToList() ?? new List<Infantry>();
 
         if (allies.Count > 0 && unit.maxTransportCapacity > unit.transportedUnits.Count)

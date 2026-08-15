@@ -3,5 +3,5 @@ using Godot;
 
 public partial class PipeRunner : Infantry
 {
-    protected override string GetIdleAnimName() => team == "Player2" ? "PipeRunner2" : "PipeRunner1";
+    public override string GetIdleAnimName() => team == "Player2" ? "PipeRunner2" : "PipeRunner1";
 }

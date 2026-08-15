@@ -2000,11 +2000,6 @@ if (turnEndMethod != null && turnEndMethod.DeclaringType != typeof(Infantry))
 
         bool isValid = IsTurnPhaseValid(infantry.team);
 
-        if (infantry is Oozium oozium)
-        {
-        }
-
-
         if (!infantry.isMoved && isValid)
         {        
             selectedWeapon = null; // 清除兵器选择
@@ -2063,25 +2058,18 @@ public void RollbackMove()
         return;
     }
 
+    // 计算实际消耗（Oozium 也通过 GetMoveCost 返回 1，无需特殊分支）
     int moveCost = 0;
-    if (unit is Oozium)
+    var path = BuildPath(fromGrid, toGrid, unit, ignoreMovePoints: true);
+    bool isFirst = true;
+    foreach (var g in path)
     {
-        moveCost = 1; // Oozium 固定消耗1
-    }
-    else
-    {
-        // 计算实际消耗
-        var path = BuildPath(fromGrid, toGrid, unit, ignoreMovePoints: true);
-        bool isFirst = true;
-        foreach (var g in path)
+        if (isFirst) 
         {
-            if (isFirst) 
-            {
-                isFirst = false;
-                continue;
-            }
-            moveCost += unit.GetMoveCost(g.gridType);
+            isFirst = false;
+            continue;
         }
+        moveCost += unit.GetMoveCost(g.gridType);
     }
 
     // 恢复移动力
@@ -2090,7 +2078,7 @@ public void RollbackMove()
     // 恢复燃料
     if (unit.consumeFuel)
     {
-        int fuelCost = unit is Oozium ? 0 : moveCost;
+        int fuelCost = moveCost;
         unit.fuel += fuelCost;
     }
 
@@ -2130,19 +2118,13 @@ public void RollbackMove()
     unit.SetWaitVisual(false);
     unit.StopBreath();  // 先停止之前的呼吸动画
 
-    // ✅ 针对不同类型的单位恢复颜色
-    // Mech 和 LightTank 使用 animSprite
-    if (unit is Mech mechUnit && mechUnit.animSprite != null)
+    // ✅ 通用：恢复 animSprite 或 sprite 的颜色
+    if (unit.animSprite != null && IsInstanceValid(unit.animSprite))
     {
-        mechUnit.animSprite.Modulate = mechUnit.normal;
-    }
-    else if (unit is LightTank tankUnit && tankUnit.animSprite != null)
-    {
-        tankUnit.animSprite.Modulate = tankUnit.normal;
+        unit.animSprite.Modulate = unit.normal;
     }
     else if (unit.sprite != null)
     {
-        // 普通 Infantry 使用 sprite
         unit.sprite.Modulate = unit.normal;
     }
 

@@ -5,7 +5,7 @@ using System.Linq;
 
 public partial class FlyBomb : Infantry
 {
-    protected override string GetIdleAnimName() => team == "Player2" ? "FlyBomb2" : "FlyBomb1";
+    public override string GetIdleAnimName() => team == "Player2" ? "FlyBomb2" : "FlyBomb1";
 
     public override void _Ready()
     {

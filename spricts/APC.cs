@@ -16,7 +16,7 @@ public partial class APC : Infantry
         gm?.RegisterUnit(this, UnitCategory.APC);
     }
 
-    protected override string GetIdleAnimName() => team == "Player2" ? "apc2" : "apc1";
+    public override string GetIdleAnimName() => team == "Player2" ? "apc2" : "apc1";
 
     private void SetupLoadedIcon()
     {

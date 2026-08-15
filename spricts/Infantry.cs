@@ -1031,8 +1031,8 @@ protected virtual void ApplyUnitRegistryConfig()
 }
 
 // ========== 子类覆盖：动画名称映射 ==========
-protected virtual string GetIdleAnimName() => null;
-protected virtual string GetMoveAnimName() => null;
+public virtual string GetIdleAnimName() => null;
+public virtual string GetMoveAnimName() => null;
 
 private void UpdateActiveSprite()
 {

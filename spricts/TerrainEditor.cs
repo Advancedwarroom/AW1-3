@@ -3241,58 +3241,13 @@ private void OnPropertyChanged(object target, string propertyName)
         {
             infantry.UpdateHpLabel();
 
-            if (infantry is Mech mech && mech.animSprite != null)
+            // ✅ 通用：任何有 animSprite 的单位都走 GetIdleAnimName()
+            if (infantry.animSprite != null && IsInstanceValid(infantry.animSprite))
             {
-                string animName = (mech.team == "Player2") ? "mech2" : "mech1";
-                if (mech.animSprite.SpriteFrames.HasAnimation(animName))
+                string animName = infantry.GetIdleAnimName();
+                if (!string.IsNullOrEmpty(animName) && infantry.animSprite.SpriteFrames?.HasAnimation(animName) == true)
                 {
-                    mech.animSprite.Play(animName);
-                    mech.animSprite.Modulate = mech.normal;
-                }
-            }
-            else if (infantry is LightTank tank && tank.animSprite != null)
-            {
-                string animName = (tank.team == "Player2") ? "lighttank2" : "lighttank1";
-                if (tank.animSprite.SpriteFrames.HasAnimation(animName))
-                {
-                    tank.ShowAnimState(animName);
-                    tank.animSprite.Modulate = tank.normal;
-                }
-            }
-            else if (infantry is Artillery artillery && artillery.animSprite != null)
-            {
-                string animName = (artillery.team == "Player2") ? "artillery2" : "artillery1";
-                if (artillery.animSprite.SpriteFrames.HasAnimation(animName))
-                {
-                    artillery.ShowAnimState(animName);
-                    artillery.animSprite.Modulate = artillery.normal;
-                }
-            }
-            else if (infantry is APC apc && apc.animSprite != null)
-            {
-                string animName = (apc.team == "Player2") ? "apc2" : "apc1";
-                if (apc.animSprite.SpriteFrames.HasAnimation(animName))
-                {
-                    apc.ShowAnimState(animName);
-                    apc.animSprite.Modulate = apc.normal;
-                }
-            }
-            else if (infantry is Oozium oozium && oozium.animSprite != null)
-            {
-                string animName = (oozium.team == "Player2") ? "oozium2" : "oozium1";
-                if (oozium.animSprite.SpriteFrames.HasAnimation(animName))
-                {
-                    oozium.animSprite.Play(animName);
-                    oozium.animSprite.Modulate = oozium.normal;
-                }
-            }
-            else if (infantry is MdTank mdTank && mdTank.MdSprite != null)
-            {
-                string animName = (mdTank.team == "Player2") ? "Md2" : "Md1";
-                if (mdTank.MdSprite.SpriteFrames.HasAnimation(animName))
-                {
-                    mdTank.MdSprite.Play(animName);
-                    mdTank.MdSprite.Modulate = mdTank.normal;
+                    infantry.ShowAnimState(animName);
                 }
             }
             else
@@ -8764,16 +8719,15 @@ private void OpenWeaponTerrainMatrixEditor()
                         unit.sprite.Texture = texture;
                         spawnHintLabel.Text = $"✅ {TranslateGroup.T("已替换")} {unit.Name} {TranslateGroup.T("贴图")}";
                     }
-                    // ✅ 同时支持AnimatedSprite2D的单位（如Mech/Flare）
-                    if (unit is Mech mech && mech.animSprite != null)
+                    // ✅ 通用：任何有 animSprite 的单位
+                    if (unit.animSprite != null && IsInstanceValid(unit.animSprite))
                     {
-                        ApplyFramesToAnimSprite(mech.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "mech2" : "mech1");
-                        spawnHintLabel.Text = $"✅ {TranslateGroup.T("已替换")} {unit.Name} {TranslateGroup.T("动画贴图")}";
-                    }
-                    else if (unit is Flare flare && flare.animSprite != null)
-                    {
-                        ApplyFramesToAnimSprite(flare.animSprite, gifFrames ?? new List<Texture2D>{texture}, unit.team == "Player2" ? "Flare2" : "Flare1");
-                        spawnHintLabel.Text = $"✅ {TranslateGroup.T("已替换")} {unit.Name} {TranslateGroup.T("动画贴图")}";
+                        string animName = unit.GetIdleAnimName();
+                        if (!string.IsNullOrEmpty(animName))
+                        {
+                            ApplyFramesToAnimSprite(unit.animSprite, gifFrames ?? new List<Texture2D>{texture}, animName);
+                            spawnHintLabel.Text = $"✅ {TranslateGroup.T("已替换")} {unit.Name} {TranslateGroup.T("动画贴图")}";
+                        }
                     }
                 }
             }

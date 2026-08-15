@@ -3,7 +3,7 @@ using Godot;
 
 public partial class Mech : Infantry
 {
-    protected override string GetIdleAnimName() => team == "Player2" ? "mech2" : "mech1";
+    public override string GetIdleAnimName() => team == "Player2" ? "mech2" : "mech1";
 
     public override bool IsArmoredTarget(Infantry target)
     {

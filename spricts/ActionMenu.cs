@@ -198,70 +198,51 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
 
         return null;
     }
-// ✅ 究极自由：通用运输单位装载菜单
-public void ShowTransportLoadMenu(Infantry transport, Infantry unit)
-{
+    // ✅ 究极自由：通用运输单位装载菜单
+    public void ShowTransportLoadMenu(Infantry transport, Infantry unit)
     {
-	currentUnit = unit;
-	currentWeapon = null;
-		currentTransport = transport;  // ✅ 通用：任何 canTransportUnits 的单位
+        currentUnit = unit;
+        currentWeapon = null;
+        currentTransport = transport;  // ✅ 通用：任何 canTransportUnits 的单位
 
-	if (!IsNodeReady()) return;
+        if (!IsNodeReady()) return;
 
-	if (!IsNodeReady()) return;
-{
-    {
-currentUnit = unit;
-currentWeapon = null;
-if (transport is APC apc)
-{
-currentTransport = apc;
-}
-else
-{
-currentTransport = transport;  // 非APC的运输单位
+        moveButton.Visible = false;
+        attackButton.Visible = false;
+        captureButton.Visible = false;
+        rotateButton?.Hide();
+        if (unloadContainer != null) unloadContainer.Visible = false;
+
+        if (loadButton != null)
+        {
+            loadButton.Visible = true;
+            var callable = new Callable(this, nameof(OnLoadPressed));
+            if (loadButton.IsConnected(BaseButton.SignalName.Pressed, callable))
+            {
+                loadButton.Disconnect(BaseButton.SignalName.Pressed, callable);
+            }
+            loadButton.Connect(BaseButton.SignalName.Pressed, callable);
+        }
+
+        waitButton.Visible = true;
+        infoButton.Visible = true;
+
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager != null)
+        {
+            foreach (var grid in gm.gridManager.grids)
+            {
+                grid.OnClickEmpty = () => {
+                    Hide();
+                    gm.gridManager.ClearAllEmptyCallbacks();
+                    gm.ClearSelectedInfantry();
+                };
+            }
+        }
+
+        Position = unit.GlobalPosition + new Vector2(-40, -100);
+        Show();
     }
-
-if (!IsNodeReady()) return;
-
-moveButton.Visible = false;
-attackButton.Visible = false;
-captureButton.Visible = false;
-rotateButton?.Hide();
-if (unloadContainer != null) unloadContainer.Visible = false;
-
-if (loadButton != null)
-{
-    loadButton.Visible = true;
-    var callable = new Callable(this, nameof(OnLoadPressed));
-    if (loadButton.IsConnected(BaseButton.SignalName.Pressed, callable))
-    {
-        loadButton.Disconnect(BaseButton.SignalName.Pressed, callable);
-    }
-    loadButton.Connect(BaseButton.SignalName.Pressed, callable);
-}
-
-waitButton.Visible = true;
-infoButton.Visible = true;
-
-var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-if (gm?.gridManager != null)
-{
-    foreach (var grid in gm.gridManager.grids)
-    {
-        grid.OnClickEmpty = () => {
-            Hide();
-            gm.gridManager.ClearAllEmptyCallbacks();
-            gm.ClearSelectedInfantry();
-        };
-    }
-}
-
-Position = unit.GlobalPosition + new Vector2(-40, -100);
-Show();
-    }
-}
-
 
 private void OnLoadPressed()
 {

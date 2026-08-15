@@ -1108,14 +1108,14 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
     }
 
-    private void ForceOoziumActed(Infantry oozium)
+    private void ForceOoziumActed(Infantry unit)
     {
-        if (oozium == null) return;
+        if (unit == null) return;
         
-        oozium.isMoved = true;
-        oozium.isAttacked = true;
-        oozium.state = UnitState.Acted;
-        oozium.originalGrid = null;
+        unit.isMoved = true;
+        unit.isAttacked = true;
+        unit.state = UnitState.Acted;
+        unit.originalGrid = null;
         
         CloseRange();
         HideAttackRange();
@@ -1125,20 +1125,20 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         
         ClearAllEmptyCallbacks();
         
-        if (oozium is Oozium oz && oz.animSprite != null)
+        // ✅ 通用：任何有 animSprite 的单位都变暗
+        if (unit.animSprite != null && IsInstanceValid(unit.animSprite))
         {
-            oz.animSprite.Modulate = new Color(0.5f, 0.5f, 0.5f, 1.0f);
-            oz.StopBreathAnimation();
+            unit.animSprite.Modulate = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+            unit.StopBreath();
         }
         
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.ClearSelectedInfantry();
-        
     }
 
     private bool CanMoveToGrid(Grids grid, Infantry requestingUnit, bool checkPassThrough = false)
     {
-        if (requestingUnit is Oozium && grid.weapon != null)
+        if (requestingUnit.overlapType == UnitOverlapType.Oozium && grid.weapon != null)
             return false;
             
         var otherUnits = grid.infantries.Where(i => i != requestingUnit && IsInstanceValid(i)).ToList();
@@ -1203,8 +1203,6 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     {
         if (infantry == null || to == null) return;
 
-        bool isOozium = infantry is Oozium;
-
         if (infantry.overlapType == UnitOverlapType.NonOverlapping)
         {
             var otherUnits = to.infantries.Where(i => i != infantry && IsInstanceValid(i)).ToList();
@@ -1236,20 +1234,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                 totalFuelCost += moveCost;
         }
 
-        if (isOozium)
-        {
-            totalMoveCost = 1;
-            totalFuelCost = 0;
-        }
-
-        if (isOozium)
-        {
-            if (infantry.movePoints < 0) return;
-        }
-        else
-        {
-            if (infantry.movePoints < totalMoveCost) return;
-        }
+        if (infantry.movePoints < totalMoveCost) return;
 
         if (infantry.consumeFuel && infantry.fuel < totalFuelCost) return;
 
