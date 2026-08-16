@@ -1,0 +1,47 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://4row48wa2qjd"]
+
+[ext_resource type="Texture2D" uid="uid://gq2vhps3shnq" path="res://asscets/units/RepairBoat/RepairBoat1.png" id="1_lmgc8"]
+[ext_resource type="Texture2D" uid="uid://dnayqcixidt2w" path="res://asscets/units/RepairBoat/RepairBoat2.png" id="2_7yvb5"]
+[ext_resource type="Texture2D" uid="uid://cd6fsd332pql" path="res://asscets/units/RepairBoat/RepairBoat3.png" id="3_n536p"]
+[ext_resource type="Texture2D" uid="uid://bhslq8nfknthb" path="res://asscets/units/RepairBoat/RepairBoat4.png" id="4_641mw"]
+[ext_resource type="Texture2D" uid="uid://bpckd3fi252ne" path="res://asscets/units/RepairBoat/RepairBoat5.png" id="5_18c3b"]
+[ext_resource type="Texture2D" uid="uid://kcjhd4jtxy0" path="res://asscets/units/RepairBoat/RepairBoat6.png" id="6_s7sn3"]
+[ext_resource type="Texture2D" uid="uid://cqje8vn5bc7ko" path="res://asscets/units/RepairBoat/RepairBoat7.png" id="7_qj283"]
+[ext_resource type="Texture2D" uid="uid://cut654iuv4r50" path="res://asscets/units/RepairBoat/RepairBoat8.png" id="8_ooom7"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_lmgc8")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_7yvb5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_n536p")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_641mw")
+}],
+"loop": 1,
+"name": &"RepairBoat1",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_18c3b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_s7sn3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_qj283")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_ooom7")
+}],
+"loop": 1,
+"name": &"RepairBoat2",
+"speed": 5.0
+}]

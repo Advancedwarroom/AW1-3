@@ -2253,13 +2253,16 @@ private string GetEditorSlotType(string category)
 
     private void RefreshSaveSlotTab()
     {
-        // 重新创建保存槽位面板
+        // 重新创建保存槽位面板，保持原索引位置
         var oldPanel = saveSlotPanel;
+        int idx = tabContainer.GetTabIdxFromControl(oldPanel);
         saveSlotPanel = CreateSaveSlotTab();
         tabContainer.RemoveChild(oldPanel);
         oldPanel.QueueFree();
         tabContainer.AddChild(saveSlotPanel);
-        tabContainer.SetTabTitle(3, TranslateGroup.T("💾 保存/加载"));
+        if (idx >= 0)
+            tabContainer.MoveChild(saveSlotPanel, idx);
+        tabContainer.SetTabTitle(idx >= 0 ? idx : 3, TranslateGroup.T("💾 保存/加载"));
     }
 
     // ==================== 通用方法 ====================

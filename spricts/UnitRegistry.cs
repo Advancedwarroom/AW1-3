@@ -372,6 +372,32 @@ public static class UnitRegistry
             IsArmoredUnit = true,
         },
 
+        // ==================== 海军 ====================
+        ["RepairBoat"] = new UnitConfig
+        {
+            UnitId = "RepairBoat",
+            DisplayName = TranslateGroup.T("维修艇"),
+            MoveType = MoveType.Hover,
+            MovePoints = 7,
+            Cost = 7500,
+            AnimPrefix = "repairboat",
+            AttackType = AttackType.NoAttack,
+            HasPrimaryWeapon = false,
+            HasSecondaryWeapon = false,
+            MaxFuel = 50,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 1,
+            DestroyOnOutOfFuel = true,
+            LowFuelThreshold = 10,
+            BaseDefense = 0,
+            CounterMul = 0f,
+            CanTransportUnits = true,
+            CanSupplyUnits = false,
+            MaxTransportCapacity = 1,
+            TransportUnitTypes = new[] { "Infantry", "Mech", "Bike" },
+            VisionRange = 1,
+        },
+
         // ==================== 特殊 ====================
         ["Oozium"] = new UnitConfig
         {

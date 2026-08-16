@@ -127,6 +127,8 @@ public partial class Weapon : Node2D
     // ✅ 双图层组件
     [Export] public Sprite2D baseSprite;
     [Export] public Sprite2D normalSprite;
+    [Export] public AnimatedSprite2D baseAnimSprite;
+    [Export] public AnimatedSprite2D normalAnimSprite;
 
     public override void _Ready()
     {
@@ -134,11 +136,32 @@ public partial class Weapon : Node2D
         AddToGroup("weapons");
         hpLabel = GetNodeOrNull<Label>("HpLabel");
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
-        // ✅ 双图层组件自动获取
+        // ✅ 双图层组件自动获取（Sprite2D 版）
         if (baseSprite == null)
             baseSprite = GetNodeOrNull<Sprite2D>("BaseSprite");
         if (normalSprite == null)
             normalSprite = GetNodeOrNull<Sprite2D>("NormalSprite");
+        // ✅ 双图层组件自动获取（AnimatedSprite2D 版）
+        if (baseAnimSprite == null)
+            baseAnimSprite = GetNodeOrNull<AnimatedSprite2D>("BaseAnimSprite");
+        if (baseAnimSprite == null)
+            baseAnimSprite = GetNodeOrNull<AnimatedSprite2D>("BaseAnimatedSprite");
+        if (normalAnimSprite == null)
+            normalAnimSprite = GetNodeOrNull<AnimatedSprite2D>("NormalAnimSprite");
+        if (normalAnimSprite == null)
+            normalAnimSprite = GetNodeOrNull<AnimatedSprite2D>("NormalAnimatedSprite");
+        
+        // ✅ 双图层 Sprite2D：把 Normal 层挂到 Base 层下
+        if (baseSprite != null && normalSprite != null && normalSprite.GetParent() != baseSprite)
+        {
+            normalSprite.Reparent(baseSprite, true);
+        }
+        // ✅ 双图层 AnimatedSprite2D：同理
+        if (baseAnimSprite != null && normalAnimSprite != null && normalAnimSprite.GetParent() != baseAnimSprite)
+        {
+            normalAnimSprite.Reparent(baseAnimSprite, true);
+        }
+        
         UpdateHpLabel();
         if (hpLabel != null)
         {
@@ -169,7 +192,26 @@ public partial class Weapon : Node2D
     /// </summary>
     protected virtual void ApplyPaletteMaterial()
     {
-        // ✅ 双图层方案
+        // ✅ 双图层 AnimatedSprite2D 方案（优先）
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite) &&
+            normalAnimSprite != null && IsInstanceValid(normalAnimSprite))
+        {
+            var baseMat = FactionPaletteManager.GetBaseLayerMaterial(team);
+            if (baseMat != null)
+            {
+                baseAnimSprite.Material = (ShaderMaterial)baseMat.Duplicate();
+                baseAnimSprite.Show();
+            }
+            normalAnimSprite.Material = null;
+            normalAnimSprite.Show();
+            // 隐藏旧版单图层组件
+            if (animSprite != null) animSprite.Hide();
+            if (baseSprite != null) baseSprite.Hide();
+            if (normalSprite != null) normalSprite.Hide();
+            return;
+        }
+        
+        // ✅ 双图层 Sprite2D 方案
         if (baseSprite != null && IsInstanceValid(baseSprite) &&
             normalSprite != null && IsInstanceValid(normalSprite))
         {
@@ -181,10 +223,20 @@ public partial class Weapon : Node2D
             }
             normalSprite.Material = null;
             normalSprite.Show();
+            // 隐藏旧版单图层组件
+            if (animSprite != null) animSprite.Hide();
+            if (baseAnimSprite != null) baseAnimSprite.Hide();
+            if (normalAnimSprite != null) normalAnimSprite.Hide();
             return;
         }
         
         // Fallback：兼容模式
+        // 先隐藏双图层节点
+        if (baseAnimSprite != null) baseAnimSprite.Hide();
+        if (normalAnimSprite != null) normalAnimSprite.Hide();
+        if (baseSprite != null) baseSprite.Hide();
+        if (normalSprite != null) normalSprite.Hide();
+        
         var mat = FactionPaletteManager.GetMaterial(team);
         if (mat == null) return;
         
@@ -192,6 +244,7 @@ public partial class Weapon : Node2D
         {
             var animMat = (ShaderMaterial)mat.Duplicate();
             animSprite.Material = animMat;
+            animSprite.Show();
         }
     }
 
@@ -354,9 +407,7 @@ public partial class Weapon : Node2D
             else
             {
                 // Fallback: 旧模式
-                Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
-                    ? TeamHelper.GetTeamColor(team) * 0.7f
-                    : new Color(0.5f, 0.5f, 0.5f, 1f);
+                Color tint = TeamHelper.GetTeamColor(team) * 0.7f;
                 tint.A = 1f;
                 animSprite.Modulate = tint;
             }
@@ -388,10 +439,7 @@ public partial class Weapon : Node2D
             else
             {
                 // Fallback: 旧模式
-                Color tint = (team == TeamHelper.Player0 || team == TeamHelper.Player)
-                    ? TeamHelper.GetTeamColor(team)
-                    : Colors.White;
-                animSprite.Modulate = tint;
+                animSprite.Modulate = TeamHelper.GetTeamColor(team);
             }
         }
     }

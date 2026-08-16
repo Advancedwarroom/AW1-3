@@ -27,6 +27,7 @@
 [ext_resource type="Script" uid="uid://74y35y84urko" path="res://spricts/TerrainEditor.cs" id="21_gtqqq"]
 [ext_resource type="PackedScene" uid="uid://crx806yfxmm2q" path="res://Prefabs/Recon.tscn" id="22_io27d"]
 [ext_resource type="PackedScene" uid="uid://cehhs3q3wtiud" path="res://Prefabs/Laser.tscn" id="23_gtqqq"]
+[ext_resource type="PackedScene" uid="uid://dbib4olv611fq" path="res://Prefabs/RepairBoat.tscn" id="25_jey2d"]
 [ext_resource type="PackedScene" uid="uid://bnxa6cihdpkhx" path="res://Prefabs/City.tscn" id="25_mjuaj"]
 [ext_resource type="PackedScene" uid="uid://sfbmwapwn124" path="res://Prefabs/AntiAir.tscn" id="25_p8adh"]
 [ext_resource type="Script" uid="uid://b45e5l1rdl2f6" path="res://spricts/FogOfWarManager.cs" id="26_oldxj"]
@@ -46,6 +47,7 @@ bg_color = Color(0.7545575, 0.4679699, 0.05228907, 1)
 
 [node name="Main" type="Node2D" unique_id=913760407]
 script = ExtResource("1_itxqv")
+metadata/_edit_horizontal_guides_ = [280.0]
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=1462766648]
 tile_set = ExtResource("2_v0l8b")
@@ -1838,49 +1840,59 @@ position = Vector2(896, 160)
 
 [node name="Grid565" parent="Grids" unique_id=91209756 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 192)
+gridType = 3
 
 [node name="Grid566" parent="Grids" unique_id=229458713 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 224)
+gridType = 3
 
 [node name="Grid567" parent="Grids" unique_id=1423117577 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 256)
+gridType = 3
 
 [node name="Grid568" parent="Grids" unique_id=1945023024 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 288)
+gridType = 3
 
 [node name="Grid569" parent="Grids" unique_id=1893408200 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 320)
+gridType = 3
 
 [node name="Grid570" parent="Grids" unique_id=1700205124 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 352)
+gridType = 3
 
 [node name="Grid571" parent="Grids" unique_id=502982460 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 384)
+gridType = 3
 
 [node name="Grid572" parent="Grids" unique_id=2026043481 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 416)
+gridType = 9
 
 [node name="Grid573" parent="Grids" unique_id=224233616 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 448)
+gridType = 3
 
 [node name="Grid574" parent="Grids" unique_id=650564149 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 480)
+gridType = 3
 
 [node name="Grid575" parent="Grids" unique_id=882810897 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid576" parent="Grids" unique_id=1839002912 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid577" parent="Grids" unique_id=1088956391 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid578" parent="Grids" unique_id=1344099473 instance=ExtResource("6_4j5ol")]
 position = Vector2(896, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid579" parent="Grids" unique_id=31316943 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 32)
@@ -1902,50 +1914,59 @@ position = Vector2(928, 160)
 
 [node name="Grid585" parent="Grids" unique_id=909049334 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 192)
+gridType = 3
 
 [node name="Grid586" parent="Grids" unique_id=430808206 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 224)
+gridType = 3
 
 [node name="Grid587" parent="Grids" unique_id=2095278262 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 256)
+gridType = 3
 
 [node name="Grid588" parent="Grids" unique_id=1264741234 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 288)
+gridType = 3
 
 [node name="Grid589" parent="Grids" unique_id=1534270778 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 320)
+gridType = 3
 
 [node name="Grid590" parent="Grids" unique_id=729699671 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 352)
+gridType = 3
 
 [node name="Grid591" parent="Grids" unique_id=866476163 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 384)
+gridType = 3
 
 [node name="Grid592" parent="Grids" unique_id=697064212 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 416)
+gridType = 3
 
 [node name="Grid593" parent="Grids" unique_id=1831123698 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 448)
+gridType = 3
 
 [node name="Grid594" parent="Grids" unique_id=1483090897 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 480)
-gridType = 5
+gridType = 3
 
 [node name="Grid595" parent="Grids" unique_id=944330346 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid596" parent="Grids" unique_id=1133615030 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid597" parent="Grids" unique_id=1934494007 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid598" parent="Grids" unique_id=2662061 instance=ExtResource("6_4j5ol")]
 position = Vector2(928, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid599" parent="Grids" unique_id=1078615925 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 32)
@@ -1967,51 +1988,59 @@ position = Vector2(960, 160)
 
 [node name="Grid605" parent="Grids" unique_id=2060670704 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 192)
+gridType = 3
 
 [node name="Grid606" parent="Grids" unique_id=1206277783 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 224)
+gridType = 3
 
 [node name="Grid607" parent="Grids" unique_id=2101828449 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 256)
+gridType = 3
 
 [node name="Grid608" parent="Grids" unique_id=1388752567 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 288)
+gridType = 3
 
 [node name="Grid609" parent="Grids" unique_id=447383235 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 320)
+gridType = 3
 
 [node name="Grid610" parent="Grids" unique_id=837918874 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 352)
+gridType = 3
 
 [node name="Grid611" parent="Grids" unique_id=1120039911 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 384)
+gridType = 3
 
 [node name="Grid612" parent="Grids" unique_id=1680794309 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 416)
+gridType = 3
 
 [node name="Grid613" parent="Grids" unique_id=449410804 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 448)
-gridType = 5
+gridType = 3
 
 [node name="Grid614" parent="Grids" unique_id=1547075207 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 480)
-gridType = 5
+gridType = 3
 
 [node name="Grid615" parent="Grids" unique_id=1243875966 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid616" parent="Grids" unique_id=20068013 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid617" parent="Grids" unique_id=833985520 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid618" parent="Grids" unique_id=1963978468 instance=ExtResource("6_4j5ol")]
 position = Vector2(960, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid619" parent="Grids" unique_id=75268426 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 32)
@@ -2033,52 +2062,59 @@ position = Vector2(992, 160)
 
 [node name="Grid625" parent="Grids" unique_id=1033406733 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 192)
+gridType = 3
 
 [node name="Grid626" parent="Grids" unique_id=1086928982 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 224)
+gridType = 3
 
 [node name="Grid627" parent="Grids" unique_id=1375257358 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 256)
+gridType = 3
 
 [node name="Grid628" parent="Grids" unique_id=1676504450 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 288)
+gridType = 3
 
 [node name="Grid629" parent="Grids" unique_id=257534649 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 320)
+gridType = 3
 
 [node name="Grid630" parent="Grids" unique_id=748242367 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 352)
+gridType = 3
 
 [node name="Grid631" parent="Grids" unique_id=705335131 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 384)
+gridType = 3
 
 [node name="Grid632" parent="Grids" unique_id=2058455757 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 416)
-gridType = 5
+gridType = 3
 
 [node name="Grid633" parent="Grids" unique_id=535245716 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 448)
-gridType = 5
+gridType = 3
 
 [node name="Grid634" parent="Grids" unique_id=1037630546 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 480)
-gridType = 5
+gridType = 3
 
 [node name="Grid635" parent="Grids" unique_id=698253139 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid636" parent="Grids" unique_id=936992570 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid637" parent="Grids" unique_id=1823028426 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid638" parent="Grids" unique_id=1819141661 instance=ExtResource("6_4j5ol")]
 position = Vector2(992, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid639" parent="Grids" unique_id=150867549 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 32)
@@ -2100,53 +2136,59 @@ position = Vector2(1024, 160)
 
 [node name="Grid645" parent="Grids" unique_id=986999910 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 192)
+gridType = 3
 
 [node name="Grid646" parent="Grids" unique_id=1878080894 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 224)
+gridType = 3
 
 [node name="Grid647" parent="Grids" unique_id=691298072 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 256)
+gridType = 3
 
 [node name="Grid648" parent="Grids" unique_id=716618866 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 288)
+gridType = 3
 
 [node name="Grid649" parent="Grids" unique_id=106805581 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 320)
+gridType = 3
 
 [node name="Grid650" parent="Grids" unique_id=434008991 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 352)
+gridType = 3
 
 [node name="Grid651" parent="Grids" unique_id=2085945934 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 384)
-gridType = 5
+gridType = 3
 
 [node name="Grid652" parent="Grids" unique_id=584655490 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 416)
-gridType = 5
+gridType = 3
 
 [node name="Grid653" parent="Grids" unique_id=562023336 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 448)
-gridType = 5
+gridType = 3
 
 [node name="Grid654" parent="Grids" unique_id=1407631275 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 480)
-gridType = 5
+gridType = 3
 
 [node name="Grid655" parent="Grids" unique_id=343300360 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid656" parent="Grids" unique_id=1709073758 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid657" parent="Grids" unique_id=359641640 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid658" parent="Grids" unique_id=1306391546 instance=ExtResource("6_4j5ol")]
 position = Vector2(1024, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid659" parent="Grids" unique_id=1700928519 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 32)
@@ -2168,54 +2210,59 @@ position = Vector2(1056, 160)
 
 [node name="Grid665" parent="Grids" unique_id=409249941 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 192)
+gridType = 3
 
 [node name="Grid666" parent="Grids" unique_id=1177051693 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 224)
+gridType = 3
 
 [node name="Grid667" parent="Grids" unique_id=45115842 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 256)
+gridType = 3
 
 [node name="Grid668" parent="Grids" unique_id=1529865624 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 288)
+gridType = 3
 
 [node name="Grid669" parent="Grids" unique_id=1212275015 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 320)
+gridType = 3
 
 [node name="Grid670" parent="Grids" unique_id=2001485931 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 352)
-gridType = 5
+gridType = 3
 
 [node name="Grid671" parent="Grids" unique_id=1111078290 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 384)
-gridType = 5
+gridType = 3
 
 [node name="Grid672" parent="Grids" unique_id=442314267 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 416)
-gridType = 5
+gridType = 3
 
 [node name="Grid673" parent="Grids" unique_id=642765273 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 448)
-gridType = 5
+gridType = 3
 
 [node name="Grid674" parent="Grids" unique_id=261973268 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 480)
-gridType = 5
+gridType = 3
 
 [node name="Grid675" parent="Grids" unique_id=378630741 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid676" parent="Grids" unique_id=1199449552 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid677" parent="Grids" unique_id=990403812 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid678" parent="Grids" unique_id=599033723 instance=ExtResource("6_4j5ol")]
 position = Vector2(1056, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid679" parent="Grids" unique_id=1747125626 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 32)
@@ -2240,105 +2287,115 @@ position = Vector2(1120, 160)
 
 [node name="Grid686" parent="Grids" unique_id=1942476481 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 192)
+gridType = 3
 
 [node name="Grid687" parent="Grids" unique_id=2082849210 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 224)
+gridType = 3
 
 [node name="Grid688" parent="Grids" unique_id=523780561 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 256)
+gridType = 3
 
 [node name="Grid689" parent="Grids" unique_id=32823590 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 288)
+gridType = 3
 
 [node name="Grid690" parent="Grids" unique_id=334457382 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 320)
+gridType = 3
 
 [node name="Grid691" parent="Grids" unique_id=1602457297 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 352)
-gridType = 5
+gridType = 3
 
 [node name="Grid692" parent="Grids" unique_id=742773130 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 384)
-gridType = 5
+gridType = 3
 
 [node name="Grid693" parent="Grids" unique_id=1967597274 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 416)
-gridType = 5
+gridType = 3
 
 [node name="Grid694" parent="Grids" unique_id=1150376147 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 448)
-gridType = 5
+gridType = 3
 
 [node name="Grid695" parent="Grids" unique_id=1774100596 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 480)
-gridType = 5
+gridType = 3
 
 [node name="Grid696" parent="Grids" unique_id=2052537548 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid697" parent="Grids" unique_id=118971307 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid698" parent="Grids" unique_id=749958020 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid699" parent="Grids" unique_id=1888315876 instance=ExtResource("6_4j5ol")]
 position = Vector2(1120, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid700" parent="Grids" unique_id=1526847526 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 608)
-gridType = 5
+gridType = 3
 
 [node name="Grid701" parent="Grids" unique_id=2139173915 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 576)
-gridType = 5
+gridType = 3
 
 [node name="Grid702" parent="Grids" unique_id=2035677240 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 544)
-gridType = 5
+gridType = 3
 
 [node name="Grid703" parent="Grids" unique_id=969987950 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 512)
-gridType = 5
+gridType = 3
 
 [node name="Grid704" parent="Grids" unique_id=1702682820 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 480)
-gridType = 5
+gridType = 3
 
 [node name="Grid705" parent="Grids" unique_id=459515837 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 448)
-gridType = 5
+gridType = 3
 
 [node name="Grid706" parent="Grids" unique_id=82575860 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 416)
-gridType = 5
+gridType = 3
 
 [node name="Grid707" parent="Grids" unique_id=1663560750 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 384)
-gridType = 5
+gridType = 3
 
 [node name="Grid708" parent="Grids" unique_id=1534566940 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 352)
-gridType = 5
+gridType = 3
 
 [node name="Grid709" parent="Grids" unique_id=255741476 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 320)
+gridType = 3
 
 [node name="Grid710" parent="Grids" unique_id=2145083480 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 288)
+gridType = 3
 
 [node name="Grid711" parent="Grids" unique_id=431139931 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 256)
+gridType = 3
 
 [node name="Grid712" parent="Grids" unique_id=1371325545 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 224)
+gridType = 3
 
 [node name="Grid713" parent="Grids" unique_id=182534918 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 192)
+gridType = 3
 
 [node name="Grid714" parent="Grids" unique_id=1449238738 instance=ExtResource("6_4j5ol")]
 position = Vector2(1088, 160)
@@ -2480,8 +2537,8 @@ position = Vector2(224, 512)
 team = "Player2"
 
 [node name="Mech" parent="UnitManager/Units" unique_id=1167390325 instance=ExtResource("16_jcbur")]
-position = Vector2(768, 448)
-team = "Player2"
+position = Vector2(834, 418)
+team = "Player1"
 
 [node name="Sprite2D" parent="UnitManager/Units/Mech" index="2" unique_id=525152588]
 visible = false
@@ -2561,6 +2618,16 @@ team = "Player1"
 position = Vector2(448, 512)
 team = "Player2"
 
+[node name="RepairBoat" parent="UnitManager/Units" unique_id=1148536001 node_paths=PackedStringArray("gridManager") instance=ExtResource("25_jey2d")]
+position = Vector2(897, 418)
+gridManager = NodePath("../../GridManager")
+health = 16
+
+[node name="RepairBoat2" parent="UnitManager/Units" unique_id=1816822065 node_paths=PackedStringArray("gridManager") instance=ExtResource("25_jey2d")]
+position = Vector2(993, 449)
+gridManager = NodePath("../../GridManager")
+health = 70
+
 [node name="AntiTank" parent="UnitManager/Units" unique_id=435382715 instance=ExtResource("29_antitan")]
 position = Vector2(320, 480)
 canIlluminate = true
@@ -2576,10 +2643,12 @@ team = "Player1"
 
 [node name="Flare" parent="UnitManager/Units" unique_id=771793553 instance=ExtResource("28_flareq")]
 position = Vector2(352, 512)
+unitCategory = 16
 team = "Player1"
 
 [node name="AntiAir" parent="UnitManager/Units" unique_id=365018763 instance=ExtResource("25_p8adh")]
 position = Vector2(480, 512)
+unitCategory = 16
 team = "Player2"
 
 [node name="UnitLists" type="RichTextLabel" parent="." unique_id=860954284]

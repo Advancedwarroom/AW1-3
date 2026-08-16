@@ -18,7 +18,7 @@ border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.85490197, 0.8117647, 0.47058824, 0.7019608)
 
-[node name="ActionMenu" type="Control" unique_id=1260179397 node_paths=PackedStringArray("moveButton", "attackButton", "waitButton", "infoButton", "captureButton", "loadButton", "unloadContainer", "supplyButton", "explodeButton", "illuminateButton")]
+[node name="ActionMenu" type="Control" unique_id=1260179397 node_paths=PackedStringArray("moveButton", "attackButton", "waitButton", "infoButton", "captureButton", "loadButton", "unloadContainer", "supplyButton", "repairButton", "explodeButton", "illuminateButton")]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
@@ -34,6 +34,7 @@ unloadButtonPreset = ExtResource("8_xkp38")
 unloadContainer = NodePath("unloadContainer")
 supplyButton = NodePath("ButtonContainer/supplyButton")
 unloadUnitButtonPreset = ExtResource("8_xkp38")
+repairButton = NodePath("ButtonContainer/RepairButton")
 explodeButton = NodePath("ButtonContainer/ExplodeButton")
 illuminateButton = NodePath("ButtonContainer/IlluminateButton")
 
@@ -108,6 +109,11 @@ layout_mode = 2
 size_flags_vertical = 3
 icon = ExtResource("9_xkp38")
 
+[node name="RepairButton" type="Button" parent="ButtonContainer" unique_id=434518878]
+layout_mode = 2
+size_flags_vertical = 3
+text = "修复"
+
 [node name="unloadContainer" type="VBoxContainer" parent="." unique_id=577535758]
 layout_mode = 0
 offset_top = 280.0
@@ -126,3 +132,4 @@ layout_mode = 2
 [connection signal="pressed" from="ButtonContainer/CaptureButton" to="." method="OnCapturePressed"]
 [connection signal="pressed" from="ButtonContainer/loadButton" to="." method="OnLoadPressed"]
 [connection signal="pressed" from="ButtonContainer/supplyButton" to="." method="OnSupplyPressed"]
+[connection signal="pressed" from="ButtonContainer/RepairButton" to="." method="OnRepairPressed"]

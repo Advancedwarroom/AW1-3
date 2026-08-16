@@ -9,9 +9,8 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_yv6tl"]
 size = Vector2(32, 32)
 
-[node name="FlyBomb" type="Node2D" unique_id=1148536001 node_paths=PackedStringArray("animSprite", "loadedIcon", "noFuelIcon", "noAmmoIcon")]
+[node name="FlyBomb" type="Node2D" unique_id=1148536001 node_paths=PackedStringArray("loadedIcon", "noFuelIcon", "noAmmoIcon", "animSprite", "baseAnimSprite")]
 script = ExtResource("1_c8rcr")
-animSprite = NodePath("Base2D")
 useDefaultConfig = false
 canCapture = false
 unitCategory = 7
@@ -42,6 +41,8 @@ canExplode = true
 explosionMaxRange = 3
 explosionDamageMode = 1
 explosionSelfDamageEnabled = false
+animSprite = NodePath("Base2D")
+baseAnimSprite = NodePath("Base2D")
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

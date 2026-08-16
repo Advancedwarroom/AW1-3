@@ -23,6 +23,7 @@ public enum UnitCategory
     PipeRunner,
     Bike,
     Flare,
+    RepairBoat,
 
     Other       // 其他未分类单位
 }
@@ -68,6 +69,7 @@ public partial class GameManager : Node
     public Godot.Collections.Array<Infantry> flyBombUnits = new();
     public Godot.Collections.Array<Infantry> flareUnits = new();
     public Godot.Collections.Array<Infantry> bikeUnits = new();
+    public Godot.Collections.Array<Infantry> repairBoatUnits = new();
 
     public Godot.Collections.Array<Infantry> PipeRunnerUnits = new();
     public Godot.Collections.Array<Infantry> lightTankUnits = new();
@@ -76,13 +78,45 @@ public partial class GameManager : Node
     // 回合管理
     public int turns = 1;
     public int turnPhase = 1;
-    public const int totalPhases = 3;
+    // ✅ totalPhases 动态计算 = 启用的战斗势力数（不含 P-1 和 P0）
+    public int totalPhases => Mathf.Max(1, TeamHelper.GetActiveFactions().Count(f => f.Id != TeamHelper.Player && f.Id != TeamHelper.Player0));
 
     // 资金系统
     [Export] public int p1Funds = 0;
     [Export] public int p2Funds = 0;
     [Export] public int p1FundsMax = 999999;
     [Export] public int p2FundsMax = 999999;
+    
+    // ✅ 通用资金字典（支持多势力，Player1/Player2 兼容旧存档）
+    private Godot.Collections.Dictionary<string, int> _teamFunds = new();
+    private Godot.Collections.Dictionary<string, int> _teamFundsMax = new();
+    
+    /// <summary>获取势力资金（支持任意数量势力）</summary>
+    public int GetTeamFunds(string team)
+    {
+        if (team == "Player1") return p1Funds;
+        if (team == "Player2") return p2Funds;
+        return _teamFunds.GetValueOrDefault(team, 0);
+    }
+    
+    /// <summary>设置势力资金（支持任意数量势力）</summary>
+    public void SetTeamFunds(string team, int value)
+    {
+        int max = GetTeamFundsMax(team);
+        int clamped = Mathf.Clamp(value, 0, max);
+        if (team == "Player1") p1Funds = clamped;
+        else if (team == "Player2") p2Funds = clamped;
+        else _teamFunds[team] = clamped;
+        UpdateUnitLists();
+    }
+    
+    /// <summary>获取势力资金上限</summary>
+    public int GetTeamFundsMax(string team)
+    {
+        if (team == "Player1") return p1FundsMax;
+        if (team == "Player2") return p2FundsMax;
+        return _teamFundsMax.GetValueOrDefault(team, 999999);
+    }
 
     // 当前选中的单位
     public Infantry selectedInfantry = null;
@@ -413,6 +447,7 @@ public void RemoveWeapon(Weapon weapon)
         flyBombUnits.Clear();
         flareUnits.Clear();
         bikeUnits.Clear();
+        repairBoatUnits.Clear();
         PipeRunnerUnits.Clear();
 
         foreach (var unit in unitManager.AllUnits)
@@ -466,6 +501,9 @@ public void RemoveWeapon(Weapon weapon)
                         break;
                     case UnitCategory.Bike:
                         bikeUnits.Add(unit);
+                        break;
+                    case UnitCategory.RepairBoat:
+                        repairBoatUnits.Add(unit);
                         break;
                     case UnitCategory.PipeRunner:
                         PipeRunnerUnits.Add(unit);
@@ -540,6 +578,10 @@ private void AutoCategorizeUnit(Infantry unit)
         case PipeRunner _:
             category = UnitCategory.PipeRunner;
             PipeRunnerUnits.Add(unit);
+            break;
+        case RepairBoat _:
+            category = UnitCategory.RepairBoat;
+            repairBoatUnits.Add(unit);
             break;
         case Artillery _:
             category = UnitCategory.Artillery;
@@ -732,6 +774,7 @@ private void AutoCategorizeUnit(Infantry unit)
         int pn1Flare = 0, p0Flare = 0, p1Flare = 0, p2Flare = 0;
         int pn1Bike = 0, p0Bike = 0, p1Bike = 0, p2Bike = 0;
         int pn1PipeRunner = 0, p0PipeRunner = 0, p1PipeRunner = 0, p2PipeRunner = 0;
+        int pn1RepairBoat = 0, p0RepairBoat = 0, p1RepairBoat = 0, p2RepairBoat = 0;
 
     
         
@@ -761,6 +804,32 @@ private void AutoCategorizeUnit(Infantry unit)
                     if (team == "Player") pn1Weapons++; else if (team == "Player0") p0Weapons++;
                     else if (team == "Player1") p1Weapons++; else if (team == "Player2") p2Weapons++;
                 }
+            }
+        }
+
+        // ✅ 按类型和势力实时计数
+        foreach (var u in all)
+        {
+            if (u == null || !IsInstanceValid(u)) continue;
+            string t = u.team;
+            switch (u)
+            {
+                case Mech _: if (t == "Player") pn1Mech++; else if (t == "Player0") p0Mech++; else if (t == "Player1") p1Mech++; else if (t == "Player2") p2Mech++; break;
+                case MdTank _: if (t == "Player") pn1MdTank++; else if (t == "Player0") p0MdTank++; else if (t == "Player1") p1MdTank++; else if (t == "Player2") p2MdTank++; break;
+                case LightTank _: if (t == "Player") pn1Tank++; else if (t == "Player0") p0Tank++; else if (t == "Player1") p1Tank++; else if (t == "Player2") p2Tank++; break;
+                case Artillery _: if (t == "Player") pn1Artillery++; else if (t == "Player0") p0Artillery++; else if (t == "Player1") p1Artillery++; else if (t == "Player2") p2Artillery++; break;
+                case Rocket _: if (t == "Player") pn1Rocket++; else if (t == "Player0") p0Rocket++; else if (t == "Player1") p1Rocket++; else if (t == "Player2") p2Rocket++; break;
+                case APC _: if (t == "Player") pn1APC++; else if (t == "Player0") p0APC++; else if (t == "Player1") p1APC++; else if (t == "Player2") p2APC++; break;
+                case Recon _: if (t == "Player") pn1Recon++; else if (t == "Player0") p0Recon++; else if (t == "Player1") p1Recon++; else if (t == "Player2") p2Recon++; break;
+                case AntiAir _: if (t == "Player") pn1AntiAir++; else if (t == "Player0") p0AntiAir++; else if (t == "Player1") p1AntiAir++; else if (t == "Player2") p2AntiAir++; break;
+                case AntiTank _: if (t == "Player") pn1AntiTank++; else if (t == "Player0") p0AntiTank++; else if (t == "Player1") p1AntiTank++; else if (t == "Player2") p2AntiTank++; break;
+                case FlyBomb _: if (t == "Player") pn1FlyBomb++; else if (t == "Player0") p0FlyBomb++; else if (t == "Player1") p1FlyBomb++; else if (t == "Player2") p2FlyBomb++; break;
+                case Flare _: if (t == "Player") pn1Flare++; else if (t == "Player0") p0Flare++; else if (t == "Player1") p1Flare++; else if (t == "Player2") p2Flare++; break;
+                case Bike _: if (t == "Player") pn1Bike++; else if (t == "Player0") p0Bike++; else if (t == "Player1") p1Bike++; else if (t == "Player2") p2Bike++; break;
+                case PipeRunner _: if (t == "Player") pn1PipeRunner++; else if (t == "Player0") p0PipeRunner++; else if (t == "Player1") p1PipeRunner++; else if (t == "Player2") p2PipeRunner++; break;
+                case RepairBoat _: if (t == "Player") pn1RepairBoat++; else if (t == "Player0") p0RepairBoat++; else if (t == "Player1") p1RepairBoat++; else if (t == "Player2") p2RepairBoat++; break;
+                case Oozium _: if (t == "Player") pn1Oozium++; else if (t == "Player0") p0Oozium++; else if (t == "Player1") p1Oozium++; else if (t == "Player2") p2Oozium++; break;
+                case Infantry _: if (t == "Player") pn1Infantry++; else if (t == "Player0") p0Infantry++; else if (t == "Player1") p1Infantry++; else if (t == "Player2") p2Infantry++; break;
             }
         }
 
@@ -816,6 +885,9 @@ private void AutoCategorizeUnit(Infantry unit)
         if (pn1PipeRunner > 0 || p0PipeRunner > 0 || p1PipeRunner > 0 || p2PipeRunner > 0)
             text += $"管[color={cPN1}] {pn1PipeRunner,2}|[color={cP0}]{p0PipeRunner,2}|[color={cP1}]{p1PipeRunner,2}|[color={cP2}]{p2PipeRunner,2}[/color]\n";
 
+        if (pn1RepairBoat > 0 || p0RepairBoat > 0 || p1RepairBoat > 0 || p2RepairBoat > 0)
+            text += $"修[color={cPN1}] {pn1RepairBoat,2}|[color={cP0}]{p0RepairBoat,2}|[color={cP1}]{p1RepairBoat,2}|[color={cP2}]{p2RepairBoat,2}[/color]\n";
+
         // 兵器统计
         bool hasAnyWeapon = pn1Cannons > 0 || p0Cannons > 0 || p1Cannons > 0 || p2Cannons > 0
                          || pn1Lasers > 0 || p0Lasers > 0 || p1Lasers > 0 || p2Lasers > 0
@@ -835,10 +907,10 @@ private void AutoCategorizeUnit(Infantry unit)
 
         int totalAll = totalUnits + totalWeapons;
 
-        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike + pn1PipeRunner;
-        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike + p0PipeRunner;
-        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike + p1PipeRunner;
-        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike + p2PipeRunner;
+        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike + pn1PipeRunner + pn1RepairBoat;
+        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike + p0PipeRunner + p0RepairBoat;
+        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike + p1PipeRunner + p1RepairBoat;
+        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike + p2PipeRunner + p2RepairBoat;
 
         int pn1TotalWeapons = pn1Cannons + pn1Lasers + pn1Weapons;
         int p0TotalWeapons = p0Cannons + p0Lasers + p0Weapons;
@@ -1211,6 +1283,7 @@ public void UpdateFacilityLists()
             AntiAir _ => UnitCategory.AntiAir,
             AntiTank _ => UnitCategory.AntiTank,
             PipeRunner _ => UnitCategory.PipeRunner,
+            RepairBoat _ => UnitCategory.RepairBoat,
             Infantry _ => UnitCategory.Infantry,
             _ => UnitCategory.Other
         };
@@ -1623,6 +1696,64 @@ public void RestartGame()
     GetTree().ReloadCurrentScene();
 }
 
+    // ========== ✅ 合流功能：两个同类型友方单位合并 ==========
+    public void MergeUnits(Infantry source, Infantry target)
+    {
+        if (source == null || target == null) return;
+        if (source.GetType() != target.GetType()) return;
+        if (source.team != target.team) return;
+        if (source == target) return;
+
+        // 合并血量
+        int combinedHealth = source.health + target.health;
+        int maxHealthCap = 100; // 最大100（10滴满血）
+        int excessHealth = Mathf.Max(0, combinedHealth - maxHealthCap);
+        target.health = Mathf.Min(maxHealthCap, combinedHealth);
+
+        // 多余血量转化为资金（按单位造价比例：每10血 = cost/maxHealth 的资金）
+        if (excessHealth > 0 && target.cost > 0)
+        {
+            int fundsGained = Mathf.RoundToInt((float)excessHealth / target.maxHealth * target.cost);
+            int currentFunds = GetTeamFunds(target.team);
+            SetTeamFunds(target.team, currentFunds + fundsGained);
+        }
+
+        // 弹药取最大值
+        if (source.hasPrimaryWeapon && target.hasPrimaryWeapon)
+        {
+            target.currentPrimaryAmmo = Mathf.Max(source.currentPrimaryAmmo, target.currentPrimaryAmmo);
+        }
+
+        // 燃料取最大值
+        if (source.consumeFuel && target.consumeFuel)
+        {
+            target.fuel = Mathf.Max(source.fuel, target.fuel);
+        }
+
+        // 更新目标单位显示
+        target.UpdateHpLabel();
+
+        // 移除源单位
+        RemoveUnit(source);
+
+        // 更新统计
+        UpdateUnitLists();
+    }
+
+    // ========== ✅ 检查是否可以合流 ==========
+    public bool CanMerge(Infantry source, Infantry target)
+    {
+        if (source == null || target == null) return false;
+        if (source.GetType() != target.GetType()) return false;
+        if (source.team != target.team) return false;
+        if (source == target) return false;
+        // 目标必须是残血的
+        if (target.health >= target.maxHealth) return false;
+        // 不能是运输单位（避免和搭载冲突）——但 RepairBoat 允许合流
+        if (target.canTransportUnits && target.maxTransportCapacity > 0 && target is not RepairBoat) return false;
+        return true;
+    }
+
     public void RemoveUnit(Infantry unit)
     {
         // ✅ 从所有专用列表中移除
@@ -1644,6 +1775,7 @@ public void RestartGame()
         reconUnits.Remove(unit);
         flyBombUnits.Remove(unit);
         PipeRunnerUnits.Remove(unit);
+        repairBoatUnits.Remove(unit);
 
         unitCategories.Remove(unit);
         unitManager?.RemoveUnit(unit);
@@ -1723,23 +1855,20 @@ public void RestartGame()
             }
         }
 
-        // ✅ 资金系统：每回合开始时给对应势力增加资金
-        // ✅ P-1公共设施给所有势力提供收入
-        if (turnPhase == 1)
+        // ✅ 资金系统：每回合开始时给当前phase的势力增加资金
+        string fundTeam = TeamHelper.GetPhaseTeamName(turnPhase);
+        if (!string.IsNullOrEmpty(fundTeam))
         {
-            AddFundsForTeam("Player1");
-        }
-        else if (turnPhase == 2)
-        {
-            AddFundsForTeam("Player2");
+            AddFundsForTeam(fundTeam);
         }
 
-        // ✅ P0 阶段：P0 和 P-1 兵器自动执行 AI
-        if (turnPhase == 3)
+        // ✅ P0 AI：在当前phase结束后（最后一个大回合阶段）执行 P0 和 P-1 兵器 AI
+        bool isLastPhase = turnPhase == totalPhases;
+        if (isLastPhase)
         {
             foreach (var wp in weaponManager?.AllWeapons ?? new List<Weapon>())
             {
-                if (IsInstanceValid(wp) && (TeamHelper.ShouldWeaponUseAI(wp.team) || TeamHelper.ShouldPlayerWeaponUseAI(turnPhase, wp.team)))
+                if (IsInstanceValid(wp) && (TeamHelper.ShouldWeaponUseAI(wp.team) || TeamHelper.ShouldPlayerWeaponUseAI(turnPhase + 1, wp.team)))
                 {
                     wp.ExecuteAI();
                 }
@@ -1757,6 +1886,23 @@ public void RestartGame()
         {
         }
         Infantry.UpdateUnitsCannotMove();
+
+        // ✅ 自动修复/补给（回合开始时）
+        foreach (var unit in unitManager?.AllUnits ?? new List<Infantry>())
+        {
+            if (!IsInstanceValid(unit)) continue;
+            // APC 自动补给
+            if (unit is APC apc && apc.autoSupplyOnTurnStart)
+            {
+                apc.OnTurnStartAutoSupply();
+            }
+            // RepairBoat 自动修复
+            if (unit is RepairBoat rb && rb.autoRepairOnTurnStart)
+            {
+                rb.OnTurnStartAutoRepair();
+            }
+        }
+
         // 重置所有单位状态
 
                 foreach (var wp in weaponManager?.AllWeapons ?? new List<Weapon>())
@@ -1772,7 +1918,8 @@ public void RestartGame()
             {
                 continue;
             }
-        if (isNewTurn && unit.canTransportUnits && unit.maxTransportCapacity > 0 )
+        // ✅ 通用运输单位自动补给（排除 RepairBoat，它走专门的 OnTurnStartAutoRepair）
+        if (isNewTurn && unit.canTransportUnits && unit.maxTransportCapacity > 0 && unit is not RepairBoat)
         {
             unit.OnTurnStartAutoSupply();
         }
@@ -1883,14 +2030,10 @@ public void RestartGame()
             }
         }
 
-        if (team == "Player1")
-        {
-            p1Funds = Mathf.Min(p1Funds + income, p1FundsMax);
-        }
-        else if (team == "Player2")
-        {
-            p2Funds = Mathf.Min(p2Funds + income, p2FundsMax);
-        }
+        // ✅ 支持任意势力
+        int maxFunds = GetTeamFundsMax(team);
+        int current = GetTeamFunds(team);
+        SetTeamFunds(team, current + income);
 
         UpdateUnitLists();
     }
@@ -2559,7 +2702,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         foreach (var child in productionMenuContainer.GetChildren())
             child.QueueFree();
 
-        string currentTeam = turnPhase == 1 ? "Player1" : "Player2";
+        string currentTeam = TeamHelper.GetPhaseTeamName(turnPhase) ?? "";
         int currentFunds = GetTeamFunds(currentTeam);
 
         int remainingProductions = Mathf.Max(0, facility.maxProductionsPerTurn - facility.productionsThisTurn);
@@ -2764,7 +2907,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         if (!productionTargetFacility.CanProduceNow()) return;
 
         var info = UnitProductionDatabase.GetInfo(unitName);
-        string currentTeam = turnPhase == 1 ? "Player1" : "Player2";
+        string currentTeam = TeamHelper.GetPhaseTeamName(turnPhase) ?? "";
 
         // 编辑模式不判定资金
         bool isEditMode = terrainEditor != null && terrainEditor.IsEditMode;
@@ -2911,22 +3054,7 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         return true;
     }
 
-    public int GetTeamFunds(string team)
-    {
-        return team switch
-        {
-            "Player1" => p1Funds,
-            "Player2" => p2Funds,
-            _ => 0
-        };
-    }
-
-    public void SetTeamFunds(string team, int value)
-    {
-        if (team == "Player1") p1Funds = Mathf.Clamp(value, 0, p1FundsMax);
-        else if (team == "Player2") p2Funds = Mathf.Clamp(value, 0, p2FundsMax);
-        UpdateUnitLists();
-    }
+    // 资金 getter/setter 已内联到字段区域上方
 
     // ========== ✅ 重置游戏状态（导入地图后调用）==========
     public void ResetGameState()

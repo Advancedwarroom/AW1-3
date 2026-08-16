@@ -41,6 +41,13 @@ public partial class Facility : Node2D
 {
     public Grids ParentGrid { get; private set; }
 
+    // ✅ 双图层视觉组件（设施/建筑染色用）
+    [Export] public AnimatedSprite2D animSprite;
+    [Export] public AnimatedSprite2D baseAnimSprite;
+    [Export] public AnimatedSprite2D normalAnimSprite;
+    [Export] public Sprite2D baseSprite;
+    [Export] public Sprite2D normalSprite;
+
     [ExportGroup("生产模块")]
     [Export] public bool canProduce = false;
     [Export] public Godot.Collections.Array<string> producibleUnitNames = new();
@@ -125,6 +132,35 @@ public partial class Facility : Node2D
                     AppliedByTeam = data.AppliedByTeam
                 });
             }
+        }
+
+        // ✅ 视觉组件自动获取
+        if (animSprite == null)
+            animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
+        if (animSprite == null)
+            animSprite = GetNodeOrNull<AnimatedSprite2D>("Base2D");
+        if (baseAnimSprite == null)
+            baseAnimSprite = GetNodeOrNull<AnimatedSprite2D>("BaseAnimSprite");
+        if (baseAnimSprite == null)
+            baseAnimSprite = GetNodeOrNull<AnimatedSprite2D>("BaseAnimatedSprite");
+        if (normalAnimSprite == null)
+            normalAnimSprite = GetNodeOrNull<AnimatedSprite2D>("NormalAnimSprite");
+        if (normalAnimSprite == null)
+            normalAnimSprite = GetNodeOrNull<AnimatedSprite2D>("NormalAnimatedSprite");
+        if (baseSprite == null)
+            baseSprite = GetNodeOrNull<Sprite2D>("BaseSprite");
+        if (normalSprite == null)
+            normalSprite = GetNodeOrNull<Sprite2D>("NormalSprite");
+        
+        // ✅ 双图层 Sprite2D：把 Normal 层挂到 Base 层下，继承所有变换
+        if (baseSprite != null && normalSprite != null && normalSprite.GetParent() != baseSprite)
+        {
+            normalSprite.Reparent(baseSprite, true);
+        }
+        // ✅ 双图层 AnimatedSprite2D：同理
+        if (baseAnimSprite != null && normalAnimSprite != null && normalAnimSprite.GetParent() != baseAnimSprite)
+        {
+            normalAnimSprite.Reparent(baseAnimSprite, true);
         }
 
         UpdateCityVisual();
@@ -352,21 +388,69 @@ public partial class Facility : Node2D
 
     public virtual void UpdateCityVisual()
     {
-        if (ParentGrid == null) return;
-        var sprite = ParentGrid.GetNodeOrNull<Sprite2D>("Sprite2D");
-        if (sprite == null) return;
-
-        Color teamColor = facilityTeam switch
+        ApplyPaletteMaterial();
+    }
+    
+    /// <summary>
+    /// ✅ 为设施应用调色板Shader（双图层 + 兼容模式）
+    /// </summary>
+    protected virtual void ApplyPaletteMaterial()
+    {
+        // ✅ 双图层 AnimatedSprite2D 方案（优先）
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite) &&
+            normalAnimSprite != null && IsInstanceValid(normalAnimSprite))
         {
-            "Player1" => new Color(1f, 0.3f, 0.3f),
-            "Player2" => new Color(0.3f, 0.5f, 1f),
-            "Player0" => new Color(0.8f, 0.8f, 0.8f),
-            "Player" => new Color(0.7f, 0.4f, 0.9f),
-            _ => Colors.White
-        };
-
-        var tween = CreateTween();
-        tween.TweenProperty(sprite, "modulate", teamColor, 0.5f);
+            var baseMat = FactionPaletteManager.GetBaseLayerMaterial(facilityTeam);
+            if (baseMat != null)
+            {
+                baseAnimSprite.Material = (ShaderMaterial)baseMat.Duplicate();
+                baseAnimSprite.Show();
+            }
+            normalAnimSprite.Material = null;
+            normalAnimSprite.Show();
+            // 隐藏旧版单图层组件
+            if (animSprite != null) animSprite.Hide();
+            if (baseSprite != null) baseSprite.Hide();
+            if (normalSprite != null) normalSprite.Hide();
+            return;
+        }
+        
+        // ✅ 双图层 Sprite2D 方案
+        if (baseSprite != null && IsInstanceValid(baseSprite) &&
+            normalSprite != null && IsInstanceValid(normalSprite))
+        {
+            var baseMat = FactionPaletteManager.GetBaseLayerMaterial(facilityTeam);
+            if (baseMat != null)
+            {
+                baseSprite.Material = (ShaderMaterial)baseMat.Duplicate();
+                baseSprite.Show();
+            }
+            normalSprite.Material = null;
+            normalSprite.Show();
+            // 隐藏旧版单图层组件
+            if (animSprite != null) animSprite.Hide();
+            if (baseAnimSprite != null) baseAnimSprite.Hide();
+            if (normalAnimSprite != null) normalAnimSprite.Hide();
+            return;
+        }
+        
+        // Fallback：兼容模式（单图层贴图直接染色）
+        // 先隐藏双图层节点
+        if (baseAnimSprite != null) baseAnimSprite.Hide();
+        if (normalAnimSprite != null) normalAnimSprite.Hide();
+        if (baseSprite != null) baseSprite.Hide();
+        if (normalSprite != null) normalSprite.Hide();
+        
+        var mat = FactionPaletteManager.GetMaterial(facilityTeam);
+        if (mat == null) return;
+        
+        // 给 animSprite 应用调色板材质
+        if (animSprite != null && IsInstanceValid(animSprite))
+        {
+            var animMat = (ShaderMaterial)mat.Duplicate();
+            animSprite.Material = animMat;
+            animSprite.Show();
+        }
     }
 
     public void ShowCaptureContestVisual()
@@ -382,7 +466,7 @@ public partial class Facility : Node2D
         var effect = new CaptureEffect
         {
             CaptureProgress = 100f,
-            TeamColor = newTeam == "Player1" ? new Color(1f, 0.2f, 0.2f) : new Color(0.2f, 0.4f, 1f),
+            TeamColor = TeamHelper.GetTeamColor(newTeam),
             IsCapturing = false, Position = new Godot.Vector2(0, -10), ZIndex = 200
         };
         AddChild(effect);

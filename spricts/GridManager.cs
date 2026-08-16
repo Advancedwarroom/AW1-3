@@ -153,6 +153,33 @@ public partial class GridManager : Node
         return false;
     }
 
+    // ========== ✅ 显示修复范围（粉色）==========
+    public void ShowRepairRange(Infantry unit)
+    {
+        if (unit == null || unit.grid == null) return;
+        ForceClearAllRangeVisuals();
+        
+        repairRange.Clear();
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager == null) return;
+
+        var allRange = FindRange(unit.grid, unit.maxRepairRange, false);
+        if (unit.minRepairRange > 1)
+        {
+            var blindZone = FindRange(unit.grid, unit.minRepairRange - 1, false);
+            allRange = allRange.Where(g => !blindZone.Contains(g)).ToList();
+        }
+        repairRange = allRange.Where(g => g != unit.grid).ToList();
+
+        Grids.IsForceActionMode = true;
+        foreach (var grid in repairRange)
+        {
+            grid.attackRangeIcon?.Show();
+            grid.attackRangeIcon.Modulate = new Color(1.0f, 0.4f, 0.7f, 0.8f); // 粉色
+            grid.IsInAttackRangeMode = true;
+        }
+    }
+
     public void ShowWeaponAttackRange(Weapon weapon)
     {
         if (weapon == null || weapon.hasActed) return;
@@ -588,6 +615,7 @@ public partial class GridManager : Node
     }
 
     public  List<Grids> moveRange = new List<Grids>() ;
+    public List<Grids> repairRange = new List<Grids>(); // ✅ 修复范围缓存
 
     public void ShowMoveRange(Infantry infantry)
     {
@@ -653,6 +681,7 @@ public partial class GridManager : Node
         
         attackRange.Clear();
         explosionRange.Clear(); // ✅ 清除爆炸范围缓存
+        repairRange.Clear(); // ✅ 清除修复范围缓存
         flareRange.Clear(); // ✅ 清除照明弹射程范围
         illuminationRange.Clear(); // ✅ 清除照明覆盖范围
         
@@ -1037,6 +1066,20 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                     CloseRange();
                     return;
                 }
+                // ✅ 合流检测：同类型友方残血单位 → 自动合流
+                var mergeTarget = otherUnits
+                    .Where(u => u.team == infantry.team && u.GetType() == infantry.GetType())
+                    .OrderBy(u => u.health)
+                    .FirstOrDefault();
+                if (mergeTarget != null)
+                {
+                    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+                    if (gm != null && gm.CanMerge(infantry, mergeTarget))
+                    {
+                        MoveTo(infantry, to);
+                        return;
+                    }
+                }
                 // ⬅️ 改为截断移动而非直接取消
                 HandleTruncatedMove(infantry, to);
                 return;
@@ -1187,6 +1230,15 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
 
 
+        // ✅ 合流检测：同类型友方残血单位可以合流
+        var mergeTarget = otherUnits.FirstOrDefault(u => u.team == requestingUnit.team && u.GetType() == requestingUnit.GetType());
+        if (mergeTarget != null)
+        {
+            var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+            if (gm != null && gm.CanMerge(requestingUnit, mergeTarget))
+                return true;
+        }
+
         switch (requestingUnit.overlapType)
         {
             case UnitOverlapType.NonOverlapping:
@@ -1206,7 +1258,17 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         if (infantry.overlapType == UnitOverlapType.NonOverlapping)
         {
             var otherUnits = to.infantries.Where(i => i != infantry && IsInstanceValid(i)).ToList();
-            if (otherUnits.Count > 0) return;
+            if (otherUnits.Count > 0)
+            {
+                // ✅ 允许合流：同类型友方残血单位
+                var mergeTarget = otherUnits.FirstOrDefault(u => u.team == infantry.team && u.GetType() == infantry.GetType());
+                var gmer = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+                bool canMerge = mergeTarget != null && gmer != null && gmer.CanMerge(infantry, mergeTarget);
+                // ✅ 允许搭载：友方运输单位
+                var transported = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == infantry.team && u.CanTransportUnit(infantry));
+                if (transported == null && !canMerge)
+                    return;
+            }
         }
 
         if (infantry.overlapType == UnitOverlapType.Oozium)
@@ -1289,13 +1351,28 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
     }
 
-    if (!hasMountedToTransport && showMenu)
+    // ✅ 合流检测：移动到同类型友方残血单位时自动合流
+    bool hasMerged = false;
+    if (!hasMountedToTransport)
+    {
+        var mergeTarget = to.infantries
+            .Where(u => u != infantry && IsInstanceValid(u) && u.team == infantry.team && u.GetType() == infantry.GetType())
+            .OrderBy(u => u.health)
+            .FirstOrDefault() as Infantry;
+        if (mergeTarget != null && gm != null && gm.CanMerge(infantry, mergeTarget))
+        {
+            gm.MergeUnits(infantry, mergeTarget);
+            hasMerged = true;
+        }
+    }
+
+    if (!hasMountedToTransport && !hasMerged && showMenu)
     {
         SetupEmptyClickForRollback(infantry);
         var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
         actionMenu?.ShowMenu(infantry, true, true);
     }
-    else if (!hasMountedToTransport)
+    else if (!hasMountedToTransport && !hasMerged)
     {
         // ⬅️ 不弹菜单，直接待机
         infantry.isAttacked = true;

@@ -187,6 +187,11 @@ private readonly List<UnitTemplate> unitTemplates = new()
     new UnitTemplate { DisplayName = TranslateGroup.T("💣 飞弹"), ScenePath = "res://Prefabs/FlyBomb.tscn", 
         Category = TranslateGroup.T("特殊"), Team = "Player1", DisplayColor = new Color(0.9f, 0.3f, 0.1f), 
         Description = TranslateGroup.T("自爆单位，3格范围50%HP伤害，空军移动力9") },
+
+    // 海军
+    new UnitTemplate { DisplayName = TranslateGroup.T("🔧 修理船"), ScenePath = "res://Prefabs/RepairBoat.tscn", 
+        Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f), 
+        Description = TranslateGroup.T("海军修理单位，可修复友军，可搭载步兵，Hover移动") },
 };
 
 private readonly List<UnitTemplate> weaponTemplates = new()
@@ -588,6 +593,7 @@ private string GetFriendlyTypeName(Infantry unit)
         Oozium => TranslateGroup.T("史莱姆"),
                 AntiTank => TranslateGroup.T("反坦克炮"),
         FlyBomb => TranslateGroup.T("飞弹"),
+        RepairBoat => TranslateGroup.T("修理船"),
         Infantry => TranslateGroup.T("步兵"),
         _ => unit.GetType().Name
     };
@@ -752,11 +758,17 @@ private Button CreateTemplateButton(UnitTemplate template)
     pressedStyle.SetCornerRadiusAll(8);
     btn.AddThemeStyleboxOverride("pressed", pressedStyle);
 
+    // ✅ 可滚动的势力选择区
+    var teamScroll = new ScrollContainer();
+    teamScroll.Position = new Vector2(180, 8);
+    teamScroll.Size = new Vector2(88, 34);
+    teamScroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Auto;
+    teamScroll.VerticalScrollMode = ScrollContainer.ScrollMode.Disabled;
+    teamScroll.Name = "TeamScroll";
+    
     var teamHBox = new HBoxContainer();
-    teamHBox.Position = new Vector2(180, 12);
-    teamHBox.Size = new Vector2(100, 26);
     teamHBox.AddThemeConstantOverride("separation", 4);
-    teamHBox.Name = "TeamHBox";  // ✅ 用于后续刷新
+    teamHBox.Name = "TeamHBox";
 
     // ✅ 动态生成所有活跃势力的选择按钮
     foreach (var faction in TeamHelper.GetActiveFactions())
@@ -779,7 +791,8 @@ private Button CreateTemplateButton(UnitTemplate template)
         teamHBox.AddChild(fBtn);
     }
 
-    btn.AddChild(teamHBox);
+    teamScroll.AddChild(teamHBox);
+    btn.AddChild(teamScroll);
 
     btn.Pressed += () => {
         selectedTemplatePath = template.ScenePath;
@@ -1394,6 +1407,7 @@ private UnitCategory GetUnitCategory(Infantry unit)
                 MdTank _ => UnitCategory.MdTank,
         AntiAir _ => UnitCategory.AntiAir,
         AntiTank _ => UnitCategory.AntiTank,
+        RepairBoat _ => UnitCategory.RepairBoat,
         Infantry _ => UnitCategory.Infantry,
         _ => UnitCategory.Other
     };

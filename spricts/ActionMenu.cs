@@ -17,6 +17,7 @@ public partial class ActionMenu : Control
     [Export] public Button rotateButton; 
     [Export] public Button explodeButton; // ✅ 自爆按钮
     [Export] public Button illuminateButton; // ✅ 照明按钮
+    [Export] public Button repairButton; // ✅ 修复按钮
 
     [Export] public Button healButton; // ✅ Crystal 黑水晶治疗按钮
 
@@ -35,7 +36,14 @@ public partial class ActionMenu : Control
     private bool isFlarePreview = false; // ✅ 照明弹射程预览状态
     private bool isIlluminationPreview = false; // ✅ 照明覆盖范围预览状态
     private bool isProcessingIllumination = false; // ✅ 防重入
+    private bool isRepairPreview = false; // ✅ 修复范围预览状态
+    private bool isProcessingRepair = false; // ✅ 防重入：防止OnRepairPressed被连续触发
     private Grids pendingIlluminationTarget = null; // ✅ 待确认的照明目标格子
+
+    // ✅ 菜单拖动
+    private bool isDraggingMenu = false;
+    private Vector2 dragStartMousePos;
+    private Vector2 dragStartMenuPos;
 
     [Export] public PackedScene unloadUnitButtonPreset;
 public override void _Ready()
@@ -48,6 +56,15 @@ public override void _Ready()
         if (!supplyButton.IsConnected(BaseButton.SignalName.Pressed, callable))
         {
             supplyButton.Connect(BaseButton.SignalName.Pressed, callable);
+        }
+    }
+    // ✅ 修复按钮信号连接（带安全检查）
+    if (repairButton != null)
+    {
+        var repairCallable = new Callable(this, nameof(OnRepairPressed));
+        if (!repairButton.IsConnected(BaseButton.SignalName.Pressed, repairCallable))
+        {
+            repairButton.Connect(BaseButton.SignalName.Pressed, repairCallable);
         }
     }
     // ⚠️ 注意：explodeButton 的 Pressed 信号已在编辑器中连接 OnExplodePressed
@@ -82,6 +99,35 @@ public override void _Ready()
         TranslateGroup.Instance.LanguageChanged += OnLanguageChanged;
     }
 }
+
+    // ✅ 菜单拖动支持
+    public override void _Input(InputEvent @event)
+    {
+        if (@event is InputEventMouseButton mb && mb.ButtonIndex == MouseButton.Left)
+        {
+            if (mb.Pressed)
+            {
+                if (GetGlobalRect().HasPoint(GetGlobalMousePosition()))
+                {
+                    isDraggingMenu = true;
+                    dragStartMousePos = GetGlobalMousePosition();
+                    dragStartMenuPos = GlobalPosition;
+                }
+            }
+            else
+            {
+                isDraggingMenu = false;
+            }
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        if (isDraggingMenu && Input.IsMouseButtonPressed(MouseButton.Left))
+        {
+            GlobalPosition = dragStartMenuPos + (GetGlobalMousePosition() - dragStartMousePos);
+        }
+    }
 
 
 // ✅ 究极自由：通用运输单位卸载菜单
@@ -766,6 +812,18 @@ private List<Grids> GetAdjacentGrids(Grids center)
             bool hasExplodeAmmo = !unit.explosionDestroysSelf ? unit.currentExplodeAmmo > 0 : true;
             explodeButton.Visible = unit.canExplode && !unit.hasActed && unit.state != UnitState.Acted && hasExplodeAmmo;
             TranslateGroup.SetText(explodeButton, isExplosionPreview ? "确认爆炸" : "爆炸");
+        }
+
+        if (repairButton != null)
+        {
+            // ✅ 修复按钮：任何开启修复模块的单位，且未行动时显示
+            bool canRepairNow = unit.CanPerformRepair && !unit.hasActed && unit.state != UnitState.Acted
+                                && (!unit.isMoved || unit.canRepairAfterMove);
+            repairButton.Visible = canRepairNow;
+            if (isRepairPreview)
+                TranslateGroup.SetText(repairButton, "确认修复");
+            else
+                TranslateGroup.SetText(repairButton, "修复");
         }
 
         if (illuminateButton != null)
@@ -2098,11 +2156,112 @@ else if (weapon is Laser laser)
         }
     }
 
-    // ✅ 重写 Hide 确保隐藏时取消爆炸预览和照明预览
+    // ========== ✅ 修复按钮处理 ==========
+    private void OnRepairPressed()
+    {
+        if (isProcessingRepair) return;
+        if (currentUnit == null || !currentUnit.CanPerformRepair) return;
+
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm == null) return;
+
+        if (!isRepairPreview)
+        {
+            // 第一阶段：显示修复范围预览（粉色）
+            isRepairPreview = true;
+            gm.gridManager?.ShowRepairRange(currentUnit);
+
+            // 设置修复范围内格子的点击回调
+            foreach (var grid in gm.gridManager.repairRange)
+            {
+                grid.OnClickGrid = to => OnRepairTargetSelected(to);
+            }
+            // 范围外点击取消
+            foreach (var grid in gm.gridManager.grids)
+            {
+                if (!gm.gridManager.repairRange.Contains(grid))
+                {
+                    grid.OnClickEmpty = () => CancelRepairPreview();
+                    grid.OnClickGrid = to => CancelRepairPreview();
+                }
+            }
+
+            // 隐藏其他按钮
+            moveButton.Visible = false;
+            attackButton.Visible = false;
+            captureButton.Visible = false;
+            infoButton.Visible = false;
+            if (loadButton != null) loadButton.Visible = false;
+            if (unloadContainer != null) unloadContainer.Visible = false;
+            if (supplyButton != null) supplyButton.Visible = false;
+            if (explodeButton != null) explodeButton.Visible = false;
+            if (illuminateButton != null) illuminateButton.Visible = false;
+            TranslateGroup.SetText(repairButton, "取消修复");
+            waitButton.Visible = true;
+        }
+        else
+        {
+            // 点击"取消修复"
+            CancelRepairPreview();
+        }
+    }
+
+    private void OnRepairTargetSelected(Grids target)
+    {
+        if (target == null || currentUnit == null) return;
+        var repairBoat = currentUnit as RepairBoat;
+        if (repairBoat == null) return;
+
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm == null) return;
+
+        // 找到目标格子上的友方单位
+        var targetUnit = target.infantries.FirstOrDefault(u => u != null && IsInstanceValid(u) && u != currentUnit && u.team == currentUnit.team);
+        if (targetUnit == null) return;
+
+        // 执行修复
+        bool repaired = repairBoat.PerformRepair(targetUnit);
+        if (!repaired) return;
+
+        // 清理状态
+        isRepairPreview = false;
+        gm.gridManager?.HideAttackRange(); // 修复范围使用 attackRangeIcon
+
+        // 标记单位已行动
+        currentUnit.hasActed = true;
+        currentUnit.isMoved = true;
+        currentUnit.isAttacked = true;
+        currentUnit.state = UnitState.Acted;
+        currentUnit.originalGrid = null;
+        currentUnit.SetWaitVisual(true);
+
+        gm.ClearSelectedInfantry();
+        Hide();
+    }
+
+    public void CancelRepairPreview()
+    {
+        if (isProcessingRepair) return;
+        if (isRepairPreview)
+        {
+            isRepairPreview = false;
+            var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            gm?.gridManager?.HideAttackRange(); // 修复范围使用 attackRangeIcon
+
+            // 恢复按钮状态
+            if (currentUnit != null)
+            {
+                ShowMenu(currentUnit, currentUnit.isMoved);
+            }
+        }
+    }
+
+    // ✅ 重写 Hide 确保隐藏时取消所有预览
     public new void Hide()
     {
         CancelExplosionPreview();
         CancelIlluminationPreview();
+        CancelRepairPreview();
         base.Hide();
     }
 }

@@ -210,6 +210,20 @@ public void InitializeDefaultMatrix()
 ["PipeRunner_PipeRunner"] = 80,["Rocket_PipeRunner"] = 80,
 ["LightTank_PipeRunner"] = 55, ["AntiTank_PipeRunner"] = 85,
 ["Flare_PipeRunner"] = 12,      ["Bike_PipeRunner"] = 4,
+            // ✅ RepairBoat：无武器，攻击值为0
+            ["RepairBoat_Infantry"] = 0,  ["RepairBoat_Mech"] = 0,  ["RepairBoat_LightTank"] = 0,
+            ["RepairBoat_Artillery"] = 0, ["RepairBoat_Rocket"] = 0,["RepairBoat_APC"] = 0,
+            ["RepairBoat_Oozium"] = 0,    ["RepairBoat_MdTank"] = 0,["RepairBoat_FlyBomb"] = 0,
+            ["RepairBoat_AntiAir"] = 0,   ["RepairBoat_Recon"] = 0, ["RepairBoat_Flare"] = 0,
+            ["RepairBoat_Bike"] = 0,      ["RepairBoat_PipeRunner"] = 0,["RepairBoat_RepairBoat"] = 0,
+            // 其他单位打 RepairBoat
+            ["MdTank_RepairBoat"] = 35,   ["PipeRunner_RepairBoat"] = 60,
+            ["Rocket_RepairBoat"] = 60,   ["LightTank_RepairBoat"] = 10,
+            ["Artillery_RepairBoat"] = 55,["Infantry_RepairBoat"] = 0,
+            ["Mech_RepairBoat"] = 0,      ["AntiAir_RepairBoat"] = 0,
+            ["Recon_RepairBoat"] = 0,     ["Flare_RepairBoat"] = 0,
+            ["Bike_RepairBoat"] = 0,      ["AntiTank_RepairBoat"] = 0,
+            ["APC_RepairBoat"] = 0,       ["FlyBomb_RepairBoat"] = 0,
         };
     }
 
@@ -269,6 +283,20 @@ public void InitializeDefaultMatrix()
             ["APC_Infantry"] = 0,         ["APC_Mech"] = 0,         ["APC_LightTank"] = 0,
             ["APC_Artillery"] = 0,        ["APC_Rocket"] = 0,       ["APC_APC"] = 0,
             ["APC_Oozium"] = 0,           ["APC_MdTank"] = 0,
+            // ✅ RepairBoat 副武器数据（无副武器）
+            ["RepairBoat_Infantry"] = 0,  ["RepairBoat_Mech"] = 0,  ["RepairBoat_LightTank"] = 0,
+            ["RepairBoat_Artillery"] = 0, ["RepairBoat_Rocket"] = 0,["RepairBoat_APC"] = 0,
+            ["RepairBoat_Oozium"] = 0,    ["RepairBoat_MdTank"] = 0,["RepairBoat_FlyBomb"] = 0,
+            ["RepairBoat_AntiAir"] = 0,   ["RepairBoat_Recon"] = 0, ["RepairBoat_Flare"] = 0,
+            ["RepairBoat_Bike"] = 0,      ["RepairBoat_PipeRunner"] = 0,["RepairBoat_RepairBoat"] = 0,
+            // 其他单位副武器打 RepairBoat
+            ["MdTank_RepairBoat"] = 10,   ["PipeRunner_RepairBoat"] = 0,
+            ["Rocket_RepairBoat"] = 0,    ["LightTank_RepairBoat"] = 1,
+            ["Artillery_RepairBoat"] = 0, ["Infantry_RepairBoat"] = 0,
+            ["Mech_RepairBoat"] = 0,      ["AntiAir_RepairBoat"] = 0,
+            ["Recon_RepairBoat"] = 0,     ["Flare_RepairBoat"] = 0,
+            ["Bike_RepairBoat"] = 0,      ["AntiTank_RepairBoat"] = 0,
+            ["APC_RepairBoat"] = 0,       ["FlyBomb_RepairBoat"] = 0,
 
             ["MdTank_Infantry"] = 55,         ["MdTank_Mech"] = 45,         ["MdTank_LightTank"] = 45,
             ["MdTank_Artillery"] = 55,        ["MdTank_Rocket"] = 45,       ["MdTank_APC"] = 55,
@@ -707,7 +735,27 @@ public virtual bool ConsumePrimaryAmmo()
     [Export] public int flareDurationTurns = 1;                      // 照明效果持续大回合数
     [Export] public bool canIlluminateAfterMove = false;             // 移动后是否可以照明
 
-    // ========== ✅ 通用自爆弹模块（无限自爆模式单位需要）==========
+
+    // ========== ✅ 通用修复模块（RepairBoat / APC 等维修单位可用）==========
+    [ExportGroup("修复模块")]
+    [Export] public bool canRepair = false;                          // 是否可以修复
+    public virtual bool CanPerformRepair => canRepair;               // ✅ 虚属性：子类可覆盖（解决字段隐藏问题）
+    [Export] public int minRepairRange = 1;                          // 最小修复范围
+    [Export] public int maxRepairRange = 1;                          // 最大修复范围
+    [Export] public bool repairCostsFunds = false;                   // 修复是否消耗资金
+    [Export] public int repairCostPerHp = 0;                         // 每点血量消耗资金
+    [Export] public bool canExceedMaxHealth = false;                 // 是否能超越最大血量
+    [Export] public int exceededMaxHealth = 100;                     // 超越后的新最大值
+    [Export] public bool canRepairAfterMove = true;                  // 是否可以移动后修复
+    [Export] public int repairAmountPerAction = 1;                   // 每次修复多少血量（可为负=扣血，可为0）
+    [Export] public bool isAreaRepair = false;                       // 能否群体修复
+    [Export] public int repairTargetMode = 1;                        // 0=所有 1=仅友方 2=仅敌方
+    [Export] public bool autoRepairOnTurnStart = false;              // 每回合自动修复（不占用操作）
+    [Export] public bool autoRepairAfterMove = false;                // 移动后自动修复（不占用操作）
+    [Export] public bool autoSupplyOnTurnStart = false;              // 每回合自动补给（不占用操作）
+    [Export] public bool supplyCostsFunds = false;                   // 补给是否消耗资金
+
+    // 当前占领进度（运行时）
     [ExportGroup("自爆弹模块")]
     [Export] public int maxExplodeAmmo = 0;                          // 最大自爆弹数
     [Export] public int currentExplodeAmmo = 0;                      // 当前自爆弹数
@@ -802,9 +850,14 @@ public virtual bool ConsumePrimaryAmmo()
     [Export] public Sprite2D idleSprite;            // ✅ 供子类使用（静态贴图）
     [Export] public Sprite2D baseSprite;            // ✅ 双图层：灰白Base图（染色层）
     [Export] public Sprite2D normalSprite;          // ✅ 双图层：彩色Normal图（肤色/不变色层）
+    [Export] public AnimatedSprite2D baseAnimSprite;    // ✅ 双图层动画：灰白Base动画（染色层）
+    [Export] public AnimatedSprite2D normalAnimSprite;  // ✅ 双图层动画：彩色Normal动画（不变色层）
 
     public  Color normal = Colors.White;
     public  Color dim = new Color(0.7f, 0.7f, 0.7f, 1.0f);
+
+    // ✅ 视觉组件原始 scale（用于呼吸动画基准，不覆盖场景中的设计 scale）
+    private Vector2 _originalVisualScale = Vector2.One;
 
 public override void _Ready()
 {
@@ -815,7 +868,8 @@ public override void _Ready()
     spriteRed = GetNodeOrNull<Sprite2D>("Osinfantry");
     spriteBlue = GetNodeOrNull<Sprite2D>("Bminfantry");
     UpdateActiveSprite();
-    if (sprite == null)
+    // ✅ 有 animSprite 时不再兜底找 sprite（避免 FindChild 错误匹配空 Sprite2D 如 BaseSprite）
+    if (sprite == null && animSprite == null)
     {
         sprite = GetNodeOrNull<Sprite2D>("Osinfantry");
         if (sprite == null)
@@ -834,11 +888,32 @@ public override void _Ready()
     if (idleSprite == null)
         idleSprite = GetNodeOrNull<Sprite2D>("BaseSprite");
     
-    // ✅ 双图层组件自动获取
+    // ✅ 双图层组件自动获取（Sprite2D 版）
     if (baseSprite == null)
         baseSprite = GetNodeOrNull<Sprite2D>("BaseSprite");
     if (normalSprite == null)
         normalSprite = GetNodeOrNull<Sprite2D>("NormalSprite");
+    
+    // ✅ 双图层组件自动获取（AnimatedSprite2D 版）
+    if (baseAnimSprite == null)
+        baseAnimSprite = GetNodeOrNull<AnimatedSprite2D>("BaseAnimSprite");
+    if (baseAnimSprite == null)
+        baseAnimSprite = GetNodeOrNull<AnimatedSprite2D>("BaseAnimatedSprite");
+    if (normalAnimSprite == null)
+        normalAnimSprite = GetNodeOrNull<AnimatedSprite2D>("NormalAnimSprite");
+    if (normalAnimSprite == null)
+        normalAnimSprite = GetNodeOrNull<AnimatedSprite2D>("NormalAnimatedSprite");
+    
+    // ✅ 双图层 Sprite2D：把 Normal 层挂到 Base 层下，继承所有变换
+    if (baseSprite != null && normalSprite != null && normalSprite.GetParent() != baseSprite)
+    {
+        normalSprite.Reparent(baseSprite, true);
+    }
+    // ✅ 双图层 AnimatedSprite2D：同理
+    if (baseAnimSprite != null && normalAnimSprite != null && normalAnimSprite.GetParent() != baseAnimSprite)
+    {
+        normalAnimSprite.Reparent(baseAnimSprite, true);
+    }
 
     actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
     hpLabel = GetNodeOrNull<Label>("HpLabel");
@@ -917,19 +992,20 @@ public override void _Ready()
     // 初始化攻防表（无论 useDefaultConfig 如何都需要，用于查询）
     InitializeDefaultMatrix();
 
+    // ✅ 记录视觉组件原始 scale（必须在 StartBreath 之前！）
+    if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
+        _originalVisualScale = baseAnimSprite.Scale;
+    else if (baseSprite != null && IsInstanceValid(baseSprite))
+        _originalVisualScale = baseSprite.Scale;
+    else if (animSprite != null && IsInstanceValid(animSprite))
+        _originalVisualScale = animSprite.Scale;
+    else if (sprite != null && IsInstanceValid(sprite))
+        _originalVisualScale = sprite.Scale;
+
     UpdateTeamVisual();
     UpdateHpLabel();
-    // ✅ 动画单位优先用 animSprite 初始化，回退到 sprite
-    if (animSprite != null && IsInstanceValid(animSprite))
-    {
-        string animName = GetIdleAnimName();
-        ShowAnimState(animName);
-        StartBreath();
-    }
-    else if (sprite != null && IsInstanceValid(sprite))
-    {
-        StartBreath();
-    }
+    // ✅ ShowAnimState / StartBreath 已统一在 UpdateTeamVisual() 中处理
+    //    避免 team 改变后重复调用或状态不同步
 
         // ========== ✅ 战争迷雾视野初始化 ==========
         if (visionRange < 0 && useConfigVision)
@@ -1067,13 +1143,27 @@ public virtual void UpdateTeamVisual()
 {
     UpdateActiveSprite();
     
-    // ✅ 动态获取势力颜色
-    normal = TeamHelper.GetTeamColor(team);
-    dim = normal * 0.7f;
-    dim.A = 1.0f;
+    // ✅ normal/dim 用于 shader 的 tone（全局变暗/变亮），保持 White/Gray
+    //    势力颜色由 ApplyPaletteMaterial() 通过 primary_color/secondary_color 设置
+    normal = Colors.White;
+    dim = new Color(0.6f, 0.6f, 0.6f, 1.0f);
     
     // ✅ 应用调色板Shader
     ApplyPaletteMaterial();
+    
+    // ✅ 刷新动画状态（team 改变后同步动画名和 tone）
+    if (animSprite != null && IsInstanceValid(animSprite))
+    {
+        string animName = GetIdleAnimName();
+        if (!string.IsNullOrEmpty(animName))
+            ShowAnimState(animName);
+        else
+            ShowAnimState("idle");
+    }
+    else if (sprite != null && IsInstanceValid(sprite))
+    {
+        ShowAnimState(null);
+    }
     
     // 确保呼吸动画作用到正确的 sprite
     if (breathTween != null && breathTween.IsValid())
@@ -1084,52 +1174,89 @@ public virtual void UpdateTeamVisual()
     
     if (sprite != null && IsInstanceValid(sprite) && !isMoved && state != UnitState.Acted)
     {
-        sprite.Scale = Vector2.One;
+        sprite.Scale = _originalVisualScale;
+        SetWaitVisual(false);
+        StartBreath();
+    }
+    else if (animSprite != null && IsInstanceValid(animSprite) && !isMoved && state != UnitState.Acted)
+    {
+        animSprite.Scale = _originalVisualScale;
         SetWaitVisual(false);
         StartBreath();
     }
 }
 
-/// <summary>
-/// ✅ 为视觉组件应用调色板Shader（LUT方案C + 双图层方案）
-/// </summary>
-protected virtual void ApplyPaletteMaterial()
-{
-    // ✅ 双图层方案：BaseSprite（染色层）+ NormalSprite（原样层）
-    if (baseSprite != null && IsInstanceValid(baseSprite) && 
-        normalSprite != null && IsInstanceValid(normalSprite))
+        /// <summary>
+    /// ✅ 为视觉组件应用调色板Shader（LUT方案C + 双图层方案）
+    /// </summary>
+    protected virtual void ApplyPaletteMaterial()
     {
-        // BaseSprite 挂简化LUT Shader（只查R通道调色板）
-        var baseMat = FactionPaletteManager.GetBaseLayerMaterial(team);
-        if (baseMat != null)
+        // ✅ 双图层 AnimatedSprite2D 方案（优先）
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite) && 
+            normalAnimSprite != null && IsInstanceValid(normalAnimSprite))
         {
-            baseSprite.Material = (ShaderMaterial)baseMat.Duplicate();
-            baseSprite.Show();
+            var baseMat = FactionPaletteManager.GetBaseLayerMaterial(team);
+            if (baseMat != null)
+            {
+                baseAnimSprite.Material = (ShaderMaterial)baseMat.Duplicate();
+                baseAnimSprite.Show();
+            }
+            normalAnimSprite.Material = null;
+            normalAnimSprite.Show();
+            // 隐藏旧版单图层组件，避免重叠
+            if (animSprite != null) animSprite.Hide();
+            if (sprite != null) sprite.Hide();
+            if (spriteRed != null) spriteRed.Hide();
+            if (spriteBlue != null) spriteBlue.Hide();
+            return;
         }
-        // NormalSprite 不挂Shader，原样显示（肤色/不变色部分）
-        normalSprite.Material = null;
-        normalSprite.Show();
-        return;
+        
+        // ✅ 双图层 Sprite2D 方案
+        if (baseSprite != null && IsInstanceValid(baseSprite) && 
+            normalSprite != null && IsInstanceValid(normalSprite))
+        {
+            var baseMat = FactionPaletteManager.GetBaseLayerMaterial(team);
+            if (baseMat != null)
+            {
+                baseSprite.Material = (ShaderMaterial)baseMat.Duplicate();
+                baseSprite.Show();
+            }
+            normalSprite.Material = null;
+            normalSprite.Show();
+            // 隐藏旧版单图层组件
+            if (animSprite != null) animSprite.Hide();
+            if (sprite != null) sprite.Hide();
+            if (spriteRed != null) spriteRed.Hide();
+            if (spriteBlue != null) spriteBlue.Hide();
+            return;
+        }
+        
+        // Fallback：兼容模式（现有红蓝双色贴图）
+        // 先隐藏双图层节点
+        if (baseAnimSprite != null) baseAnimSprite.Hide();
+        if (normalAnimSprite != null) normalAnimSprite.Hide();
+        if (baseSprite != null) baseSprite.Hide();
+        if (normalSprite != null) normalSprite.Hide();
+        
+        var mat = FactionPaletteManager.GetMaterial(team);
+        if (mat == null) return;
+        
+        // 给animSprite应用调色板材质
+        if (animSprite != null && IsInstanceValid(animSprite))
+        {
+            var animMat = (ShaderMaterial)mat.Duplicate();
+            animSprite.Material = animMat;
+            animSprite.Show();
+        }
+        
+        // 给sprite应用调色板材质
+        if (sprite != null && IsInstanceValid(sprite))
+        {
+            var spriteMat = (ShaderMaterial)mat.Duplicate();
+            sprite.Material = spriteMat;
+            sprite.Show();
+        }
     }
-    
-    // Fallback：兼容模式（现有红蓝双色贴图）
-    var mat = FactionPaletteManager.GetMaterial(team);
-    if (mat == null) return;
-    
-    // 给animSprite应用调色板材质
-    if (animSprite != null && IsInstanceValid(animSprite))
-    {
-        var animMat = (ShaderMaterial)mat.Duplicate();
-        animSprite.Material = animMat;
-    }
-    
-    // 给sprite应用调色板材质
-    if (sprite != null && IsInstanceValid(sprite))
-    {
-        var spriteMat = (ShaderMaterial)mat.Duplicate();
-        sprite.Material = spriteMat;
-    }
-}
 
 public override void _Process(double delta)
 {
@@ -1900,18 +2027,51 @@ public void StartBreath()
 {
     UpdateActiveSprite(); // 确保呼吸作用到正确的 sprite
     
-    if (sprite == null || !IsInstanceValid(sprite))
-        return;
-
     breathTween?.Kill();
 
-    // ✅ 支持 animSprite 和 sprite 两种模式
+    // ✅ 双图层 AnimatedSprite2D：BaseAnimSprite 做呼吸，NormalAnimSprite 自动跟随
+    if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite) &&
+        normalAnimSprite != null && IsInstanceValid(normalAnimSprite))
+    {
+        baseAnimSprite.Scale = _originalVisualScale;
+        
+        breathTween = CreateTween();
+        if (breathTween == null) return;
+        breathTween.SetLoops();
+        breathTween.SetProcessMode(Tween.TweenProcessMode.Idle);
+        
+        breathTween.TweenProperty(baseAnimSprite, "scale", _originalVisualScale * 1.05f, 1.2f)
+                   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        breathTween.TweenProperty(baseAnimSprite, "scale", _originalVisualScale, 1.2f)
+                   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        return;
+    }
+
+    // ✅ 双图层 Sprite2D：BaseSprite 做呼吸，NormalSprite 自动跟随
+    if (baseSprite != null && IsInstanceValid(baseSprite) &&
+        normalSprite != null && IsInstanceValid(normalSprite))
+    {
+        baseSprite.Scale = _originalVisualScale;
+        
+        breathTween = CreateTween();
+        if (breathTween == null) return;
+        breathTween.SetLoops();
+        breathTween.SetProcessMode(Tween.TweenProcessMode.Idle);
+        
+        breathTween.TweenProperty(baseSprite, "scale", _originalVisualScale * 1.05f, 1.2f)
+                   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        breathTween.TweenProperty(baseSprite, "scale", _originalVisualScale, 1.2f)
+                   .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        return;
+    }
+
+    // ✅ 支持 animSprite 和 sprite 两种模式（单图层）
     Node target = animSprite != null && IsInstanceValid(animSprite) ? animSprite : sprite;
     if (target == null || !IsInstanceValid(target))
         return;
 
     if (target is Node2D node2d)
-        node2d.Scale = Vector2.One;
+        node2d.Scale = _originalVisualScale;
 
     breathTween = CreateTween();
     if (breathTween == null) return;
@@ -1919,9 +2079,9 @@ public void StartBreath()
     breathTween.SetLoops();
     breathTween.SetProcessMode(Tween.TweenProcessMode.Idle);
 
-    breathTween.TweenProperty(target, "scale", Vector2.One * 1.05f, 1.2f)
+    breathTween.TweenProperty(target, "scale", _originalVisualScale * 1.05f, 1.2f)
                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-    breathTween.TweenProperty(target, "scale", Vector2.One, 1.2f)
+    breathTween.TweenProperty(target, "scale", _originalVisualScale, 1.2f)
                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
 }
 
@@ -1929,13 +2089,20 @@ public void StopBreath()
 {
     UpdateActiveSprite();
     
-    if (sprite == null || !IsInstanceValid(sprite))
-        return;
-
     breathTween?.Kill();
+    
+    // ✅ 双图层 AnimatedSprite2D：重置 BaseAnimSprite
+    if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
+        baseAnimSprite.Scale = _originalVisualScale;
+    
+    // ✅ 双图层 Sprite2D：重置 BaseSprite
+    if (baseSprite != null && IsInstanceValid(baseSprite))
+        baseSprite.Scale = _originalVisualScale;
+    
+    // ✅ 单图层模式
     Node target = animSprite != null && IsInstanceValid(animSprite) ? animSprite : sprite;
     if (target is Node2D node2d)
-        node2d.Scale = Vector2.One;
+        node2d.Scale = _originalVisualScale;
 }
 
 public virtual void UpdateHpLabel()
@@ -1966,7 +2133,23 @@ public virtual void SetWaitVisual(bool waiting)
     // 确保 sprite 指向正确的阵营节点
     UpdateActiveSprite();
     
-    // ✅ 双图层方案：只变暗 BaseSprite 的 tone
+    // ✅ 双图层 AnimatedSprite2D：只变暗 BaseAnimSprite 的 tone
+    if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
+    {
+        if (baseAnimSprite.Material is ShaderMaterial baseMat)
+        {
+            baseMat.SetShaderParameter("tone", waiting ? dim : normal);
+        }
+        else
+        {
+            baseAnimSprite.Modulate = waiting ? dim : normal;
+        }
+        if (hpLabel != null)
+            hpLabel.Modulate = Colors.White;
+        return;
+    }
+    
+    // ✅ 双图层 Sprite2D：只变暗 BaseSprite 的 tone
     if (baseSprite != null && IsInstanceValid(baseSprite))
     {
         if (baseSprite.Material is ShaderMaterial baseMat)
@@ -1977,7 +2160,6 @@ public virtual void SetWaitVisual(bool waiting)
         {
             baseSprite.Modulate = waiting ? dim : normal;
         }
-        // NormalSprite 保持不变
         if (hpLabel != null)
             hpLabel.Modulate = Colors.White;
         return;
@@ -2203,14 +2385,7 @@ public virtual void SetWaitVisual(bool waiting)
 
     protected Color GetTeamColor()
     {
-        return team switch
-        {
-            "Player1" => new Color(1f, 0.2f, 0.2f),  // 红色
-            "Player2" => new Color(0.2f, 0.4f, 1f),  // 蓝色
-            "Player0" => new Color(0.7f, 0.7f, 0.7f),  // P0 灰白色
-            "Player" => new Color(0.7f, 0.4f, 0.9f),   // P-1 浅紫色
-            _ => Colors.White
-        };
+        return TeamHelper.GetTeamColor(team);
     }
 
 // ✅ 新增：计算对兵器的伤害
@@ -3346,7 +3521,28 @@ public static bool CanUnitMove(Infantry unit)
 
     public virtual void ShowAnimState(string animName)
     {
-        // ✅ 双图层方案：恢复 BaseSprite tone
+        // ✅ 双图层 AnimatedSprite2D：恢复 tone + 同步动画
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
+        {
+            if (baseAnimSprite.Material is ShaderMaterial baseMat)
+                baseMat.SetShaderParameter("tone", normal);
+            else
+                baseAnimSprite.Modulate = normal;
+            
+            string actualAnim = animName;
+            if (baseAnimSprite.SpriteFrames != null && !baseAnimSprite.SpriteFrames.HasAnimation(actualAnim))
+                actualAnim = GetIdleAnimName();
+            if (baseAnimSprite.SpriteFrames != null && baseAnimSprite.SpriteFrames.HasAnimation(actualAnim))
+            {
+                baseAnimSprite.Play(actualAnim);
+                // 同步 Normal 层动画
+                if (normalAnimSprite != null && normalAnimSprite.SpriteFrames != null &&
+                    normalAnimSprite.SpriteFrames.HasAnimation(actualAnim))
+                    normalAnimSprite.Play(actualAnim);
+            }
+        }
+        
+        // ✅ 双图层 Sprite2D：恢复 tone
         if (baseSprite != null && IsInstanceValid(baseSprite))
         {
             if (baseSprite.Material is ShaderMaterial baseMat)
@@ -3378,7 +3574,46 @@ public static bool CanUnitMove(Infantry unit)
 
     public virtual void ShowIdleState()
     {
-        // ✅ 双图层方案：变暗 BaseSprite
+        // ✅ 双图层 AnimatedSprite2D：变暗 + 同步 idle 动画
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
+        {
+            if (baseAnimSprite.Material is ShaderMaterial baseMat)
+                baseMat.SetShaderParameter("tone", dim);
+            else
+                baseAnimSprite.Modulate = dim;
+            
+            string idleAnimName = GetIdleAnimName();
+            if (baseAnimSprite.SpriteFrames != null && baseAnimSprite.SpriteFrames.HasAnimation(idleAnimName))
+            {
+                baseAnimSprite.Animation = idleAnimName;
+                baseAnimSprite.Frame = 0;
+                baseAnimSprite.Stop();
+            }
+            else if (baseAnimSprite.SpriteFrames != null && baseAnimSprite.SpriteFrames.HasAnimation("idle"))
+            {
+                baseAnimSprite.Animation = "idle";
+                baseAnimSprite.Frame = 0;
+                baseAnimSprite.Stop();
+            }
+            // 同步 Normal 层
+            if (normalAnimSprite != null && normalAnimSprite.SpriteFrames != null)
+            {
+                if (normalAnimSprite.SpriteFrames.HasAnimation(idleAnimName))
+                {
+                    normalAnimSprite.Animation = idleAnimName;
+                    normalAnimSprite.Frame = 0;
+                    normalAnimSprite.Stop();
+                }
+                else if (normalAnimSprite.SpriteFrames.HasAnimation("idle"))
+                {
+                    normalAnimSprite.Animation = "idle";
+                    normalAnimSprite.Frame = 0;
+                    normalAnimSprite.Stop();
+                }
+            }
+        }
+        
+        // ✅ 双图层 Sprite2D：变暗
         if (baseSprite != null && IsInstanceValid(baseSprite))
         {
             if (baseSprite.Material is ShaderMaterial baseMat)
@@ -3416,7 +3651,46 @@ public static bool CanUnitMove(Infantry unit)
     public virtual void FreezeToIdleDark()
     {
         StopBreath();
-        // ✅ 双图层方案：变暗 BaseSprite
+        // ✅ 双图层 AnimatedSprite2D：变暗 + 同步 idle
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
+        {
+            if (baseAnimSprite.Material is ShaderMaterial baseMat)
+                baseMat.SetShaderParameter("tone", dim);
+            else
+                baseAnimSprite.Modulate = dim;
+            
+            string idleAnimName = GetIdleAnimName();
+            if (baseAnimSprite.SpriteFrames != null && baseAnimSprite.SpriteFrames.HasAnimation(idleAnimName))
+            {
+                baseAnimSprite.Animation = idleAnimName;
+                baseAnimSprite.Frame = 0;
+                baseAnimSprite.Stop();
+            }
+            else if (baseAnimSprite.SpriteFrames != null && baseAnimSprite.SpriteFrames.HasAnimation("idle"))
+            {
+                baseAnimSprite.Animation = "idle";
+                baseAnimSprite.Frame = 0;
+                baseAnimSprite.Stop();
+            }
+            // 同步 Normal 层
+            if (normalAnimSprite != null && normalAnimSprite.SpriteFrames != null)
+            {
+                if (normalAnimSprite.SpriteFrames.HasAnimation(idleAnimName))
+                {
+                    normalAnimSprite.Animation = idleAnimName;
+                    normalAnimSprite.Frame = 0;
+                    normalAnimSprite.Stop();
+                }
+                else if (normalAnimSprite.SpriteFrames.HasAnimation("idle"))
+                {
+                    normalAnimSprite.Animation = "idle";
+                    normalAnimSprite.Frame = 0;
+                    normalAnimSprite.Stop();
+                }
+            }
+        }
+        
+        // ✅ 双图层 Sprite2D：变暗
         if (baseSprite != null && IsInstanceValid(baseSprite))
         {
             if (baseSprite.Material is ShaderMaterial baseMat)

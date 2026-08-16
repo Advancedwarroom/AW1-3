@@ -70,5 +70,12 @@ visible = false
 position = Vector2(16, 16)
 texture = ExtResource("6_c1h8w")
 
+[node name="BaseSprite" type="Sprite2D" parent="." unique_id=2027261163]
+position = Vector2(16, 16)
+
+[node name="NormalSprite" type="Sprite2D" parent="BaseSprite" unique_id=1230365381]
+position = Vector2(4.7683716e-07, 0.5)
+scale = Vector2(1.0625, 1.03125)
+
 [connection signal="input_event" from="Area2D" to="." method="InputClick"]
 [connection signal="mouse_entered" from="Area2D" to="." method="MouseEnterPeice"]

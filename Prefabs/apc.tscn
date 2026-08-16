@@ -9,13 +9,11 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4b63n"]
 size = Vector2(34, 34)
 
-[node name="APC" type="Node2D" unique_id=1999259536 node_paths=PackedStringArray("animSprite", "idleSprite", "loadedIcon", "noFuelIcon", "noAmmoIcon")]
+[node name="APC" type="Node2D" unique_id=1999259536 node_paths=PackedStringArray("loadedIcon", "noFuelIcon", "noAmmoIcon", "animSprite", "idleSprite")]
 z_index = 10
 script = ExtResource("1_xci6q")
-animSprite = NodePath("AnimatedSprite2D")
-idleSprite = NodePath("Sprite2D")
 useDefaultConfig = false
-unitCategory = 7
+unitCategory = 9
 isArmoredUnit = true
 canTransportUnits = true
 canSupplyUnits = true
@@ -40,6 +38,8 @@ secondaryAttack = 0
 primaryAntiInfantry = false
 secondaryAntiInfantry = false
 team = "Player2"
+animSprite = NodePath("AnimatedSprite2D")
+idleSprite = NodePath("Sprite2D")
 
 [node name="Area2D" type="Area2D" parent="." unique_id=979674784]
 

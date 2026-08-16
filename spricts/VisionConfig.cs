@@ -16,6 +16,7 @@ public static class VisionConfig
         ["APC"] = 3, ["Oozium"] = 2, ["AntiAir"] = 5,
         ["Recon"] = 5, ["FlyBomb"] = 1, ["AntiTank"] = 2,
         ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
+        ["RepairBoat"] = 1,
     };
 
     // ========== 单位类型额外视野加成（全局）==========
@@ -258,7 +259,7 @@ public static class VisionConfig
             return bonus;
         return 0;
     }
-public static void SetTerrainVisionBonus(GridType gridType, int bonus)
+	public static void SetTerrainVisionBonus(GridType gridType, int bonus)
     {
         defaultTerrainVisionBonus[gridType] = bonus;
     }
@@ -416,8 +417,8 @@ public static void SetTerrainVisionBonus(GridType gridType, int bonus)
 
             },
             ["PipeRunner"] = new()
-{
-},
+	{
+	},
         };
     }
 

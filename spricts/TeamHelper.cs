@@ -29,6 +29,48 @@ public static class FactionPaletteManager
     
     // 共享的 Shader
     private static Shader _paletteShader;
+    
+    /// <summary>
+    /// 自动为未注册的势力创建默认配置（确保任意 team 都能正确染色）
+    /// </summary>
+    private static FactionConfig GetOrCreateFaction(string factionId)
+    {
+        var faction = TeamHelper.GetFaction(factionId);
+        if (faction != null) return faction;
+        
+        // 预定义 Player3~Player8 的默认颜色
+        Color primary = factionId switch
+        {
+            "Player3" => new Color(0.2f, 0.8f, 0.2f),   // 绿
+            "Player4" => new Color(1.0f, 0.9f, 0.1f),   // 黄
+            "Player5" => new Color(1.0f, 0.5f, 0.1f),   // 橙
+            "Player6" => new Color(1.0f, 0.4f, 0.7f),   // 粉
+            "Player7" => new Color(0.2f, 0.9f, 0.9f),   // 青
+            "Player8" => new Color(0.6f, 0.4f, 0.2f),   // 棕
+            _ => new Color(0.5f, 0.5f, 0.5f)             // 其他：灰
+        };
+        
+        faction = new FactionConfig
+        {
+            Id = factionId,
+            DisplayName = factionId,
+            PrimaryColor = primary,
+            SecondaryColor = primary.Darkened(0.3f),
+            IsActive = true,
+            SortOrder = ExtractSortOrder(factionId)
+        };
+        TeamHelper.RegisterFaction(faction);
+        return faction;
+    }
+    
+    private static int ExtractSortOrder(string factionId)
+    {
+        if (factionId == TeamHelper.Player) return -1;
+        if (factionId == TeamHelper.Player0) return 0;
+        if (factionId.StartsWith("Player") && int.TryParse(factionId.Substring(6), out int n))
+            return n;
+        return 999;
+    }
     public static Shader PaletteShader
     {
         get
@@ -117,8 +159,7 @@ public static class FactionPaletteManager
     /// </summary>
     public static ShaderMaterial GetMaterial(string factionId)
     {
-        var faction = TeamHelper.GetFaction(factionId);
-        if (faction == null) return null;
+        var faction = GetOrCreateFaction(factionId);
         
         if (Materials.TryGetValue(factionId, out var mat) && GodotObject.IsInstanceValid(mat))
             return mat;
@@ -134,14 +175,6 @@ public static class FactionPaletteManager
         // 设置势力颜色
         mat.SetShaderParameter("primary_color", faction.PrimaryColor);
         mat.SetShaderParameter("secondary_color", faction.SecondaryColor);
-        
-        // P-1/P0 特殊色调覆盖
-        bool isSpecial = factionId == TeamHelper.Player || factionId == TeamHelper.Player0;
-        mat.SetShaderParameter("use_override", isSpecial);
-        if (isSpecial)
-        {
-            mat.SetShaderParameter("override_color", faction.PrimaryColor);
-        }
         
         Materials[factionId] = mat;
         return mat;
@@ -165,8 +198,7 @@ public static class FactionPaletteManager
     /// </summary>
     public static ShaderMaterial GetBaseLayerMaterial(string factionId)
     {
-        var faction = TeamHelper.GetFaction(factionId);
-        if (faction == null) return null;
+        var faction = GetOrCreateFaction(factionId);
         
         if (BaseMaterials.TryGetValue(factionId, out var mat) && GodotObject.IsInstanceValid(mat))
             return mat;
@@ -614,10 +646,68 @@ public static class TeamHelper
             
             RebuildActiveList();
             FactionPaletteManager.ClearCache();
+            
+            // ✅ 确保默认势力始终存在（防止存档覆盖导致缺失）
+            EnsureDefaultFactions();
         }
         catch (Exception e)
         {
             GD.PrintErr($"[TeamHelper] 加载势力配置失败: {e.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// 确保默认势力（Player/P0/P1/P2）始终存在于Factions字典中
+    /// </summary>
+    private static void EnsureDefaultFactions()
+    {
+        if (!Factions.ContainsKey(Player))
+        {
+            RegisterFaction(new FactionConfig
+            {
+                Id = Player,
+                DisplayName = "Player(-1)",
+                PrimaryColor = new Color(0.7f, 0.4f, 0.9f),
+                SecondaryColor = new Color(0.5f, 0.3f, 0.7f),
+                IsActive = true,
+                SortOrder = -1
+            });
+        }
+        if (!Factions.ContainsKey(Player0))
+        {
+            RegisterFaction(new FactionConfig
+            {
+                Id = Player0,
+                DisplayName = "Player0(中立)",
+                PrimaryColor = new Color(0.7f, 0.7f, 0.7f),
+                SecondaryColor = new Color(0.5f, 0.5f, 0.5f),
+                IsActive = true,
+                SortOrder = 0
+            });
+        }
+        if (!Factions.ContainsKey(Player1))
+        {
+            RegisterFaction(new FactionConfig
+            {
+                Id = Player1,
+                DisplayName = "Player1",
+                PrimaryColor = new Color(1f, 0.2f, 0.2f),
+                SecondaryColor = new Color(0.8f, 0.1f, 0.1f),
+                IsActive = true,
+                SortOrder = 1
+            });
+        }
+        if (!Factions.ContainsKey(Player2))
+        {
+            RegisterFaction(new FactionConfig
+            {
+                Id = Player2,
+                DisplayName = "Player2",
+                PrimaryColor = new Color(0.2f, 0.4f, 1f),
+                SecondaryColor = new Color(0.1f, 0.2f, 0.8f),
+                IsActive = true,
+                SortOrder = 2
+            });
         }
     }
 }
