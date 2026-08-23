@@ -24,6 +24,7 @@ maxHealth = 200
 health = 200
 baseAttack = 0
 noAmmoIcon = NodePath("NoAmmoIcon")
+overlapType = 2
 
 [node name="Area2D" type="Area2D" parent="." unique_id=1442364498]
 

@@ -492,7 +492,7 @@ public partial class GridManager : Node
                 bool blocked = false;
 
                 g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team))
+                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team && u.team != TeamHelper.Player))
                     blocked = true; // 敌方单位阻挡（迷雾中隐藏的也算）
                 else if (selectedUnit is not Oozium && g.weapon != null)
                     blocked = true; // 兵器阻挡
@@ -719,7 +719,7 @@ public partial class GridManager : Node
                 if (curVisible)
                 {
                     cur.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                    var enemyOnCur = cur.infantries.FirstOrDefault(u => u != infantry && u.team != infantry.team);
+                    var enemyOnCur = cur.infantries.FirstOrDefault(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player);
                     if (enemyOnCur != null)
                         continue;
                 }
@@ -756,7 +756,10 @@ public partial class GridManager : Node
                     if (neighborVisible)
                     {
                         neighbor.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                        var enemyOnNeighbor = neighbor.infantries.FirstOrDefault(u => u != infantry && u.team != infantry.team);
+                        var enemyOnNeighbor = neighbor.infantries.FirstOrDefault(u =>
+                            u != infantry
+                            && u.team != infantry.team
+                            && u.team != TeamHelper.Player); // ✅ P-1 公共单位不算敌方
                         if (enemyOnNeighbor != null)
                             continue;
                     }
@@ -1113,7 +1116,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                     
                     // 检查1: 敌方单位阻挡
                     g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                    var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team).ToList();
+                    var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player).ToList();
                     if (enemies.Count > 0)
                     {
                         // 截断到最后一个可停留的格子
@@ -1190,7 +1193,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         switch (requestingUnit.overlapType)
         {
             case UnitOverlapType.NonOverlapping:
-                bool hasEnemy = otherUnits.Any(u => u.team != requestingUnit.team);
+                bool hasEnemy = otherUnits.Any(u => u.team != requestingUnit.team && u.team != TeamHelper.Player);
                 bool hasAlly = otherUnits.Any(u => u.team == requestingUnit.team);
                 
                 if (hasEnemy)
@@ -1203,6 +1206,13 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                     if (allyTransport != null)
                     {
                     return true;
+                    }
+
+                    // ✅ P-1 公共运输单位可以搭载任何势力
+                    var p1Transport = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == TeamHelper.Player && u.CanTransportUnit(requestingUnit));
+                    if (p1Transport != null)
+                    {
+                        return true;
                     }
 
                     return checkPassThrough;
@@ -1229,6 +1239,10 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         return true;
         }
 
+
+        // ✅ P-1 公共运输单位可以搭载任何势力的单位
+        var p1Transport = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == TeamHelper.Player && u.CanTransportUnit(requestingUnit));
+        if (p1Transport != null) return true;
 
         // ✅ 合流检测：同类型友方残血单位可以合流
         var mergeTarget = otherUnits.FirstOrDefault(u => u.team == requestingUnit.team && u.GetType() == requestingUnit.GetType());
@@ -1266,6 +1280,9 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                 bool canMerge = mergeTarget != null && gmer != null && gmer.CanMerge(infantry, mergeTarget);
                 // ✅ 允许搭载：友方运输单位
                 var transported = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == infantry.team && u.CanTransportUnit(infantry));
+                // ✅ P-1 公共运输单位可以搭载任何势力
+                if (transported == null)
+                    transported = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == TeamHelper.Player && u.CanTransportUnit(infantry));
                 if (transported == null && !canMerge)
                     return;
             }
@@ -1338,6 +1355,15 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         && u.maxTransportCapacity > 0 
         && u.team == infantry.team 
         && u != infantry) as Infantry;
+    // ✅ P-1 公共运输单位可以搭载任何势力
+    if (transport == null)
+    {
+        transport = to.infantries.FirstOrDefault(u => 
+            u.canTransportUnits 
+            && u.maxTransportCapacity > 0 
+            && u.team == TeamHelper.Player 
+            && u != infantry) as Infantry;
+    }
     bool hasMountedToTransport = false;
 
     if (transport != null && transport.CanTransportUnit(infantry))
@@ -1425,7 +1451,16 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             if (infantry.overlapType == UnitOverlapType.NonOverlapping)
             {
                 g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team).ToList();
+                var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player).ToList();
+                if (enemies.Count > 0)
+                {
+                    break; // 截断到上一个可停留格
+                }
+            }
+            if (infantry.overlapType == UnitOverlapType.NonOverlapping)
+            {
+                g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
+                var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player).ToList();
                 if (enemies.Count > 0)
                 {
                     break; // 截断到上一个可停留格

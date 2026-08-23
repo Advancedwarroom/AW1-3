@@ -2537,7 +2537,7 @@ position = Vector2(224, 512)
 team = "Player2"
 
 [node name="Mech" parent="UnitManager/Units" unique_id=1167390325 instance=ExtResource("16_jcbur")]
-position = Vector2(834, 418)
+position = Vector2(833, 416)
 team = "Player1"
 
 [node name="Sprite2D" parent="UnitManager/Units/Mech" index="2" unique_id=525152588]
@@ -2619,14 +2619,15 @@ position = Vector2(448, 512)
 team = "Player2"
 
 [node name="RepairBoat" parent="UnitManager/Units" unique_id=1148536001 node_paths=PackedStringArray("gridManager") instance=ExtResource("25_jey2d")]
-position = Vector2(897, 418)
+position = Vector2(897, 417)
 gridManager = NodePath("../../GridManager")
 health = 16
 
 [node name="RepairBoat2" parent="UnitManager/Units" unique_id=1816822065 node_paths=PackedStringArray("gridManager") instance=ExtResource("25_jey2d")]
-position = Vector2(993, 449)
+position = Vector2(416, 256)
 gridManager = NodePath("../../GridManager")
 health = 70
+team = "Player1"
 
 [node name="AntiTank" parent="UnitManager/Units" unique_id=435382715 instance=ExtResource("29_antitan")]
 position = Vector2(320, 480)

@@ -63,40 +63,40 @@ void fragment() {
     // 完全透明或禁用时不处理
     if (!enabled || tex.a < 0.01) {
         COLOR = tex * tone;
-        return;
-    }
-    
-    vec3 rgb = tex.rgb;
-    vec3 result = rgb;
-    
-    if (mode == 0) {
-        // ===== LUT模式：R通道作为调色板索引 =====
-        float index = clamp(tex.r, 0.0, 1.0);
-        vec2 palette_uv = vec2(index, 0.0);
-        vec4 replaced = texture(palette, palette_uv);
-        result = replaced.rgb;
     }
     else {
-        // ===== 兼容模式：红蓝区域自动检测替换 =====
-        if (is_red_dominant(rgb)) {
-            // 红色模板区 → 替换为势力主色（保留原明暗层次）
-            float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
-            result = primary_color.rgb * (0.4 + luminance * 1.2);
+        vec3 rgb = tex.rgb;
+        vec3 result = rgb;
+        
+        if (mode == 0) {
+            // ===== LUT模式：R通道作为调色板索引 =====
+            float index = clamp(tex.r, 0.0, 1.0);
+            vec2 palette_uv = vec2(index, 0.0);
+            vec4 replaced = texture(palette, palette_uv);
+            result = replaced.rgb;
         }
-        else if (is_blue_dominant(rgb)) {
-            // 蓝色模板区 → 替换为势力副色
-            float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
-            result = secondary_color.rgb * (0.4 + luminance * 1.2);
+        else {
+            // ===== 兼容模式：红蓝区域自动检测替换 =====
+            if (is_red_dominant(rgb)) {
+                // 红色模板区 → 替换为势力主色（保留原明暗层次）
+                float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
+                result = primary_color.rgb * (0.4 + luminance * 1.2);
+            }
+            else if (is_blue_dominant(rgb)) {
+                // 蓝色模板区 → 替换为势力副色
+                float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
+                result = secondary_color.rgb * (0.4 + luminance * 1.2);
+            }
+            // 其他颜色（肤色、金属、阴影等）保持不变
         }
-        // 其他颜色（肤色、金属、阴影等）保持不变
+        
+        // P-1/P0 特殊色调覆盖
+        if (use_override) {
+            float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
+            result = override_color.rgb * luminance * 1.5;
+        }
+        
+        // 应用全局色调（待机变暗等）
+        COLOR = vec4(result * tone.rgb, tex.a * tone.a);
     }
-    
-    // P-1/P0 特殊色调覆盖
-    if (use_override) {
-        float luminance = dot(rgb, vec3(0.299, 0.587, 0.114));
-        result = override_color.rgb * luminance * 1.5;
-    }
-    
-    // 应用全局色调（待机变暗等）
-    COLOR = vec4(result * tone.rgb, tex.a * tone.a);
 }

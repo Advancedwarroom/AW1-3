@@ -2133,51 +2133,29 @@ public virtual void SetWaitVisual(bool waiting)
     // 确保 sprite 指向正确的阵营节点
     UpdateActiveSprite();
     
-    // ✅ 双图层 AnimatedSprite2D：只变暗 BaseAnimSprite 的 tone
+    // ✅ 双图层 AnimatedSprite2D：tone + Modulate 双重保险
     if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
     {
         if (baseAnimSprite.Material is ShaderMaterial baseMat)
-        {
             baseMat.SetShaderParameter("tone", waiting ? dim : normal);
-        }
-        else
-        {
-            baseAnimSprite.Modulate = waiting ? dim : normal;
-        }
-        if (hpLabel != null)
-            hpLabel.Modulate = Colors.White;
-        return;
+        baseAnimSprite.Modulate = waiting ? dim : normal;
     }
     
-    // ✅ 双图层 Sprite2D：只变暗 BaseSprite 的 tone
+    // ✅ 双图层 Sprite2D：tone + Modulate 双重保险
     if (baseSprite != null && IsInstanceValid(baseSprite))
     {
         if (baseSprite.Material is ShaderMaterial baseMat)
-        {
             baseMat.SetShaderParameter("tone", waiting ? dim : normal);
-        }
-        else
-        {
-            baseSprite.Modulate = waiting ? dim : normal;
-        }
-        if (hpLabel != null)
-            hpLabel.Modulate = Colors.White;
-        return;
+        baseSprite.Modulate = waiting ? dim : normal;
     }
     
-    // ✅ LUT模式：通过Shader的tone参数实现变暗
+    // ✅ LUT模式 / 旧模式：同时处理 animSprite 和 sprite
     Node2D target = animSprite != null && IsInstanceValid(animSprite) ? animSprite : sprite;
     if (target != null && IsInstanceValid(target))
     {
         if (target.Material is ShaderMaterial shaderMat)
-        {
             shaderMat.SetShaderParameter("tone", waiting ? dim : normal);
-        }
-        else
-        {
-            // Fallback: 旧模式的Modulate
-            target.Modulate = waiting ? dim : normal;
-        }
+        target.Modulate = waiting ? dim : normal;
     }
 
     if (hpLabel != null)
@@ -2981,9 +2959,14 @@ public virtual bool LoadUnit(Infantry unit)
         unit.grid.infantries.Remove(unit);
         if (unit.grid.infantry == unit)
             unit.grid.infantry = unit.grid.infantries.Count > 0 ? unit.grid.infantries[0] : null;
+        unit.grid = null; // ✅ 彻底断开与格子的关联
     }
     
     UpdateLoadedIcon();
+    
+    // ✅ 装载后刷新迷雾，确保被装载单位正确隐藏
+    var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+    gm?.fogOfWarManager?.OnUnitMoved();
     
     return true;
 }
@@ -3000,18 +2983,25 @@ public virtual bool LoadUnit(Infantry unit)
             {
                 sp.Scale = Vector2.One;
                 sp.Modulate = Colors.White;
+                sp.Hide();
             }
             else if (node is AnimatedSprite2D anim && IsInstanceValid(anim))
             {
                 anim.Scale = Vector2.One;
                 anim.Modulate = Colors.White;
                 anim.Stop();
+                anim.Hide();
+            }
+            else if (node is Label lbl && IsInstanceValid(lbl))
+            {
+                lbl.Hide();
             }
             foreach (var child in node.GetChildren())
                 ResetNode(child);
         }
         
         ResetNode(unit);
+        unit.Hide();
     }
     
     // ✅ 恢复单位的所有视觉组件（卸载后调用）
@@ -3042,6 +3032,17 @@ public virtual bool UnloadUnit(Infantry unit, Grids targetGrid)
     if (!transportedUnits.Contains(unit)) return false;
     if (targetGrid == null) return false;
     if (targetGrid.gridType == GridType.METEORITE) return false;
+
+    var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+
+    // ✅ P-1 公共运输单位：只能卸载当前势力的单位
+    if (this.team == TeamHelper.Player)
+    {
+        string currentTurnTeam = TeamHelper.GetPhaseTeamName(gm?.turnPhase ?? 1);
+        if (unit.team != currentTurnTeam)
+            return false;
+    }
+
     
     var blockingUnit = targetGrid.infantries.FirstOrDefault(u => 
         u != null && IsInstanceValid(u) && 
@@ -3073,7 +3074,6 @@ public virtual bool UnloadUnit(Infantry unit, Grids targetGrid)
     
     unitsCannotMove[unit] = 1;
     
-    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     gm?.unitManager?.BindUnitToGrid(unit, true);
     gm?.fogOfWarManager?.OnUnitMoved(); // ✅ 卸载后刷新迷雾
     
@@ -3610,6 +3610,11 @@ public static bool CanUnitMove(Infantry unit)
                     normalAnimSprite.Frame = 0;
                     normalAnimSprite.Stop();
                 }
+                // ✅ Normal 层也变暗（shader tone 只影响自身，不影响子节点）
+                if (normalAnimSprite.Material is ShaderMaterial normalMat)
+                    normalMat.SetShaderParameter("tone", dim);
+                else
+                    normalAnimSprite.Modulate = dim;
             }
         }
         
@@ -3620,8 +3625,16 @@ public static bool CanUnitMove(Infantry unit)
                 baseMat.SetShaderParameter("tone", dim);
             else
                 baseSprite.Modulate = dim;
+            
+            // ✅ Normal 层也变暗
+            if (normalSprite != null && IsInstanceValid(normalSprite))
+            {
+                if (normalSprite.Material is ShaderMaterial normalMat)
+                    normalMat.SetShaderParameter("tone", dim);
+                else
+                    normalSprite.Modulate = dim;
+            }
         }
-        
         if (animSprite != null)
         {
             if (idleSprite != null) idleSprite.Hide();
@@ -3687,6 +3700,11 @@ public static bool CanUnitMove(Infantry unit)
                     normalAnimSprite.Frame = 0;
                     normalAnimSprite.Stop();
                 }
+                // ✅ Normal 层也变暗（shader tone 只影响自身，不影响子节点）
+                if (normalAnimSprite.Material is ShaderMaterial normalMat)
+                    normalMat.SetShaderParameter("tone", dim);
+                else
+                    normalAnimSprite.Modulate = dim;
             }
         }
         
@@ -3697,6 +3715,15 @@ public static bool CanUnitMove(Infantry unit)
                 baseMat.SetShaderParameter("tone", dim);
             else
                 baseSprite.Modulate = dim;
+            
+            // ✅ Normal 层也变暗
+            if (normalSprite != null && IsInstanceValid(normalSprite))
+            {
+                if (normalSprite.Material is ShaderMaterial normalMat)
+                    normalMat.SetShaderParameter("tone", dim);
+                else
+                    normalSprite.Modulate = dim;
+            }
         }
         
         if (animSprite != null)
@@ -3723,6 +3750,9 @@ public static bool CanUnitMove(Infantry unit)
             else
                 sprite.Modulate = dim;
         }
+        
+        // ✅ 保险：统一调用 SetWaitVisual 确保所有图层都被处理
+        SetWaitVisual(true);
     }
 
     public virtual void RestoreAnimAndBreath()

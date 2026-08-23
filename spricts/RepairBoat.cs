@@ -90,15 +90,16 @@ public partial class RepairBoat : Infantry
     // ========== ✅ 重写：RepairBoat 只能搭载步兵类单位（Infantry / Mech / Bike）==========
     public override bool CanTransportUnit(Infantry unit)
     {
-        if (unit == null || !IsInstanceValid(unit)) return false;
-        if (transportedUnits.Count >= maxTransportCapacity) return false;
-        if (unit.team != this.team) return false;
+    if (unit == null || !IsInstanceValid(unit)) return false;
+    if (transportedUnits.Count >= maxTransportCapacity) return false;
+    // ✅ P-1 公共单位可以搭载任何势力
+    if (this.team != TeamHelper.Player && unit.team != this.team) return false;
 
-        // 只允许 Infantry / Mech / Bike
-        bool isAllowedType = unit.GetType() == typeof(Infantry) || unit is Mech || unit is Bike;
-        if (!isAllowedType) return false;
+    // 只允许 Infantry / Mech / Bike
+    bool isAllowedType = unit.GetType() == typeof(Infantry) || unit is Mech || unit is Bike;
+    if (!isAllowedType) return false;
 
-        return true;
+    return true;
     }
 
     // ========== ✅ 修复范围计算 ==========

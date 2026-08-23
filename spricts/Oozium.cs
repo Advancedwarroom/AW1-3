@@ -5,6 +5,7 @@ public partial class Oozium : Infantry
 {
     public override void _Ready()
     {
+        overlapType = UnitOverlapType.Oozium;
         base._Ready();
         // Oozium 仅保留特殊视觉初始化（队伍颜色决定呼吸动画）
         StartBreathAnimation();
@@ -62,6 +63,22 @@ public partial class Oozium : Infantry
 
     public override void SetWaitVisual(bool waiting)
     {
+        // ✅ 先调用基类暗色逻辑
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite))
+        {
+            if (baseAnimSprite.Material is ShaderMaterial baseMat)
+                baseMat.SetShaderParameter("tone", waiting ? dim : normal);
+            else
+                baseAnimSprite.Modulate = waiting ? dim : normal;
+        }
+        else if (animSprite != null && IsInstanceValid(animSprite))
+        {
+            if (animSprite.Material is ShaderMaterial mat)
+                mat.SetShaderParameter("tone", waiting ? dim : normal);
+            else
+                animSprite.Modulate = waiting ? dim : normal;
+        }
+        
         if (animSprite != null)
             animSprite.SpeedScale = waiting ? 0.5f : 1.0f;
         if (hpLabel != null)

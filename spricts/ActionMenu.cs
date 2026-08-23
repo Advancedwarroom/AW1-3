@@ -167,10 +167,20 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
     foreach (var child in container.GetChildren())
         child.QueueFree();
 
+    // ✅ P-1 公共运输单位：预计算当前回合势力
+    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+    string currentTurnTeam = "";
+    if (transport.team == TeamHelper.Player)
+    {
+        currentTurnTeam = TeamHelper.GetPhaseTeamName(gm?.turnPhase ?? 1);
+    }
+
     // 创建卸载按钮
     foreach (var unit in transport.transportedUnits)
     {
         if (unit == null || !IsInstanceValid(unit)) continue;
+        if (transport.team == TeamHelper.Player && unit.team != currentTurnTeam)
+            continue;
 
         if (unloadUnitButtonPreset != null)
         {
@@ -202,7 +212,6 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
     }
 
     // 设置空地回调
-    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     if (gm?.gridManager != null)
     {
         if (afterMove)
@@ -981,9 +990,9 @@ public void ShowTransportMenu(Infantry transport, bool afterMove)
     {
         var mountableUnit = transport.grid.infantries
             .FirstOrDefault(u => u != transport 
-                && u.team == transport.team 
+                && (u.team == transport.team || transport.team == TeamHelper.Player)
                 && transport.CanTransportUnit(u) 
-                && !u.isMoved 
+                && (afterMove || !u.isMoved) 
                 && u.state != UnitState.Acted);
 
         if (mountableUnit != null && loadButton != null)
@@ -1050,6 +1059,13 @@ private void ShowTransportUnloadButtonsOnly(Infantry transport)
     foreach (var unit in transport.transportedUnits)
     {
         if (unit == null || !IsInstanceValid(unit)) continue;
+
+        // ✅ P-1 公共运输单位：只显示当前势力可卸载的单位
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        string currentTurnTeam = TeamHelper.GetPhaseTeamName(gm?.turnPhase ?? 1);
+        if (transport.team == TeamHelper.Player && unit.team != currentTurnTeam)
+            continue;
+
 
         if (unloadUnitButtonPreset != null)
         {
