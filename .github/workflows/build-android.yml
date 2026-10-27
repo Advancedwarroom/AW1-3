@@ -53,13 +53,11 @@ jobs:
 
       - name: 装 Android Gradle 构建模板到项目
         run: |
-          unzip -o ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono/android_source.zip -d /tmp/asrc
-          if [ -f /tmp/asrc/build.gradle ]; then
-            mkdir -p android && cp -r /tmp/asrc/. android/
-          else
-            cp -r /tmp/asrc/android ./android
-          fi
-          ls android
+          mkdir -p android/build
+          echo "${GODOT_VERSION}.stable.mono" > android/.build_version
+          touch android/build/.gdignore
+          unzip -o ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono/android_source.zip -d android/build
+          ls android/build
 
       - name: 修导出预设（C# 必须 Gradle + linux-bionic）
         run: |
