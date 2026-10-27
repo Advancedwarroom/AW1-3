@@ -69,11 +69,20 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android -dname "CN=Debug,O=AW,C=CN"
 
-      - name: 导入资源并导出 APK
+      - name: 导入资源
+        run: godot --headless --import --path . --quit
+
+      - name: 杀掉 MSBuild 服务进程（防止文件锁）
+        run: dotnet build-server shutdown
+
+      - name: 手动预发布 .NET（预热 + 留诊断日志）
+        run: |
+          mkdir -p build
+          dotnet publish AWone1.sln -p:GodotTargetPlatform=android -p:Configuration=ExportRelease -r linux-bionic-arm64 2>&1 | tee build/prepublish.log
+
+      - name: 导出 APK
         run: |
           set -o pipefail
-          godot --headless --import --path . --quit
-          mkdir -p build
           GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$HOME/debug.keystore \
           GODOT_ANDROID_KEYSTORE_RELEASE_USER=androiddebugkey \
           GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=android \
@@ -91,4 +100,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: export-log
-          path: build/export.log
+          path: |
+            build/export.log
+            build/prepublish.log
