@@ -7,6 +7,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- CI 修复：Mono 运行时包在 nuget.org 不存在，Android 导出必须用 CoreCLR -->
-    <UseMonoRuntime>false</UseMonoRuntime>
+    <UseMonoRuntime>true</UseMonoRuntime>
   </PropertyGroup>
 </Project>
