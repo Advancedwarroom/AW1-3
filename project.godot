@@ -40,7 +40,7 @@ movie_writer/movie_file="C:/Users/honor/Documents/aw-1-3/MovieWriters/movie.avi"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/agent/plugin.cfg", "res://addons/godot_ai_hook/plugin.cfg", "res://addons/vscode_opener/plugin.cfg")
+enabled=PackedStringArray()
 
 [file_customization]
 
