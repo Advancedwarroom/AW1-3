@@ -75,10 +75,11 @@ jobs:
       - name: 杀掉 MSBuild 服务进程（防止文件锁）
         run: dotnet build-server shutdown
 
-      - name: 手动预发布 .NET（预热 + 留诊断日志）
+      - name: 手动发布 .NET 到运行时目录（双保险）
         run: |
-          mkdir -p build
-          dotnet publish AWone1.sln -p:GodotTargetPlatform=android -p:Configuration=ExportRelease -r linux-bionic-arm64 2>&1 | tee build/prepublish.log
+          mkdir -p build .godot/mono/publish/arm64
+          dotnet publish AWone1.sln -p:GodotTargetPlatform=android -p:Configuration=ExportRelease -r linux-bionic-arm64 -o .godot/mono/publish/arm64 2>&1 | tee build/prepublish.log
+          ls -la .godot/mono/publish/arm64 | head -15
 
       - name: 导出 APK
         run: |
