@@ -31,12 +31,11 @@ jobs:
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q commandlinetools-linux-11076708_latest.zip
           mv cmdline-tools latest
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platform-tools" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
 
       - name: 下载 Godot 4.7.1 Mono 无头版
         run: |
@@ -72,15 +71,24 @@ jobs:
 
       - name: 导入资源并导出 APK
         run: |
+          set -o pipefail
           godot --headless --import --path . --quit
           mkdir -p build
           GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$HOME/debug.keystore \
           GODOT_ANDROID_KEYSTORE_RELEASE_USER=androiddebugkey \
           GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=android \
-          godot --headless --export-release "Android" build/AWone1.apk
+          godot --headless --export-release "Android" build/AWone1.apk 2>&1 | tee build/export.log
 
       - name: 上传 APK（去 Actions 页面下载）
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: AWone1-android
           path: build/AWone1.apk
+
+      - name: 失败时导出日志（发这个给我）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-log
+          path: build/export.log
