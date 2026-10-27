@@ -51,6 +51,16 @@ jobs:
           unzip -o Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz -d ~/.local/share/godot/export_templates
           mv ~/.local/share/godot/export_templates/templates ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
 
+      - name: 装 Android Gradle 构建模板到项目
+        run: |
+          unzip -o ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono/android_source.zip -d /tmp/asrc
+          if [ -f /tmp/asrc/build.gradle ]; then
+            mkdir -p android && cp -r /tmp/asrc/. android/
+          else
+            cp -r /tmp/asrc/android ./android
+          fi
+          ls android
+
       - name: 修导出预设（C# 必须 Gradle + linux-bionic）
         run: |
           sed -i 's|gradle_build/use_gradle_build=false|gradle_build/use_gradle_build=true|' export_presets.cfg
