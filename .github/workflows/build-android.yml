@@ -58,10 +58,9 @@ jobs:
           unzip -o ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono/android_source.zip -d android/build
           ls android/build
 
-      - name: 修导出预设（C# 必须 Gradle + linux-bionic）
+      - name: 修导出预设（C# 必须 Gradle 构建）
         run: |
           sed -i 's|gradle_build/use_gradle_build=false|gradle_build/use_gradle_build=true|' export_presets.cfg
-          sed -i 's|dotnet/android_use_linux_bionic=false|dotnet/android_use_linux_bionic=true|' export_presets.cfg
 
       - name: 生成调试签名（自己测够用）
         run: |
@@ -75,10 +74,10 @@ jobs:
       - name: 杀掉 MSBuild 服务进程（防止文件锁）
         run: dotnet build-server shutdown
 
-      - name: 手动发布 .NET 到运行时目录（双保险）
+      - name: 手动发布 .NET（预热 + 探雷，参数与 Godot 内部一致）
         run: |
-          mkdir -p build .godot/mono/publish/arm64
-          dotnet publish AWone1.sln -c ExportRelease -r linux-bionic-arm64 -p:GodotTargetPlatform=android -o .godot/mono/publish/arm64 2>&1 | tee build/prepublish.log
+          mkdir -p build
+          dotnet publish AWone1.sln -c ExportRelease -r android-arm64 --self-contained true -p:GodotTargetPlatform=android -o .godot/mono/publish/arm64 2>&1 | tee build/prepublish.log
 
       - name: 导出 APK
         run: |
@@ -87,21 +86,6 @@ jobs:
           GODOT_ANDROID_KEYSTORE_RELEASE_USER=androiddebugkey \
           GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=android \
           godot --headless --export-release "Android" build/AWone1.apk 2>&1 | tee build/export.log
-
-      - name: 补注 libclrjit.so 并重新签名（修 Godot 4.7.1 漏拷 JIT 的 bug）
-        run: |
-          dotnet publish AWone1.sln -c ExportRelease -r linux-bionic-arm64 --self-contained true -p:GodotTargetPlatform=android -o /tmp/pubfull
-          test -f /tmp/pubfull/libclrjit.so || (echo "ERROR: libclrjit.so 不在发布产物里" && exit 1)
-          mkdir -p lib/arm64-v8a
-          cp /tmp/pubfull/libclrjit.so lib/arm64-v8a/
-          zip -X -0 build/AWone1.apk lib/arm64-v8a/libclrjit.so
-          rm -rf lib
-          cd build
-          $ANDROID_HOME/build-tools/34.0.0/zipalign -f -p 4 AWone1.apk AWone1.aligned.apk
-          mv AWone1.aligned.apk AWone1.apk
-          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks $HOME/debug.keystore --ks-pass pass:android --key-pass pass:android --out AWone1.signed.apk AWone1.apk
-          mv AWone1.signed.apk AWone1.apk
-          echo "== 修补完成 =="
 
       - name: 上传 APK（去 Actions 页面下载）
         if: success()
