@@ -85,7 +85,13 @@ public partial class Infantry : Node2D
     [Export] public int stealthPrimaryAmmoCostPerDay = 0;             // 普通弹药
     [Export] public int stealthExplodeAmmoCostPerDay = 0;             // 自爆弹
     [Export] public int stealthFlareAmmoCostPerDay = 0;               // 照明弹
-    // —— 阈值矩阵：双方向(强制隐/强制显) × 双阈值(高/低) × 八资源，0=关闭，到达即触发(非区间带) ——
+    [Export] public bool stealthForceOneShot = false;    // 阈值效果一次性：true=触发一次后永久锁存；false=持续模式(条件成立期间强制且玩家不可改)
+    [Export] public bool stealthFormLocked = false;      // 形态锁定：true=玩家不可隐/现切换（阈值强制不受限，照常在条件满足时改写形态）
+    bool stealthForceLatched = false;                    // 运行时：一次性锁存标记
+    // —— 阈值矩阵：双方向(强制隐/强制显) × 双阈值(高/低) × 八资源 ——
+    // 语义=手机电量：高于等于高阈值触发(≥80%性能模式)，低于等于低阈值触发(≤20%省电模式)，两侧持续判定
+    [Export] public bool stealthForceHideOneShot = false;      // 强制隐阈值：true=只触发一次(终身)
+    [Export] public bool stealthForceRevealOneShot = false;    // 强制显阈值：true=只触发一次(终身)
     [Export] public int stealthForceHideHpHigh = 0;        [Export] public int stealthForceHideHpLow = 0;
     [Export] public int stealthForceRevealHpHigh = 0;      [Export] public int stealthForceRevealHpLow = 0;
     [Export] public int stealthForceHideFuelHigh = 0;      [Export] public int stealthForceHideFuelLow = 0;
@@ -2491,6 +2497,7 @@ public virtual void SetWaitVisual(bool waiting)
     public void ToggleStealth()
     {
         if (!canStealth) return;
+        if (stealthFormLocked) return;   // ✅ 形态锁定：玩家不可操作（阈值强制改写不受此限）
         // ✅ 弹系统（三选一模式，不能通吃）：切换扣弹，无弹拒绝
         if (stealthAmmoMode == 1)
         {
@@ -2540,6 +2547,9 @@ public virtual void SetWaitVisual(bool waiting)
         if (fuel <= 0 && destroyOnOutOfFuel) CallDeferred(nameof(DestroySelf));   // 沿用坠毁链
     }
 
+    private bool forceHideTriggered = false;    // 运行时：强制隐已触发(OneShot用)
+    private bool forceRevealTriggered = false;  // 运行时：强制显已触发(OneShot用)
+
     // ✅ 阈值矩阵统一判定：双方向(强制隐/强制显)×双阈值(高/低)×八资源，0=关，到达即触发
     private void ForceStealthNow()   // 阈值强制隐：被动效果，不耗行动/不扣弹
     {
@@ -2548,32 +2558,66 @@ public virtual void SetWaitVisual(bool waiting)
         Modulate = new Color(1, 1, 1, 0.45f);
     }
 
+    private static bool ThresholdHit(int value, int high, int low)
+        => (high > 0 && value >= high) || (low > 0 && value <= low);
+
     public void CheckStealthThresholds()
     {
-        // 血量
-        if ((stealthForceHideHpHigh > 0 && health <= stealthForceHideHpHigh) || (stealthForceHideHpLow > 0 && health <= stealthForceHideHpLow)) ForceStealthNow();
-        if ((stealthForceRevealHpHigh > 0 && health <= stealthForceRevealHpHigh) || (stealthForceRevealHpLow > 0 && health <= stealthForceRevealHpLow)) RevealStealth();
-        // 燃油
-        if ((stealthForceHideFuelHigh > 0 && fuel <= stealthForceHideFuelHigh) || (stealthForceHideFuelLow > 0 && fuel <= stealthForceHideFuelLow)) ForceStealthNow();
-        if ((stealthForceRevealFuelHigh > 0 && fuel <= stealthForceRevealFuelHigh) || (stealthForceRevealFuelLow > 0 && fuel <= stealthForceRevealFuelLow)) RevealStealth();
-        // 普通弹药
-        if ((stealthForceHidePrimaryHigh > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryHigh) || (stealthForceHidePrimaryLow > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryLow)) ForceStealthNow();
-        if ((stealthForceRevealPrimaryHigh > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryHigh) || (stealthForceRevealPrimaryLow > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryLow)) RevealStealth();
-        // 自爆弹
-        if ((stealthForceHideExplodeHigh > 0 && currentExplodeAmmo <= stealthForceHideExplodeHigh) || (stealthForceHideExplodeLow > 0 && currentExplodeAmmo <= stealthForceHideExplodeLow)) ForceStealthNow();
-        if ((stealthForceRevealExplodeHigh > 0 && currentExplodeAmmo <= stealthForceRevealExplodeHigh) || (stealthForceRevealExplodeLow > 0 && currentExplodeAmmo <= stealthForceRevealExplodeLow)) RevealStealth();
-        // 照明弹
-        if ((stealthForceHideFlareHigh > 0 && currentFlareAmmo <= stealthForceHideFlareHigh) || (stealthForceHideFlareLow > 0 && currentFlareAmmo <= stealthForceHideFlareLow)) ForceStealthNow();
-        if ((stealthForceRevealFlareHigh > 0 && currentFlareAmmo <= stealthForceRevealFlareHigh) || (stealthForceRevealFlareLow > 0 && currentFlareAmmo <= stealthForceRevealFlareLow)) RevealStealth();
-        // 隐身弹
-        if ((stealthForceHideStealthBulletHigh > 0 && currentStealthBullets <= stealthForceHideStealthBulletHigh) || (stealthForceHideStealthBulletLow > 0 && currentStealthBullets <= stealthForceHideStealthBulletLow)) ForceStealthNow();
-        if ((stealthForceRevealStealthBulletHigh > 0 && currentStealthBullets <= stealthForceRevealStealthBulletHigh) || (stealthForceRevealStealthBulletLow > 0 && currentStealthBullets <= stealthForceRevealStealthBulletLow)) RevealStealth();
-        // 显形弹
-        if ((stealthForceHideRevealBulletHigh > 0 && currentRevealBullets <= stealthForceHideRevealBulletHigh) || (stealthForceHideRevealBulletLow > 0 && currentRevealBullets <= stealthForceHideRevealBulletLow)) ForceStealthNow();
-        if ((stealthForceRevealRevealBulletHigh > 0 && currentRevealBullets <= stealthForceRevealRevealBulletHigh) || (stealthForceRevealRevealBulletLow > 0 && currentRevealBullets <= stealthForceRevealRevealBulletLow)) RevealStealth();
-        // 迷彩弹
-        if ((stealthForceHideCamoBulletHigh > 0 && currentCamoBullets <= stealthForceHideCamoBulletHigh) || (stealthForceHideCamoBulletLow > 0 && currentCamoBullets <= stealthForceHideCamoBulletLow)) ForceStealthNow();
-        if ((stealthForceRevealCamoBulletHigh > 0 && currentCamoBullets <= stealthForceRevealCamoBulletHigh) || (stealthForceRevealCamoBulletLow > 0 && currentCamoBullets <= stealthForceRevealCamoBulletLow)) RevealStealth();
+        // 一次性模式：已锁存则永不重判
+        if (stealthForceOneShot && stealthForceLatched) return;
+
+        bool anyActive = false;
+
+        // —— Hp：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideHpHigh > 0 && health >= stealthForceHideHpHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideHpLow > 0 && health <= stealthForceHideHpLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealHpHigh > 0 && health >= stealthForceRevealHpHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealHpLow > 0 && health <= stealthForceRevealHpLow) { RevealStealth(); anyActive = true; }
+        // —— Fuel：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideFuelHigh > 0 && fuel >= stealthForceHideFuelHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideFuelLow > 0 && fuel <= stealthForceHideFuelLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealFuelHigh > 0 && fuel >= stealthForceRevealFuelHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealFuelLow > 0 && fuel <= stealthForceRevealFuelLow) { RevealStealth(); anyActive = true; }
+        // —— Primary：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHidePrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceHidePrimaryHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHidePrimaryLow > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealPrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceRevealPrimaryHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealPrimaryLow > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryLow) { RevealStealth(); anyActive = true; }
+        // —— Explode：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideExplodeHigh > 0 && currentExplodeAmmo >= stealthForceHideExplodeHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideExplodeLow > 0 && currentExplodeAmmo <= stealthForceHideExplodeLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealExplodeHigh > 0 && currentExplodeAmmo >= stealthForceRevealExplodeHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealExplodeLow > 0 && currentExplodeAmmo <= stealthForceRevealExplodeLow) { RevealStealth(); anyActive = true; }
+        // —— Flare：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideFlareHigh > 0 && currentFlareAmmo >= stealthForceHideFlareHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideFlareLow > 0 && currentFlareAmmo <= stealthForceHideFlareLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealFlareHigh > 0 && currentFlareAmmo >= stealthForceRevealFlareHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealFlareLow > 0 && currentFlareAmmo <= stealthForceRevealFlareLow) { RevealStealth(); anyActive = true; }
+        // —— StealthBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideStealthBulletHigh > 0 && currentStealthBullets >= stealthForceHideStealthBulletHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideStealthBulletLow > 0 && currentStealthBullets <= stealthForceHideStealthBulletLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealStealthBulletHigh > 0 && currentStealthBullets >= stealthForceRevealStealthBulletHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealStealthBulletLow > 0 && currentStealthBullets <= stealthForceRevealStealthBulletLow) { RevealStealth(); anyActive = true; }
+        // —— RevealBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideRevealBulletHigh > 0 && currentRevealBullets >= stealthForceHideRevealBulletHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideRevealBulletLow > 0 && currentRevealBullets <= stealthForceHideRevealBulletLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealRevealBulletHigh > 0 && currentRevealBullets >= stealthForceRevealRevealBulletHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealRevealBulletLow > 0 && currentRevealBullets <= stealthForceRevealRevealBulletLow) { RevealStealth(); anyActive = true; }
+        // —— CamoBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideCamoBulletHigh > 0 && currentCamoBullets >= stealthForceHideCamoBulletHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideCamoBulletLow > 0 && currentCamoBullets <= stealthForceHideCamoBulletLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealCamoBulletHigh > 0 && currentCamoBullets >= stealthForceRevealCamoBulletHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealCamoBulletLow > 0 && currentCamoBullets <= stealthForceRevealCamoBulletLow) { RevealStealth(); anyActive = true; }
+
+        // ✅ 模式结算
+        if (stealthForceOneShot)
+        {
+            if (anyActive) stealthForceLatched = true;   // 一次性：触发即锁存，永不重判
+        }
+        else
+        {
+            stealthFormLocked = anyActive;   // 持续模式：条件成立期间形态锁定，解除即还玩家自由
+        }
     }
 
     // 感知：viewerTeam 是否"看见"该单位（视觉层）
