@@ -432,8 +432,7 @@ public static class UnitRegistry
             DestroyOnOutOfFuel = true,
         },
 
-        // ==================== 空军（预留，你加贴图就行）====================
-        /*
+        // ==================== 战斗机（2026-10-28 正式启用）====================
         ["Fighter"] = new UnitConfig
         {
             UnitId = "Fighter",
@@ -443,16 +442,16 @@ public static class UnitRegistry
             Cost = 20000,
             AnimPrefix = "fighter",
             HasPrimaryWeapon = true,
-            MaxPrimaryAmmo = 99,
-            PrimaryHasLimitedAmmo = false,
-            PrimaryAntiAir = true,
+            MaxPrimaryAmmo = 9,
+            PrimaryHasLimitedAmmo = true,
             IsAirUnit = true,
+            VisionRange = 2,
             MaxFuel = 99,
             ConsumeFuel = true,
             DailyFuelConsumption = 5,
             DestroyOnOutOfFuel = true,
         },
-        */
+
     };
 
     /// <summary>
