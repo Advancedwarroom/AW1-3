@@ -1750,6 +1750,10 @@ public void RestartGame()
 
         // 更新统计
         UpdateUnitLists();
+
+        // ✅ 合流后再行动开关：重置目标为未行动状态（移动点/待机动画全恢复）
+        if (target.canActAfterMerge)
+            target.OnTurnEnd();
     }
 
     // ========== ✅ 检查是否可以合流 ==========

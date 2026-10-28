@@ -74,6 +74,7 @@ public partial class Infantry : Node2D
     [Export] public bool canCounterWhenDefending = true;   // 被攻击时能否反击（Artillery/Rocket=false，默认true）
     [Export] public bool canCounterAtRange = false;        // 能否远程反击（false=仅近战距离1可反击，true=在攻击范围内可反击）
     [Export] public bool canMerge = true;
+    [Export] public bool canActAfterMerge = false;   // 🔁 合流后再行动：true=合流完成后可继续操作一次（默认关=AW原作）
     [Export] public string[] excludedWeaponTargets = System.Array.Empty<string>();  // ⚔ 兵器攻击准入(攻击方)：不能攻击的兵器类型，"Weapon"=全部兵器，留空=均可攻击              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
     [Export] public bool useDefaultConfig = true;           // ✅ 是否使用代码默认值（false=完全由Inspector控制，不执行ApplyUnitSpecificDefaults）
     [Export] public bool canDevour = false;                // 是否能吞噬敌人（Oozium特性）
