@@ -2213,7 +2213,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
     }
 
     string attackerType = currentEditingTarget?.GetType().Name ?? "Unknown";
-    string[] defenderTypes = { "Infantry", "Mech", "LightTank", "Artillery", "Rocket", "APC", "Oozium" };
+    string[] defenderTypes = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter" };
 
     foreach (var defenderType in defenderTypes)
     {
@@ -2270,7 +2270,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
 
 private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string attackerType, string preset)
 {
-    string[] defenders = { "Infantry", "Mech", "LightTank", "Artillery", "Rocket", "APC", "Oozium" };
+    string[] defenders = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter" };
 
     foreach (var d in defenders)
     {
