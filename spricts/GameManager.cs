@@ -1771,9 +1771,18 @@ public void RestartGame()
         // 更新统计
         UpdateUnitLists();
 
-        // ✅ 合流后再行动开关：重置目标为未行动状态（移动点/待机动画全恢复）
+        // ✅ 合流后再行动开关
         if (target.canActAfterMerge)
-            target.OnTurnEnd();
+            target.OnTurnEnd();   // 开启：合流后获得一次全新行动
+        else
+        {
+            // ✅ AW基准（修复）：合流后本回合不能再行动——此前目标若未行动，合流完还能操作
+            target.isMoved = true;
+            target.isAttacked = true;
+            target.hasActed = true;
+            target.state = UnitState.Acted;
+            target.SetWaitVisual(true);
+        }
     }
 
     // ========== ✅ 检查是否可以合流 ==========
