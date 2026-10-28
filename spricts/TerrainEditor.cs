@@ -187,6 +187,9 @@ private readonly List<UnitTemplate> unitTemplates = new()
     new UnitTemplate { DisplayName = TranslateGroup.T("💣 飞弹"), ScenePath = "res://Prefabs/FlyBomb.tscn", 
         Category = TranslateGroup.T("特殊"), Team = "Player1", DisplayColor = new Color(0.9f, 0.3f, 0.1f), 
         Description = TranslateGroup.T("自爆单位，3格范围50%HP伤害，空军移动力9") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("✈ 战斗机"), ScenePath = "res://Prefabs/Fighter.tscn",
+        Category = TranslateGroup.T("空军"), Team = "Player1", DisplayColor = new Color(0.45f, 0.65f, 0.95f),
+        Description = TranslateGroup.T("制空战斗机，仅可攻击空中单位，弹药9发，日耗油5") },
 
     // 海军
     new UnitTemplate { DisplayName = TranslateGroup.T("🔧 修理船"), ScenePath = "res://Prefabs/RepairBoat.tscn", 
@@ -593,6 +596,7 @@ private string GetFriendlyTypeName(Infantry unit)
         Oozium => TranslateGroup.T("史莱姆"),
                 AntiTank => TranslateGroup.T("反坦克炮"),
         FlyBomb => TranslateGroup.T("飞弹"),
+            Fighter => TranslateGroup.T("战斗机"),
         RepairBoat => TranslateGroup.T("修理船"),
         Infantry => TranslateGroup.T("步兵"),
         _ => unit.GetType().Name
@@ -1404,6 +1408,7 @@ private UnitCategory GetUnitCategory(Infantry unit)
         Artillery _ => UnitCategory.Artillery,
         Rocket _ => UnitCategory.Rocket,
         FlyBomb _ => UnitCategory.FlyBomb,
+                Fighter _ => UnitCategory.Fighter,
                 MdTank _ => UnitCategory.MdTank,
         AntiAir _ => UnitCategory.AntiAir,
         AntiTank _ => UnitCategory.AntiTank,
@@ -6189,7 +6194,7 @@ private void OpenWeaponTerrainMatrixEditor()
         { "LightTank", "LTk" }, { "MdTank", "MTk" }, { "Rocket", "Rck" },
         { "Artillery", "Art" }, { "APC", "APC" }, { "Recon", "Rec" },
         { "AntiAir", "AA" }, { "AntiTank", "AT" }, { "Flare", "Flr" },
-        { "Bike", "Bke" }, { "FlyBomb", "FBo" },
+        { "Bike", "Bke" }, { "FlyBomb", "FBo" }, { "Fighter", "Ftr" },
         { "PipeRunner", "PRun" }
     };
     private readonly Dictionary<string, string> compactWeaponAbbr = new()
