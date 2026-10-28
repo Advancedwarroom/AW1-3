@@ -228,6 +228,18 @@ public void InitializeDefaultMatrix()
             // 轰炸机挨揍表
             ["Fighter_Bomber"] = 100,
             ["AntiAir_Bomber"] = 75,
+            // 武装直升机主武器(导弹6发)：对车辆/兵器，对空无一格=打不了飞机
+            ["BCopter_Recon"] = 55,      ["BCopter_APC"] = 60,
+            ["BCopter_LightTank"] = 55,  ["BCopter_MdTank"] = 25,
+            ["BCopter_Artillery"] = 65,  ["BCopter_Rocket"] = 65,
+            ["BCopter_AntiAir"] = 25,    ["BCopter_AntiTank"] = 55,
+            ["BCopter_PipeRunner"] = 55, ["BCopter_Flare"] = 55,
+            ["BCopter_Bike"] = 55,       ["BCopter_Oozium"] = 25,
+            ["BCopter_RepairBoat"] = 25,
+            // 武装直升机副武器(机枪∞)：对步兵/直升机
+            // 挨揍表：直升机系
+            ["AntiAir_BCopter"] = 120,   ["Fighter_BCopter"] = 100,   ["PipeRunner_BCopter"] = 120,
+            ["AntiAir_TCopter"] = 120, ["Fighter_TCopter"] = 100,   ["PipeRunner_TCopter"] = 120,
 ["PipeRunner_PipeRunner"] = 80,["PipeRunner_Flare"] = 75,
 ["PipeRunner_AntiTank"] = 60,   ["PipeRunner_Bike"] = 90,
 // ✅ 其他单位主武器攻击 PipeRunner
@@ -257,6 +269,8 @@ public void InitializeDefaultMatrix()
     {
         defaultSecondaryMatrix = new Dictionary<string, int>
         {
+            ["BCopter_Infantry"] = 75,  ["BCopter_Mech"] = 75,
+            ["BCopter_BCopter"] = 65,   ["BCopter_TCopter"] = 95,
             // 步兵副武器（机枪）——通用但低
             ["Infantry_Infantry"] = 45,   ["Infantry_Mech"] = 35,   ["Infantry_LightTank"] = 5,
             ["Infantry_Artillery"] = 15,  ["Infantry_Rocket"] = 15, ["Infantry_APC"] = 5,

@@ -471,6 +471,42 @@ public static class UnitRegistry
             DailyFuelConsumption = 5,
             DestroyOnOutOfFuel = true,
         },
+        // ==================== 武装直升机（2026-10-28 空军补齐）====================
+        ["BCopter"] = new UnitConfig
+        {
+            UnitId = "BCopter",
+            DisplayName = TranslateGroup.T("武装直升机"),
+            MoveType = MoveType.AirPlane,
+            MovePoints = 6,
+            Cost = 9000,
+            AnimPrefix = "bcopter",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 6,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = true,
+            VisionRange = 3,
+            MaxFuel = 99,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 2,
+            DestroyOnOutOfFuel = true,
+        },
+        // ==================== 运输直升机（2026-10-28 空军补齐）====================
+        ["TCopter"] = new UnitConfig
+        {
+            UnitId = "TCopter",
+            DisplayName = TranslateGroup.T("运输直升机"),
+            MoveType = MoveType.AirPlane,
+            MovePoints = 6,
+            Cost = 5000,
+            AnimPrefix = "tcopter",
+            HasPrimaryWeapon = false,
+            IsAirUnit = true,
+            VisionRange = 2,
+            MaxFuel = 99,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 2,
+            DestroyOnOutOfFuel = true,
+        },
 
     };
 

@@ -565,7 +565,9 @@ public partial class AI_Manager : Node
             ["Oozium"] = 15,
             ["FlyBomb"] = 10,
             ["Fighter"] = 45,
-            ["Bomber"] = 42
+            ["Bomber"] = 42,
+            ["BCopter"] = 38,
+            ["TCopter"] = 25
         };
 
         foreach (var grid in gameManager.gridManager.grids)
