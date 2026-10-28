@@ -14,7 +14,7 @@ public static class VisionConfig
         ["Infantry"] = 2, ["Mech"] = 2, ["LightTank"] = 3,
         ["MdTank"] = 3, ["Artillery"] = 2, ["Rocket"] = 2,
         ["APC"] = 3, ["Oozium"] = 2, ["AntiAir"] = 5,
-        ["Recon"] = 5, ["FlyBomb"] = 1, ["AntiTank"] = 2,
+        ["Recon"] = 5, ["FlyBomb"] = 1, ["Fighter"] = 2, ["AntiTank"] = 2,
         ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
         ["RepairBoat"] = 1,
     };
@@ -105,6 +105,15 @@ public static class VisionConfig
         },
         // 飞弹：高空飞行，不受地形影响
         ["FlyBomb"] = new()
+        {
+            [GridType.GROUND] = 0, [GridType.ROAD] = 0,
+            [GridType.HILL] = 0, [GridType.FOREST] = 0,
+            [GridType.SEA] = 0,
+            [GridType.SEAFOG] = 0, [GridType.LANDFOG] = 0,
+            [GridType.LAVA] = 0, [GridType.LAVAFOG] = 0,
+        },
+        // 战斗机：高空飞行，不受地形影响
+        ["Fighter"] = new()
         {
             [GridType.GROUND] = 0, [GridType.ROAD] = 0,
             [GridType.HILL] = 0, [GridType.FOREST] = 0,
