@@ -9,18 +9,18 @@ public partial class AirPort : City
     {
         base._Ready();
 
-        // 补给配置：只支持 FlyBomb
+        // 补给配置：支持空军单位（飞弹、战斗机）
         healMode = 1;      
         healPercent = 0.2f; 
         flareAmmoSupply = 999;
         explodeAmmoSupply = 999;
         primaryAmmoSupply = 999;
         fuelSupply = 999;
-        supportedUnitTypesForHeal = new Godot.Collections.Array<string> { "FlyBomb" };
+        supportedUnitTypesForHeal = new Godot.Collections.Array<string> { "FlyBomb", "Fighter" };
         supportedUnitTypesForFlare = new Godot.Collections.Array<string> { "FlyBomb" };
         supportedUnitTypesForExplode = new Godot.Collections.Array<string> { "FlyBomb" };
-        supportedUnitTypesForPrimaryAmmo = new Godot.Collections.Array<string> { "FlyBomb" };
-        supportedUnitTypesForFuel = new Godot.Collections.Array<string> { "FlyBomb" };
+        supportedUnitTypesForPrimaryAmmo = new Godot.Collections.Array<string> { "FlyBomb", "Fighter" };
+        supportedUnitTypesForFuel = new Godot.Collections.Array<string> { "FlyBomb", "Fighter" };
 
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
         if (animSprite == null)
@@ -33,7 +33,7 @@ public partial class AirPort : City
         if (!canProduce && producibleUnitNames.Count == 0)
         {
             canProduce = true;
-            producibleUnitNames = new Godot.Collections.Array<string> { "FlyBomb" };
+            producibleUnitNames = new Godot.Collections.Array<string> { "FlyBomb", "Fighter" };
         }
 
         UpdateCityVisual();
