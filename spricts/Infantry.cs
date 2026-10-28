@@ -321,6 +321,17 @@ public void InitializeDefaultMatrix()
             ["AntiTank_AntiAirMissile"] = 85,  ["PipeRunner_AntiAirMissile"] = 90,
             ["Flare_AntiAirMissile"] = 28,     ["Bike_AntiAirMissile"] = 10,
             ["Bomber_AntiAirMissile"] = 105,   ["BCopter_AntiAirMissile"] = 65,
+            // 隐身战机(AWDS全量对空对地)：全能打，唯一例外水下潜艇
+            ["Stealth_Infantry"] = 95,  ["Stealth_Mech"] = 90,    ["Stealth_Bike"] = 90,
+            ["Stealth_Oozium"] = 15,    ["Stealth_Recon"] = 90,   ["Stealth_APC"] = 80,
+            ["Stealth_LightTank"] = 80, ["Stealth_MdTank"] = 55,  ["Stealth_Artillery"] = 80,
+            ["Stealth_Rocket"] = 85,    ["Stealth_AntiAir"] = 85, ["Stealth_AntiTank"] = 80,
+            ["Stealth_PipeRunner"] = 80,["Stealth_Flare"] = 80,   ["Stealth_RepairBoat"] = 60,
+            ["Stealth_Fighter"] = 65,   ["Stealth_Bomber"] = 75,  ["Stealth_BCopter"] = 105,
+            ["Stealth_TCopter"] = 105,  ["Stealth_Stealth"] = 75, ["Stealth_FlyBomb"] = 120,
+            // 隐身战机挨揍表（AWDS）：战斗机85 防空车75 导弹车100 管道炮75（打它必须先破隐）
+            ["Fighter_Stealth"] = 85,   ["AntiAir_Stealth"] = 75,
+            ["AntiAirMissile_Stealth"] = 100, ["PipeRunner_Stealth"] = 75,
 ["PipeRunner_PipeRunner"] = 80,["PipeRunner_Flare"] = 75,
 ["PipeRunner_AntiTank"] = 60,   ["PipeRunner_Bike"] = 90,
 // ✅ 其他单位主武器攻击 PipeRunner

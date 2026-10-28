@@ -568,7 +568,8 @@ public partial class AI_Manager : Node
             ["Bomber"] = 42,
             ["BCopter"] = 38,
             ["TCopter"] = 25,
-            ["AntiAirMissile"] = 35
+            ["AntiAirMissile"] = 35,
+            ["Stealth"] = 44
         };
 
         foreach (var grid in gameManager.gridManager.grids)

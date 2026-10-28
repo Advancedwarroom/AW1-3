@@ -37,6 +37,7 @@ public static class UnitProductionDatabase
         ["BCopter"]    = new("res://Prefabs/BCopter.tscn",        9000, "武装直升机"),
         ["TCopter"]    = new("res://Prefabs/TCopter.tscn",        5000, "运输直升机"),
         ["AntiAirMissile"] = new("res://Prefabs/AntiAirMissile.tscn", 12000, "防空导弹"),
+        ["Stealth"]      = new("res://Prefabs/Stealth.tscn",          24000, "隐身战机"),
     };
 
     public static bool HasUnit(string unitName) => Units.ContainsKey(unitName);

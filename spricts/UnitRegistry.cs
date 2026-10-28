@@ -524,6 +524,25 @@ public static class UnitRegistry
             MaxFuel = 50,
             ConsumeFuel = false,
         },
+        // ==================== 隐身战机（2026-10-29 隐身模块首任用户，AW3官方值）====================
+        ["Stealth"] = new UnitConfig
+        {
+            UnitId = "Stealth",
+            DisplayName = TranslateGroup.T("隐身战机"),
+            MoveType = MoveType.AirPlane,
+            MovePoints = 6,
+            Cost = 24000,
+            AnimPrefix = "stealth",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 6,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = true,
+            VisionRange = 4,
+            MaxFuel = 60,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 5,
+            DestroyOnOutOfFuel = true,
+        },
 
     };
 

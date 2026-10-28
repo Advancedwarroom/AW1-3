@@ -16,11 +16,11 @@ public partial class AirPort : City
         explodeAmmoSupply = 999;
         primaryAmmoSupply = 999;
         fuelSupply = 999;
-        supportedUnitTypesForHeal = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter" };
+        supportedUnitTypesForHeal = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth" };
         supportedUnitTypesForFlare = new Godot.Collections.Array<string> { "FlyBomb" };
         supportedUnitTypesForExplode = new Godot.Collections.Array<string> { "FlyBomb" };
-        supportedUnitTypesForPrimaryAmmo = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter" };
-        supportedUnitTypesForFuel = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter" };
+        supportedUnitTypesForPrimaryAmmo = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth" };
+        supportedUnitTypesForFuel = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth" };
 
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
         if (animSprite == null)
@@ -33,7 +33,7 @@ public partial class AirPort : City
         if (!canProduce && producibleUnitNames.Count == 0)
         {
             canProduce = true;
-            producibleUnitNames = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter" };
+            producibleUnitNames = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth" };
         }
 
         UpdateCityVisual();

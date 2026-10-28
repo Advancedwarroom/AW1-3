@@ -14,7 +14,7 @@ public static class VisionConfig
         ["Infantry"] = 2, ["Mech"] = 2, ["LightTank"] = 3,
         ["MdTank"] = 3, ["Artillery"] = 2, ["Rocket"] = 2,
         ["APC"] = 3, ["Oozium"] = 2, ["AntiAir"] = 5,
-        ["Recon"] = 5, ["FlyBomb"] = 1, ["Fighter"] = 2, ["Bomber"] = 2, ["BCopter"] = 3, ["TCopter"] = 2, ["AntiAirMissile"] = 5, ["AntiTank"] = 2,
+        ["Recon"] = 5, ["FlyBomb"] = 1, ["Fighter"] = 2, ["Bomber"] = 2, ["BCopter"] = 3, ["TCopter"] = 2, ["AntiAirMissile"] = 5, ["Stealth"] = 4, ["AntiTank"] = 2,
         ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
         ["RepairBoat"] = 1,
     };
@@ -82,6 +82,11 @@ public static class VisionConfig
         },
         // 防空导弹车：视野5为全局之眼（地形视野沿用默认）
         ["AntiAirMissile"] = new()
+        {
+
+        },
+        // 隐身战机：高空飞行
+        ["Stealth"] = new()
         {
 
         },
