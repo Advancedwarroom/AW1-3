@@ -3026,6 +3026,8 @@ public virtual (int damage, string info) CalculateCounterPreview(Infantry attack
 
 public virtual void Attack(Infantry target)
 {
+        // ✅ 隐身攻击门：白名单外的单位打不了隐身目标（所有攻击路径的唯一闸门）
+        if (!CanTargetStealth(this, target)) return;
         if (isStealthed && !canAttackWhileStealthed) return;   // ✅ 隐身行为锁：攻击
     if (attackType == AttackType.NoAttack) return;
     if (isAttacked) return;

@@ -409,6 +409,8 @@ public partial class FogOfWarManager : Node
         if (unit.isTransported) return false;
         if (unit.team == currentTeam) return true;
         if (unit.grid == null) return false;
+        // ✅ 隐身：按感知规则决定渲染（贴身/同格可见，否则隐藏——AW3规则）
+        if (!Infantry.IsVisibleTo(unit, currentTeam, gridManager?.grids)) return false;
         return visibleGridsThisTurn.Contains(unit.grid);
     }
 
