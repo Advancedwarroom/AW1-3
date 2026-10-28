@@ -73,7 +73,8 @@ public partial class Infantry : Node2D
     [Export] public bool cannotCounterWhenAttacked = false; // 攻击时不被反击（如Artillery/Rocket/AntiTank等间接攻击单位）
     [Export] public bool canCounterWhenDefending = true;   // 被攻击时能否反击（Artillery/Rocket=false，默认true）
     [Export] public bool canCounterAtRange = false;        // 能否远程反击（false=仅近战距离1可反击，true=在攻击范围内可反击）
-    [Export] public bool canMerge = true;              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
+    [Export] public bool canMerge = true;
+    [Export] public string[] excludedWeaponTargets = System.Array.Empty<string>();  // ⚔ 兵器攻击准入(攻击方)：不能攻击的兵器类型，"Weapon"=全部兵器，留空=均可攻击              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
     [Export] public bool useDefaultConfig = true;           // ✅ 是否使用代码默认值（false=完全由Inspector控制，不执行ApplyUnitSpecificDefaults）
     [Export] public bool canDevour = false;                // 是否能吞噬敌人（Oozium特性）
     [Export] public bool canCapture = true;                // 是否能占领城市
@@ -2373,8 +2374,29 @@ public virtual void SetWaitVisual(bool waiting)
     }
 
 // ✅ 新增：计算对兵器的伤害
-public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weaponType)
+    // ✅ 兵器攻击准入：双向名单判定（攻击方排除表 + 兵器拒绝表），空表=不限制
+    public bool CanTargetWeapon(Weapon w)
+    {
+        if (w == null || w.isDestroyed) return false;
+        string myName = GetType().Name;
+        if (w.excludedAttackerTypes != null && w.excludedAttackerTypes.Length > 0
+            && System.Array.IndexOf(w.excludedAttackerTypes, myName) >= 0)
+            return false;
+        if (excludedWeaponTargets != null && excludedWeaponTargets.Length > 0)
+        {
+            Type t = w.GetType();
+            while (t != null && t != typeof(object))
+            {
+                if (System.Array.IndexOf(excludedWeaponTargets, t.Name) >= 0) return false;
+                t = t.BaseType;
+            }
+        }
+        return true;
+    }
+
+    public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weaponType)
 {
+    if (!CanTargetWeapon(target)) return 0;   // ✅ 兵器攻击准入闸门
     // 兵器没有类型名在攻防表中，使用基础攻击力的百分比
     float healthPercent = (float)health / maxHealth;
     
@@ -2486,6 +2508,7 @@ public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weapon
             originalGrid = null;
 
             // ✅ 修复3：使用攻防表计算伤害（兵器没有对应条目，需要处理）
+                        if (!CanTargetWeapon(weapon)) return;   // ✅ 准入拒绝
             int damage = CalculateDamageAgainstWeapon(weapon, selectedWeapon);
             weapon.TakeDamage(damage);
 

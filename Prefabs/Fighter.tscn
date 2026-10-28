@@ -39,6 +39,7 @@ maxPrimaryAmmo = 9
 currentPrimaryAmmo = 9
 primaryHasLimitedAmmo = true
 hasSecondaryWeapon = false
+excludedWeaponTargets = PackedStringArray("Weapon")
 animSprite = NodePath("Base2D")
 baseAnimSprite = NodePath("Base2D")
 

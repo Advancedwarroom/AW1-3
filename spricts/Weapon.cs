@@ -7,6 +7,9 @@ public partial class Weapon : Node2D
 {
     [Export] public bool CanAttackWeapon = false;
 
+    [ExportGroup("攻击准入")]
+    [Export] public string[] excludedAttackerTypes = System.Array.Empty<string>();  // ⚔ 不能被这些单位类型攻击（填类名，如 "Fighter"）
+
     [ExportGroup("多格占据")]
     [Export] public Vector2I size = new Vector2I(1, 1);
     [Export] public bool isMultiTile = false;
