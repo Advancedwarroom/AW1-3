@@ -399,7 +399,8 @@ public partial class AI_Manager : Node
         // 优先：能击杀的 > 血量最低的 > 最近的
         var validEnemies = enemies
             .Select(e => e is Infantry i ? i : null)
-            .Where(i => i != null && IsInstanceValid(i) && i.health > 0)
+            .Where(i => i != null && IsInstanceValid(i) && i.health > 0
+                && (!i.isStealthed || Infantry.CanTargetStealth(unit, i)))   // ✅ 隐身感知：AI无视看不见/打不了的隐身目标
             .ToList();
 
         if (validEnemies.Count == 0) return null;

@@ -2643,8 +2643,12 @@ public virtual void SetWaitVisual(bool waiting)
         if (unit.team == viewerTeam) return true;
         if (!unit.isStealthed || unit.stealthFlareRevealed) return true;   // 没隐身/被照明弹照出的照常
         if (unit.stealthVisibleOnTile && unit.grid != null)
+        {
             foreach (var u in unit.grid.infantries)
-                if (u.team == viewerTeam) return true;   // 同格单位看得见（建筑版见后续接线）
+                if (u.team == viewerTeam) return true;   // 同格单位看得见
+            var fac = unit.grid.city;   // ✅ 脚下建筑：所属方看得见（AW3规则，接线完成）
+            if (fac != null && fac.facilityTeam == viewerTeam) return true;
+        }
         if (unit.stealthVisibleWhenAdjacent && allGrids != null)
             foreach (var g in allGrids)
             {
