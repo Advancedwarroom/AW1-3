@@ -73,6 +73,7 @@ public partial class Infantry : Node2D
     [Export] public bool cannotCounterWhenAttacked = false; // 攻击时不被反击（如Artillery/Rocket/AntiTank等间接攻击单位）
     [Export] public bool canCounterWhenDefending = true;   // 被攻击时能否反击（Artillery/Rocket=false，默认true）
     [Export] public bool canCounterAtRange = false;        // 能否远程反击（false=仅近战距离1可反击，true=在攻击范围内可反击）
+    [Export] public bool canMerge = true;              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
     [Export] public bool useDefaultConfig = true;           // ✅ 是否使用代码默认值（false=完全由Inspector控制，不执行ApplyUnitSpecificDefaults）
     [Export] public bool canDevour = false;                // 是否能吞噬敌人（Oozium特性）
     [Export] public bool canCapture = true;                // 是否能占领城市
@@ -1051,6 +1052,7 @@ protected virtual void ApplyUnitRegistryConfig()
     if (config.MoveType != default) moveType = config.MoveType;
     if (config.MovePoints > 0) defaultMovePoints = config.MovePoints;
     if (config.Cost > 0) cost = config.Cost;
+    if (config.CanMerge) canMerge = true;
     if (!string.IsNullOrEmpty(config.DisplayName) && string.IsNullOrEmpty(Name))
         Name = config.DisplayName;
 

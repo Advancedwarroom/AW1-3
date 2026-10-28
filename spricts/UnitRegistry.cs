@@ -46,6 +46,7 @@ public class UnitConfig
     // 燃料
     public int MaxFuel = 99;
     public bool ConsumeFuel = false;
+        public bool CanMerge { get; set; } = true;      // 合流模块：默认允许合流
     public int DailyFuelConsumption = 0;
     public bool DestroyOnOutOfFuel = false;
     public int LowFuelThreshold = 15;

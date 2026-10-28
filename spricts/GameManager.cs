@@ -1706,6 +1706,7 @@ public void RestartGame()
     public void MergeUnits(Infantry source, Infantry target)
     {
         if (source == null || target == null) return;
+        if (!source.canMerge || !target.canMerge) return;   // ✅ 合流模块：防御性检查
         if (source.GetType() != target.GetType()) return;
         if (source.team != target.team) return;
         if (source == target) return;
@@ -1750,6 +1751,7 @@ public void RestartGame()
     public bool CanMerge(Infantry source, Infantry target)
     {
         if (source == null || target == null) return false;
+        if (!source.canMerge || !target.canMerge) return false;   // ✅ 合流模块：任一方关闭即不可合流
         if (source.GetType() != target.GetType()) return false;
         if (source.team != target.team) return false;
         if (source == target) return false;
