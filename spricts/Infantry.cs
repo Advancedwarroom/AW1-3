@@ -3070,8 +3070,9 @@ public virtual void Attack(Infantry target)
     target.health -= attackDamage;
         ApplyStealthRevealOnDamage(target);   // ✅ 受伤现形（含阈值模式）
         target.CheckStealthThresholds();   // ✅ 受伤后阈值矩阵重判
+        if (stealthRevealOnAttack) RevealStealth();   // ✅ 攻击后现形（先于反击结算：现形即暴露给反击）
+        if (!CanTargetStealth(target, this)) counterDamage = 0;   // ✅ 隐身反击门：防守方打不了隐身攻击者则不能反击（AW3规则）
     this.health -= counterDamage;
-        if (stealthRevealOnAttack) RevealStealth();   // ✅ 攻击后现形
         CheckStealthThresholds();   // ✅ 反击掉血后阈值矩阵重判
     
     target.UpdateHpLabel();

@@ -418,7 +418,7 @@ public static class UnitRegistry
         {
             UnitId = "FlyBomb",
             DisplayName = TranslateGroup.T("飞弹"),
-            MoveType = MoveType.AirPlane,
+            MoveType = MoveType.Missile,
             MovePoints = 9,
             Cost = 25000,
             AnimPrefix = "flybomb",
@@ -476,7 +476,7 @@ public static class UnitRegistry
         {
             UnitId = "BCopter",
             DisplayName = TranslateGroup.T("武装直升机"),
-            MoveType = MoveType.AirPlane,
+            MoveType = MoveType.HeliCopter,
             MovePoints = 6,
             Cost = 9000,
             AnimPrefix = "bcopter",
@@ -495,7 +495,7 @@ public static class UnitRegistry
         {
             UnitId = "TCopter",
             DisplayName = TranslateGroup.T("运输直升机"),
-            MoveType = MoveType.AirPlane,
+            MoveType = MoveType.HeliCopter,
             MovePoints = 6,
             Cost = 5000,
             AnimPrefix = "tcopter",

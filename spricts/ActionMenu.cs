@@ -18,6 +18,7 @@ public partial class ActionMenu : Control
     [Export] public Button explodeButton; // ✅ 自爆按钮
     [Export] public Button illuminateButton; // ✅ 照明按钮
     [Export] public Button repairButton; // ✅ 修复按钮
+    [Export] public Button stealthButton; // ✅ 隐身按钮
 
     [Export] public Button healButton; // ✅ Crystal 黑水晶治疗按钮
 
@@ -253,6 +254,16 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
 
         return null;
     }
+    public void OnStealthPressed()
+    {
+        GetViewport().SetInputAsHandled();
+        if (currentUnit == null || currentWeapon != null) return;
+        currentUnit.ToggleStealth();   // 无弹/锁定时内部静默拒绝
+        TranslateGroup.SetText(stealthButton, currentUnit.isStealthed ? "显形" : "隐身");
+        if (currentUnit.stealthToggleCostsAction || currentUnit.state == UnitState.Acted)
+            Hide();
+    }
+
     // ✅ 究极自由：通用运输单位装载菜单
     public void ShowTransportLoadMenu(Infantry transport, Infantry unit)
     {
@@ -677,6 +688,7 @@ private List<Grids> GetAdjacentGrids(Grids center)
         rotateButton?.Hide();
         explodeButton?.Hide();
         illuminateButton?.Hide();
+        stealthButton?.Hide();
         loadButton?.Hide();
         supplyButton.Visible = false;
 
@@ -848,6 +860,21 @@ private List<Grids> GetAdjacentGrids(Grids center)
                 TranslateGroup.SetText(illuminateButton, "取消照明");
             else
                 TranslateGroup.SetText(illuminateButton, "照明");
+        }
+
+        // ✅ 隐身按钮：canStealth 单位显示；形态锁定隐藏；耗行动模式要求未行动
+        if (stealthButton == null && illuminateButton != null)
+        {
+            stealthButton = new Button();
+            stealthButton.Pressed += OnStealthPressed;
+            illuminateButton.GetParent().AddChild(stealthButton);
+        }
+        if (stealthButton != null)
+        {
+            bool canToggleStealth = unit.canStealth && !unit.stealthFormLocked
+                && (!unit.stealthToggleCostsAction || (!unit.hasActed && unit.state != UnitState.Acted));
+            stealthButton.Visible = canToggleStealth;
+            TranslateGroup.SetText(stealthButton, unit.isStealthed ? "显形" : "隐身");
         }
 
         if (isCapturing)
