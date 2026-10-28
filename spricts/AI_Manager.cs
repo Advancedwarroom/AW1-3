@@ -563,7 +563,8 @@ public partial class AI_Manager : Node
             ["Rocket"] = 30,
             ["MdTank"] = 25,
             ["Oozium"] = 15,
-            ["FlyBomb"] = 10
+            ["FlyBomb"] = 10,
+            ["Fighter"] = 45
         };
 
         foreach (var grid in gameManager.gridManager.grids)
