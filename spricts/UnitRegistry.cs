@@ -507,6 +507,23 @@ public static class UnitRegistry
             DailyFuelConsumption = 2,
             DestroyOnOutOfFuel = true,
         },
+        // ==================== 防空导弹车（2026-10-29 空军克星）====================
+        ["AntiAirMissile"] = new UnitConfig
+        {
+            UnitId = "AntiAirMissile",
+            DisplayName = TranslateGroup.T("防空导弹"),
+            MoveType = MoveType.Tire,
+            MovePoints = 4,
+            Cost = 12000,
+            AnimPrefix = "aamissile",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 6,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = false,
+            VisionRange = 5,
+            MaxFuel = 50,
+            ConsumeFuel = false,
+        },
 
     };
 

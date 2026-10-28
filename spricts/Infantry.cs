@@ -240,6 +240,18 @@ public void InitializeDefaultMatrix()
             // 挨揍表：直升机系
             ["AntiAir_BCopter"] = 120,   ["Fighter_BCopter"] = 100,   ["PipeRunner_BCopter"] = 120,
             ["AntiAir_TCopter"] = 120, ["Fighter_TCopter"] = 100,   ["PipeRunner_TCopter"] = 120,
+            // 防空导弹车(Anti-air Missile)：只对空，射程3-5（AW官方值）
+            ["AntiAirMissile_Fighter"] = 100,  ["AntiAirMissile_Bomber"] = 100,
+            ["AntiAirMissile_BCopter"] = 100,  ["AntiAirMissile_TCopter"] = 100,
+            ["AntiAirMissile_FlyBomb"] = 120,
+            // 防空导弹车挨揍表（AWDS矩阵Missiles列）：轻坦85 中坦105 轰105 武直65 步25 甲85
+            ["Infantry_AntiAirMissile"] = 25,  ["Mech_AntiAirMissile"] = 85,
+            ["Recon_AntiAirMissile"] = 28,     ["LightTank_AntiAirMissile"] = 85,
+            ["MdTank_AntiAirMissile"] = 105,   ["Artillery_AntiAirMissile"] = 80,
+            ["Rocket_AntiAirMissile"] = 90,    ["AntiAir_AntiAirMissile"] = 55,
+            ["AntiTank_AntiAirMissile"] = 85,  ["PipeRunner_AntiAirMissile"] = 90,
+            ["Flare_AntiAirMissile"] = 28,     ["Bike_AntiAirMissile"] = 10,
+            ["Bomber_AntiAirMissile"] = 105,   ["BCopter_AntiAirMissile"] = 65,
 ["PipeRunner_PipeRunner"] = 80,["PipeRunner_Flare"] = 75,
 ["PipeRunner_AntiTank"] = 60,   ["PipeRunner_Bike"] = 90,
 // ✅ 其他单位主武器攻击 PipeRunner

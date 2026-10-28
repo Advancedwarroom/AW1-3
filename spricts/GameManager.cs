@@ -28,6 +28,7 @@ public enum UnitCategory
     Bomber,    // 轰炸机
     BCopter,    // 武装直升机
     TCopter,    // 运输直升机
+    AntiAirMissile,    // 防空导弹车
 
     Other       // 其他未分类单位
 }
@@ -780,6 +781,7 @@ private void AutoCategorizeUnit(Infantry unit)
         int pn1Bomber = 0, p0Bomber = 0, p1Bomber = 0, p2Bomber = 0;
         int pn1BCopter = 0, p0BCopter = 0, p1BCopter = 0, p2BCopter = 0;
         int pn1TCopter = 0, p0TCopter = 0, p1TCopter = 0, p2TCopter = 0;
+        int pn1AntiAirMissile = 0, p0AntiAirMissile = 0, p1AntiAirMissile = 0, p2AntiAirMissile = 0;
         int pn1Bike = 0, p0Bike = 0, p1Bike = 0, p2Bike = 0;
         int pn1PipeRunner = 0, p0PipeRunner = 0, p1PipeRunner = 0, p2PipeRunner = 0;
         int pn1RepairBoat = 0, p0RepairBoat = 0, p1RepairBoat = 0, p2RepairBoat = 0;
@@ -836,6 +838,7 @@ private void AutoCategorizeUnit(Infantry unit)
                 case Bomber _: if (t == "Player") pn1Bomber++; else if (t == "Player0") p0Bomber++; else if (t == "Player1") p1Bomber++; else if (t == "Player2") p2Bomber++; break;
                 case BCopter _: if (t == "Player") pn1BCopter++; else if (t == "Player0") p0BCopter++; else if (t == "Player1") p1BCopter++; else if (t == "Player2") p2BCopter++; break;
                 case TCopter _: if (t == "Player") pn1TCopter++; else if (t == "Player0") p0TCopter++; else if (t == "Player1") p1TCopter++; else if (t == "Player2") p2TCopter++; break;
+                case AntiAirMissile _: if (t == "Player") pn1AntiAirMissile++; else if (t == "Player0") p0AntiAirMissile++; else if (t == "Player1") p1AntiAirMissile++; else if (t == "Player2") p2AntiAirMissile++; break;
                 case Flare _: if (t == "Player") pn1Flare++; else if (t == "Player0") p0Flare++; else if (t == "Player1") p1Flare++; else if (t == "Player2") p2Flare++; break;
                 case Bike _: if (t == "Player") pn1Bike++; else if (t == "Player0") p0Bike++; else if (t == "Player1") p1Bike++; else if (t == "Player2") p2Bike++; break;
                 case PipeRunner _: if (t == "Player") pn1PipeRunner++; else if (t == "Player0") p0PipeRunner++; else if (t == "Player1") p1PipeRunner++; else if (t == "Player2") p2PipeRunner++; break;
@@ -927,11 +930,13 @@ private void AutoCategorizeUnit(Infantry unit)
             text += $"武 [color={cPN1}]{pn1BCopter,2}|[color={cP0}]{p0BCopter,2}|[color={cP1}]{p1BCopter,2}|[color={cP2}]{p2BCopter,2}[/color]\n";
         if (pn1TCopter > 0 || p0TCopter > 0 || p1TCopter > 0 || p2TCopter > 0)
             text += $"直 [color={cPN1}]{pn1TCopter,2}|[color={cP0}]{p0TCopter,2}|[color={cP1}]{p1TCopter,2}|[color={cP2}]{p2TCopter,2}[/color]\n";
+        if (pn1AntiAirMissile > 0 || p0AntiAirMissile > 0 || p1AntiAirMissile > 0 || p2AntiAirMissile > 0)
+            text += $"导 [color={cPN1}]{pn1AntiAirMissile,2}|[color={cP0}]{p0AntiAirMissile,2}|[color={cP1}]{p1AntiAirMissile,2}|[color={cP2}]{p2AntiAirMissile,2}[/color]\n";
 
-        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike + pn1PipeRunner + pn1RepairBoat + pn1Fighter + pn1Bomber + pn1BCopter + pn1TCopter;
-        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike + p0PipeRunner + p0RepairBoat + p0Fighter + p0Bomber + p0BCopter + p0TCopter;
-        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike + p1PipeRunner + p1RepairBoat + p1Fighter + p1Bomber + p1BCopter + p1TCopter;
-        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike + p2PipeRunner + p2RepairBoat + p2Fighter + p2Bomber + p2BCopter + p2TCopter;
+        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike + pn1PipeRunner + pn1RepairBoat + pn1Fighter + pn1Bomber + pn1BCopter + pn1TCopter + pn1AntiAirMissile;
+        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike + p0PipeRunner + p0RepairBoat + p0Fighter + p0Bomber + p0BCopter + p0TCopter + p0AntiAirMissile;
+        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike + p1PipeRunner + p1RepairBoat + p1Fighter + p1Bomber + p1BCopter + p1TCopter + p1AntiAirMissile;
+        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike + p2PipeRunner + p2RepairBoat + p2Fighter + p2Bomber + p2BCopter + p2TCopter + p2AntiAirMissile;
 
         int pn1TotalWeapons = pn1Cannons + pn1Lasers + pn1Weapons;
         int p0TotalWeapons = p0Cannons + p0Lasers + p0Weapons;
