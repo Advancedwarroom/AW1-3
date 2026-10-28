@@ -202,6 +202,10 @@ public void InitializeDefaultMatrix()
 ["PipeRunner_Rocket"] = 85,     ["PipeRunner_Recon"] = 90,
 ["PipeRunner_APC"] = 80,        ["PipeRunner_AntiAir"] = 85,
 ["PipeRunner_Artillery"] = 80,  ["PipeRunner_FlyBomb"] = 120,
+            ["Fighter_FlyBomb"] = 100,
+            ["Fighter_Fighter"] = 100,
+            ["AntiAir_Fighter"] = 65,
+            ["PipeRunner_Fighter"] = 120,
 ["PipeRunner_PipeRunner"] = 80,["PipeRunner_Flare"] = 75,
 ["PipeRunner_AntiTank"] = 60,   ["PipeRunner_Bike"] = 90,
 // ✅ 其他单位主武器攻击 PipeRunner
