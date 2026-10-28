@@ -77,7 +77,8 @@ public partial class Infantry : Node2D
     [Export] public bool canActAfterMerge = false;
 
     [ExportGroup("隐身模块")]
-    [Export] public bool canStealth = false;                            // 可否隐身
+    [Export] public bool canStealth = false;
+    [Export] public bool stealthToggleCostsAction = true;    // 隐身/显形是否算独立操作：true=切换后待机；false=切换后仍可攻击移动                            // 可否隐身
     [Export] public bool isStealthed = false;                           // 运行时：当前是否隐身
     // —— 每日消耗（维持隐身时扣，0=该项不扣）——
     [Export] public int stealthFuelCostPerDay = 0;                      // 燃油
@@ -2521,8 +2522,12 @@ public virtual void SetWaitVisual(bool waiting)
             currentCamoBullets--;
         }
         isStealthed = !isStealthed;
-        SetWaitVisual(true);
-        state = UnitState.Acted;
+        if (stealthToggleCostsAction)
+        {
+            SetWaitVisual(true);
+            state = UnitState.Acted;   // 算独立操作：切换即待机
+        }
+        // 不算独立操作：state 保持，切换后仍可攻击/移动
         Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1, 1);
         CheckStealthThresholds();
     }
