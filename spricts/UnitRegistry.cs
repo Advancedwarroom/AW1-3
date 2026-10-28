@@ -452,6 +452,25 @@ public static class UnitRegistry
             DailyFuelConsumption = 5,
             DestroyOnOutOfFuel = true,
         },
+        // ==================== 轰炸机（2026-10-28 紧随战斗机服役）====================
+        ["Bomber"] = new UnitConfig
+        {
+            UnitId = "Bomber",
+            DisplayName = TranslateGroup.T("轰炸机"),
+            MoveType = MoveType.AirPlane,
+            MovePoints = 7,
+            Cost = 22000,
+            AnimPrefix = "bomber",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 9,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = true,
+            VisionRange = 2,
+            MaxFuel = 99,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 5,
+            DestroyOnOutOfFuel = true,
+        },
 
     };
 
