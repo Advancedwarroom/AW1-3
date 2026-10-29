@@ -874,6 +874,7 @@ public partial class AI_Manager : Node
         {
             int d = Dist(g, e.grid);
             if (d > maxR || !CanHitAtDistance(u, d)) continue;
+            if (ctx.fogOn && !Infantry.IsVisibleTo(e, u.team, null)) continue;   // ✅ 公平性：AI不攻击看不见的单位（含隐身+林地隐蔽）
             if (!Infantry.CanTargetStealth(u, e)) continue;
             int dmg = EstDamage(u, u.health, e, e.health, e.grid, false, attStealthed);
             if (dmg <= 0) continue;

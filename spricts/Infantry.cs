@@ -90,6 +90,7 @@ public partial class Infantry : Node2D
     [Export] public bool canActAfterMerge = false;
 
     [ExportGroup("隐身模块")]
+    [Export] public bool terrainConcealment = true;              // ✅ 林地/礁岩隐蔽（AW规则）：无贴身敌人时藏于森林/礁岩不可见
     [Export] public bool canStealth = false;
     [Export] public bool stealthToggleCostsAction = true;    // 隐身/显形是否算独立操作：true=切换后待机；false=切换后仍可攻击移动                            // 可否隐身
     [Export] public bool isStealthed = false;                           // 运行时：当前是否隐身
@@ -2865,7 +2866,28 @@ public virtual void SetWaitVisual(bool waiting)
     {
         if (unit == null) return false;
         if (unit.team == viewerTeam) return true;
-        if (!unit.isStealthed || unit.stealthFlareRevealed) return true;   // 没隐身/被照明弹照出的照常
+        if (unit.stealthFlareRevealed) return true;   // 被照明弹照出的照常
+        if (!unit.isStealthed)
+        {
+            // ✅ 林地/礁岩隐蔽（AW规则）：蹲在森林/礁岩的单位，对无贴身敌人的观察者隐身
+            if (unit.terrainConcealment && unit.grid != null
+                && (unit.grid.gridType == GridType.FOREST || unit.grid.gridType == GridType.REEF))
+            {
+                bool adjEnemy = false;
+                if (allGrids != null)
+                    foreach (var g in allGrids)
+                    {
+                        if (g == null || g == unit.grid) continue;
+                        int dist = Math.Abs(g.GridIndex.X - unit.grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - unit.grid.GridIndex.Y);
+                        if (dist != 1) continue;
+                        foreach (var u in g.infantries)
+                            if (u != null && u.team == viewerTeam) { adjEnemy = true; break; }
+                        if (adjEnemy) break;
+                    }
+                if (!adjEnemy) return false;
+            }
+            return true;
+        }
         if (unit.stealthVisibleOnTile && unit.grid != null)
         {
             foreach (var u in unit.grid.infantries)

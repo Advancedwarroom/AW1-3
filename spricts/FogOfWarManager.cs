@@ -30,6 +30,7 @@ public partial class FogOfWarManager : Node
     [Export] public Color revealedColor = new Color(1, 1, 1, 0);
 
     private Dictionary<Grids, Sprite2D> fogSprites = new();
+    private readonly System.Collections.Generic.Dictionary<string, HashSet<Grids>> exploredByTeam = new();   // ✅ 已探索记忆层（按阵营持久保留）
     private HashSet<Grids> visibleGridsThisTurn = new();
     public List<IlluminationEffect> activeIlluminations = new(); // ✅ 活跃照明弹效果
 
@@ -89,7 +90,7 @@ public partial class FogOfWarManager : Node
     {
         if (!isFogOfWarEnabled || gridManager == null) { ClearAllFog(); return; }
 
-        currentTeam = gameManager?.turnPhase == 1 ? "Player1" : "Player2";
+        currentTeam = gameManager != null ? TeamHelper.GetPhaseTeamName(gameManager.turnPhase) : "Player1";   // ✅ 多阵营：与 GameManager 同源回合映射
 
         // ✅ AI 操控时，切换为 P-1 视角（玩家只能看到公开领域）
         var aiManager = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
@@ -119,6 +120,12 @@ public partial class FogOfWarManager : Node
         }
 
         ApplyFogToGrids();
+        // ✅ 探索记忆：本回合可见格并入当前阵营的已探索集合（跨回合保留）
+        if (currentTeam != null && visibleGridsThisTurn != null)
+        {
+            if (!exploredByTeam.TryGetValue(currentTeam, out var exploredSet)) { exploredSet = new HashSet<Grids>(); exploredByTeam[currentTeam] = exploredSet; }
+            exploredSet.UnionWith(visibleGridsThisTurn);
+        }
         UpdateUnitVisibility();
 
     }
@@ -397,7 +404,11 @@ public partial class FogOfWarManager : Node
             var grid = kvp.Key; var sprite = kvp.Value;
             if (grid == null || !IsInstanceValid(grid) || sprite == null || !IsInstanceValid(sprite)) continue;
             bool isVisible = visibleGridsThisTurn.Contains(grid);
+            bool isExplored = !isVisible && currentTeam != null
+                && exploredByTeam.TryGetValue(currentTeam, out var exSet) && exSet.Contains(grid);
             sprite.Visible = isFogOfWarEnabled && !isVisible;
+            // ✅ 三态：可见=无雾块 / 已探索=暗色半透明 / 未知=纯黑默认
+            sprite.Modulate = isExplored ? new Color(0.45f, 0.45f, 0.58f, 0.55f) : new Color(1, 1, 1, 1);
         }
     }
 
