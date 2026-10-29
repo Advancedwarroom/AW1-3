@@ -197,6 +197,15 @@ public int GetTerrainVisionBonus(GridType gridType)
     return VisionConfig.GetUnitTerrainVisionBonus(this.GetType().Name, gridType);
 }
 
+// ✅ AI 档案（提案 docs/proposals/ai-brain.md）：全部默认=自动，AI 按单位实际能力字段推断行为；填写后覆盖推断
+[ExportGroup("AI 档案")]
+[Export(PropertyHint.Enum, "自动,突击,占点,守备,刺客")] public int aiRole = 0;   // 自动=按能力推断；突击=只找仗打；占点=优先占领；守备=守己方据点；刺客=打完就隐身/撤离
+[Export] public Godot.Collections.Dictionary<string, float> aiTargetWeights = new(); // 目标兵种名→价值倍率（"*"=其余全部）；空=纯伤害预估。例：战斗机 {"*":0}+空军各1
+[Export] public int aiRetreatHpThreshold = -1;     // 血≤N 撤退修整；-1=自动(最大血量30%)；0=死战不退
+[Export] public bool aiPreferKill = true;           // 能击杀的目标额外加分
+[Export] public bool aiFocusFire = true;           // 集火：残血目标额外加分
+[Export] public float aiRiskMultiplier = 1f;       // 威胁规避倍率：0=无畏，1=默认，>1=更怕死
+
 [ExportGroup("攻防表")]
 [Export] public Godot.Collections.Dictionary<string, int> attackMatrix = new();      // 主武器
 [Export] public Godot.Collections.Dictionary<string, int> secondaryAttackMatrix = new(); // 副武器
@@ -506,6 +515,7 @@ public virtual void OnTurnEnd()
     state = UnitState.Idle;
     isMoved = false;
     isAttacked = false;
+    hasActed = false;   // ✅ 修复：此前从不重置，生产/合流/补给/修理过的单位永久失去补给/修理/自爆等按钮
     movePoints = defaultMovePoints;
     SetWaitVisual(false);
     // ✅ 恢复 idle 动画后再启动呼吸（animSprite 单位需要）
@@ -523,6 +533,14 @@ public virtual int GetPrimaryDamageFromMatrix(Infantry target)
     else if (defaultMatrix?.TryGetValue(key, out v) == true) baseValue = v;
     
     return baseValue;
+}
+
+// ✅ AI 生产评估用：按类型名查默认攻防表（无实例时使用）
+public static int LookupDefaultMatrix(string attackerType, string defenderType, bool secondary = false)
+{
+    var m = secondary ? defaultSecondaryMatrix : defaultMatrix;
+    if (m == null) return 0;
+    return m.TryGetValue($"{attackerType}_{defenderType}", out int v) ? v : 0;
 }
 
 // 查副武器表
