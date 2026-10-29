@@ -89,6 +89,9 @@ public partial class Infantry : Node2D
     [Export] public bool stealthForceOneShot = false;    // 阈值效果一次性：true=触发一次后永久锁存；false=持续模式(条件成立期间强制且玩家不可改)
     [Export] public bool stealthFormLocked = false;      // 形态锁定：true=玩家不可隐/现切换（阈值强制不受限，照常在条件满足时改写形态）
     bool stealthForceLatched = false;                    // 运行时：一次性锁存标记
+    public bool stealthThresholdLocked = false;          // 运行时：持续模式阈值锁（与手动锁分开存，修复阈值判定覆盖编辑器手动锁）
+    public bool IsStealthFormLocked => stealthFormLocked || stealthThresholdLocked;   // ✅ 有效锁定 = 手动锁 或 阈值锁
+    [Export] public bool stealthThresholdRevealWins = true;    // 强制隐/强制显同时命中：true=显形优先(原行为) false=隐身优先
     // —— 阈值矩阵：双方向(强制隐/强制显) × 双阈值(高/低) × 八资源 ——
     // 语义=手机电量：高于等于高阈值触发(≥80%性能模式)，低于等于低阈值触发(≤20%省电模式)，两侧持续判定
     [Export] public bool stealthForceHideOneShot = false;      // 强制隐阈值：true=只触发一次(终身)
@@ -924,17 +927,23 @@ public virtual bool ConsumePrimaryAmmo()
         if ((!consumeFuel || dailyFuelConsumption <= 0) && !hasStealthCost) return;
         if (consumeFuel && dailyFuelConsumption > 0) fuel -= dailyFuelConsumption;
 
-        if (fuel <= 0 && destroyOnOutOfFuel)
+        stealthFlareRevealed = false;   // 照明临时显形每回合刷新
+        ApplyStealthDailyCost();   // ✅ 隐身日耗（独立于燃料开关）
+
+        // ✅ 燃料耗尽坠毁：统一在日耗全部结算后判定一次（修复：此前与 ApplyStealthDailyCost 各判一次，隐身时重复销毁）
+        if (fuel <= 0 && destroyOnOutOfFuel && !pendingFuelDestroy)
         {
+            pendingFuelDestroy = true;
             // 延迟一帧销毁，避免在迭代中修改集合
             CallDeferred(nameof(DestroySelf));
         }
-        stealthFlareRevealed = false;   // 照明临时显形每回合刷新
-        ApplyStealthDailyCost();   // ✅ 隐身日耗（独立于燃料开关）
     }
+    private bool pendingFuelDestroy = false;
+    private bool stealthVisualApplied = false;   // 运行时：当前已应用的隐身外观   // 运行时：已排队坠毁，防重复
 
     private void DestroySelf()
     {
+        if (!IsInstanceValid(this) || IsQueuedForDeletion()) return;
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.unitManager?.RemoveUnit(this);
     }
@@ -1405,6 +1414,12 @@ public virtual void UpdateTeamVisual()
 
 public override void _Process(double delta)
 {
+    // ✅ 隐身半透明与状态同步（修复：读档/编辑器载入 isStealthed=true 时不会重设半透明）
+    if (isStealthed != stealthVisualApplied)
+    {
+        stealthVisualApplied = isStealthed;
+        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1, 1);
+    }
     // ✅ noFuelIcon 闪烁（从子类抽到基类统一处理）
     if (noFuelIcon != null)
     {
@@ -2526,7 +2541,7 @@ public virtual void SetWaitVisual(bool waiting)
     public void ToggleStealth()
     {
         if (!canStealth) return;
-        if (stealthFormLocked) return;   // ✅ 形态锁定：玩家不可操作（阈值强制改写不受此限）
+        if (IsStealthFormLocked) return;   // ✅ 形态锁定（手动锁/阈值锁）：玩家不可操作（阈值强制改写不受此限）
         // ✅ 弹系统（三选一模式，不能通吃）：切换扣弹，无弹拒绝
         if (stealthAmmoMode == 1)
         {
@@ -2577,7 +2592,7 @@ public virtual void SetWaitVisual(bool waiting)
         if (revealBulletCostPerDay > 0) currentRevealBullets = Math.Max(0, currentRevealBullets - revealBulletCostPerDay);
         if (camoBulletCostPerDay > 0) currentCamoBullets = Math.Max(0, currentCamoBullets - camoBulletCostPerDay);
         CheckStealthThresholds();
-        if (fuel <= 0 && destroyOnOutOfFuel) CallDeferred(nameof(DestroySelf));   // 沿用坠毁链
+        // 坠毁判定统一在 ConsumeDailyFuel 末尾（防重复销毁）
     }
 
     private bool forceHideTriggered = false;    // 运行时：强制隐已触发(OneShot用)
@@ -2599,48 +2614,61 @@ public virtual void SetWaitVisual(bool waiting)
         // 一次性模式：已锁存则永不重判
         if (stealthForceOneShot && stealthForceLatched) return;
 
-        bool anyActive = false;
+        bool hideHit = false, revealHit = false;
 
         // —— Hp：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideHpHigh > 0 && health >= stealthForceHideHpHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideHpLow > 0 && health <= stealthForceHideHpLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealHpHigh > 0 && health >= stealthForceRevealHpHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealHpLow > 0 && health <= stealthForceRevealHpLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideHpHigh > 0 && health >= stealthForceHideHpHigh) hideHit = true;
+        if (stealthForceHideHpLow > 0 && health <= stealthForceHideHpLow) hideHit = true;
+        if (stealthForceRevealHpHigh > 0 && health >= stealthForceRevealHpHigh) revealHit = true;
+        if (stealthForceRevealHpLow > 0 && health <= stealthForceRevealHpLow) revealHit = true;
         // —— Fuel：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideFuelHigh > 0 && fuel >= stealthForceHideFuelHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideFuelLow > 0 && fuel <= stealthForceHideFuelLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealFuelHigh > 0 && fuel >= stealthForceRevealFuelHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealFuelLow > 0 && fuel <= stealthForceRevealFuelLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideFuelHigh > 0 && fuel >= stealthForceHideFuelHigh) hideHit = true;
+        if (stealthForceHideFuelLow > 0 && fuel <= stealthForceHideFuelLow) hideHit = true;
+        if (stealthForceRevealFuelHigh > 0 && fuel >= stealthForceRevealFuelHigh) revealHit = true;
+        if (stealthForceRevealFuelLow > 0 && fuel <= stealthForceRevealFuelLow) revealHit = true;
         // —— Primary：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHidePrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceHidePrimaryHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHidePrimaryLow > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealPrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceRevealPrimaryHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealPrimaryLow > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHidePrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceHidePrimaryHigh) hideHit = true;
+        if (stealthForceHidePrimaryLow > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryLow) hideHit = true;
+        if (stealthForceRevealPrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceRevealPrimaryHigh) revealHit = true;
+        if (stealthForceRevealPrimaryLow > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryLow) revealHit = true;
         // —— Explode：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideExplodeHigh > 0 && currentExplodeAmmo >= stealthForceHideExplodeHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideExplodeLow > 0 && currentExplodeAmmo <= stealthForceHideExplodeLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealExplodeHigh > 0 && currentExplodeAmmo >= stealthForceRevealExplodeHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealExplodeLow > 0 && currentExplodeAmmo <= stealthForceRevealExplodeLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideExplodeHigh > 0 && currentExplodeAmmo >= stealthForceHideExplodeHigh) hideHit = true;
+        if (stealthForceHideExplodeLow > 0 && currentExplodeAmmo <= stealthForceHideExplodeLow) hideHit = true;
+        if (stealthForceRevealExplodeHigh > 0 && currentExplodeAmmo >= stealthForceRevealExplodeHigh) revealHit = true;
+        if (stealthForceRevealExplodeLow > 0 && currentExplodeAmmo <= stealthForceRevealExplodeLow) revealHit = true;
         // —— Flare：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideFlareHigh > 0 && currentFlareAmmo >= stealthForceHideFlareHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideFlareLow > 0 && currentFlareAmmo <= stealthForceHideFlareLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealFlareHigh > 0 && currentFlareAmmo >= stealthForceRevealFlareHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealFlareLow > 0 && currentFlareAmmo <= stealthForceRevealFlareLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideFlareHigh > 0 && currentFlareAmmo >= stealthForceHideFlareHigh) hideHit = true;
+        if (stealthForceHideFlareLow > 0 && currentFlareAmmo <= stealthForceHideFlareLow) hideHit = true;
+        if (stealthForceRevealFlareHigh > 0 && currentFlareAmmo >= stealthForceRevealFlareHigh) revealHit = true;
+        if (stealthForceRevealFlareLow > 0 && currentFlareAmmo <= stealthForceRevealFlareLow) revealHit = true;
         // —— StealthBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideStealthBulletHigh > 0 && currentStealthBullets >= stealthForceHideStealthBulletHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideStealthBulletLow > 0 && currentStealthBullets <= stealthForceHideStealthBulletLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealStealthBulletHigh > 0 && currentStealthBullets >= stealthForceRevealStealthBulletHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealStealthBulletLow > 0 && currentStealthBullets <= stealthForceRevealStealthBulletLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideStealthBulletHigh > 0 && currentStealthBullets >= stealthForceHideStealthBulletHigh) hideHit = true;
+        if (stealthForceHideStealthBulletLow > 0 && currentStealthBullets <= stealthForceHideStealthBulletLow) hideHit = true;
+        if (stealthForceRevealStealthBulletHigh > 0 && currentStealthBullets >= stealthForceRevealStealthBulletHigh) revealHit = true;
+        if (stealthForceRevealStealthBulletLow > 0 && currentStealthBullets <= stealthForceRevealStealthBulletLow) revealHit = true;
         // —— RevealBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideRevealBulletHigh > 0 && currentRevealBullets >= stealthForceHideRevealBulletHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideRevealBulletLow > 0 && currentRevealBullets <= stealthForceHideRevealBulletLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealRevealBulletHigh > 0 && currentRevealBullets >= stealthForceRevealRevealBulletHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealRevealBulletLow > 0 && currentRevealBullets <= stealthForceRevealRevealBulletLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideRevealBulletHigh > 0 && currentRevealBullets >= stealthForceHideRevealBulletHigh) hideHit = true;
+        if (stealthForceHideRevealBulletLow > 0 && currentRevealBullets <= stealthForceHideRevealBulletLow) hideHit = true;
+        if (stealthForceRevealRevealBulletHigh > 0 && currentRevealBullets >= stealthForceRevealRevealBulletHigh) revealHit = true;
+        if (stealthForceRevealRevealBulletLow > 0 && currentRevealBullets <= stealthForceRevealRevealBulletLow) revealHit = true;
         // —— CamoBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideCamoBulletHigh > 0 && currentCamoBullets >= stealthForceHideCamoBulletHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideCamoBulletLow > 0 && currentCamoBullets <= stealthForceHideCamoBulletLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealCamoBulletHigh > 0 && currentCamoBullets >= stealthForceRevealCamoBulletHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealCamoBulletLow > 0 && currentCamoBullets <= stealthForceRevealCamoBulletLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideCamoBulletHigh > 0 && currentCamoBullets >= stealthForceHideCamoBulletHigh) hideHit = true;
+        if (stealthForceHideCamoBulletLow > 0 && currentCamoBullets <= stealthForceHideCamoBulletLow) hideHit = true;
+        if (stealthForceRevealCamoBulletHigh > 0 && currentCamoBullets >= stealthForceRevealCamoBulletHigh) revealHit = true;
+        if (stealthForceRevealCamoBulletLow > 0 && currentCamoBullets <= stealthForceRevealCamoBulletLow) revealHit = true;
+
+        // ✅ 分方向一次性：该方向已触发过则不再生效（此前这两个开关未接线）
+        if (stealthForceHideOneShot && forceHideTriggered) hideHit = false;
+        if (stealthForceRevealOneShot && forceRevealTriggered) revealHit = false;
+
+        // ✅ 冲突裁决：同时命中只执行一个（此前两者都执行，后执行的显形静默覆盖）
+        if (hideHit && revealHit)
+        {
+            if (stealthThresholdRevealWins) hideHit = false; else revealHit = false;
+        }
+        if (hideHit) { ForceStealthNow(); forceHideTriggered = true; }
+        if (revealHit) { RevealStealth(); forceRevealTriggered = true; }
+        bool anyActive = hideHit || revealHit;
 
         // ✅ 模式结算
         if (stealthForceOneShot)
@@ -2649,7 +2677,7 @@ public virtual void SetWaitVisual(bool waiting)
         }
         else
         {
-            stealthFormLocked = anyActive;   // 持续模式：条件成立期间形态锁定，解除即还玩家自由
+            stealthThresholdLocked = anyActive;   // 持续模式：写运行时阈值锁，不再覆盖编辑器手动锁
         }
     }
 
@@ -2662,18 +2690,18 @@ public virtual void SetWaitVisual(bool waiting)
         if (unit.stealthVisibleOnTile && unit.grid != null)
         {
             foreach (var u in unit.grid.infantries)
-                if (u.team == viewerTeam) return true;   // 同格单位看得见
+                if (u != null && u != unit && u.team == viewerTeam) return true;   // 同格单位看得见
             var fac = unit.grid.city;   // ✅ 脚下建筑：所属方看得见（AW3规则，接线完成）
             if (fac != null && fac.facilityTeam == viewerTeam) return true;
         }
-        if (unit.stealthVisibleWhenAdjacent && allGrids != null)
+        if (unit.stealthVisibleWhenAdjacent && allGrids != null && unit.grid != null)
             foreach (var g in allGrids)
             {
                 if (g == null || g == unit.grid) continue;
                 int dist = Math.Abs(g.GridIndex.X - unit.grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - unit.grid.GridIndex.Y);
                 if (dist < unit.stealthVisibleMinRange || dist > unit.stealthVisibleMaxRange) continue;
                 foreach (var u in g.infantries)
-                    if (u.team == viewerTeam) return true;
+                    if (u != null && u.team == viewerTeam) return true;
             }
         if (unit.stealthRevealOnFlare && unit.IsFlareLit()) return true;   // ✅ 照明弹照出（实时查询，离开亮格自动恢复）
         return false;
@@ -2850,6 +2878,8 @@ public virtual void SetWaitVisual(bool waiting)
 // Infantry.cs - 修改 InputClick 方法
 public virtual void InputClick(Node viewport, InputEvent inputs, int shape_index)
 {
+    // ✅ 被迷雾/隐身隐藏的单位不响应点击（Area2D 拾取不受 Visible 影响，否则会暴露位置/信息）
+    if (!IsVisibleInTree()) return;
 
 
     if (inputs is InputEventMouseButton mouseEvent && mouseEvent.Pressed)

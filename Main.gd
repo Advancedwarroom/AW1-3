@@ -49,6 +49,9 @@ func _has_clickable_under_mouse() -> bool:
 		
 		# 检查是否是 Infantry 或 Weapon（通过组或类型）
 		if parent.is_in_group("infantry") or parent.is_in_group("weapons"):
+			# ✅ 被迷雾/隐身隐藏的单位不算可点击（否则拖地图被拦截=暴露位置）
+			if parent is CanvasItem and not parent.is_visible_in_tree():
+				continue
 			return true
 		
 		# 检查是否是 Grid（格子）

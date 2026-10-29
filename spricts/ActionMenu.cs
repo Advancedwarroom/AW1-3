@@ -871,7 +871,7 @@ private List<Grids> GetAdjacentGrids(Grids center)
         }
         if (stealthButton != null)
         {
-            bool canToggleStealth = unit.canStealth && !unit.stealthFormLocked
+            bool canToggleStealth = unit.canStealth && !unit.IsStealthFormLocked
                 && (!unit.stealthToggleCostsAction || (!unit.hasActed && unit.state != UnitState.Acted));
             stealthButton.Visible = canToggleStealth;
             TranslateGroup.SetText(stealthButton, unit.isStealthed ? "显形" : "隐身");

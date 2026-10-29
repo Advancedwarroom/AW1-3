@@ -492,8 +492,9 @@ public partial class GridManager : Node
                 bool blocked = false;
 
                 g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team && u.team != TeamHelper.Player))
-                    blocked = true; // 敌方单位阻挡（迷雾中隐藏的也算）
+                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team && u.team != TeamHelper.Player
+                        && Infantry.IsVisibleTo(u, selectedUnit.team, grids)))
+                    blocked = true; // 敌方单位阻挡（✅ 隐身中看不见的不参与预览截断，防暴露；实际移动仍会被截断）
                 else if (selectedUnit is not Oozium && g.weapon != null)
                     blocked = true; // 兵器阻挡
                 else
@@ -550,6 +551,7 @@ public partial class GridManager : Node
             if (g?.pathIcon == null) continue;
             bool canStay = CanStayOnGrid(g, selectedUnit);
             bool gridVisible = !isFogEnabled || fog.IsGridVisible(g);
+            if (HasOnlyHiddenStealthBlockers(g, selectedUnit)) gridVisible = false;   // ✅ 只被看不见的隐身敌军占据：不标红（防暴露）
             if (!canStay && selectedUnit.overlapType == UnitOverlapType.NonOverlapping && gridVisible)
                 g.pathIcon.Modulate = new Color(1, 0.3f, 0.3f, 0.6f); // 红色不可停留
             else
@@ -719,7 +721,8 @@ public partial class GridManager : Node
                 if (curVisible)
                 {
                     cur.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                    var enemyOnCur = cur.infantries.FirstOrDefault(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player);
+                    var enemyOnCur = cur.infantries.FirstOrDefault(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player
+                        && Infantry.IsVisibleTo(u, infantry.team, grids));   // ✅ 隐身敌军不阻挡范围计算（否则范围出现空洞=暴露位置），实际移动时由截断逻辑触发遭遇
                     if (enemyOnCur != null)
                         continue;
                 }
@@ -759,7 +762,8 @@ public partial class GridManager : Node
                         var enemyOnNeighbor = neighbor.infantries.FirstOrDefault(u =>
                             u != infantry
                             && u.team != infantry.team
-                            && u.team != TeamHelper.Player); // ✅ P-1 公共单位不算敌方
+                            && u.team != TeamHelper.Player // ✅ P-1 公共单位不算敌方
+                            && Infantry.IsVisibleTo(u, infantry.team, grids)); // ✅ 看不见的隐身敌军不剔除（防暴露位置）
                         if (enemyOnNeighbor != null)
                             continue;
                     }
@@ -837,6 +841,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             {
                 // ✅ 只有可见格子才显示红色（不可见格子不暴露敌方单位位置）
                 bool gridVisible = !isFogEnabled || fog.IsGridVisible(g);
+                if (HasOnlyHiddenStealthBlockers(g, infantry)) gridVisible = false;   // ✅ 只被看不见的隐身敌军占据：不标红（防暴露）
                 if (gridVisible)
                 {
                     g.pathIcon.Modulate = new Color(1, 0.3f, 0.3f, 0.6f);
@@ -1226,6 +1231,15 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             default: 
                 return false;
         }
+    }
+
+    // ✅ 该格是否"只"被移动方看不见的隐身敌军挡住（用于显示层：不标红、不留空洞）
+    public bool HasOnlyHiddenStealthBlockers(Grids grid, Infantry mover)
+    {
+        if (grid == null || mover == null) return false;
+        var others = grid.infantries.Where(u => u != null && IsInstanceValid(u) && u != mover).ToList();
+        if (others.Count == 0) return false;
+        return others.All(u => u.team != mover.team && !Infantry.IsVisibleTo(u, mover.team, grids));
     }
 
     private bool CanStayOnGrid(Grids grid, Infantry requestingUnit)

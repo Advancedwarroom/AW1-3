@@ -529,7 +529,14 @@ public partial class FogOfWarManager : Node
     public bool IsGridIlluminated(Grids g)
     {
         if (g == null || activeIlluminations == null || activeIlluminations.Count == 0) return false;
-        return CalculateIlluminatedGrids().Contains(g);
+        // ✅ 性能：直接按曼哈顿距离判定，不再每次重建全图照亮集合（结果与 CalculateIlluminatedGrids 一致）
+        foreach (var effect in activeIlluminations)
+        {
+            if (effect?.centerGrid == null) continue;
+            int dist = Mathf.Abs(g.GridIndex.X - effect.centerGrid.GridIndex.X) + Mathf.Abs(g.GridIndex.Y - effect.centerGrid.GridIndex.Y);
+            if (dist <= effect.maxRange && dist >= effect.minRange) return true;
+        }
+        return false;
     }
 
     private HashSet<Grids> CalculateIlluminatedGrids()
