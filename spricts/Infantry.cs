@@ -1598,7 +1598,7 @@ public override void _Process(double delta)
     if (isStealthed != stealthVisualApplied)
     {
         stealthVisualApplied = isStealthed;
-        Modulate = isStealthed ? new Color(1, 1, 1, 0.06f) : new Color(1, 1, 1, 1);   // ✅ 纯消失（近全透明），位置看「隐」指示器
+        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1,1);   // ✅ 我方视角=半透明幽灵；敌方视角=完全不渲染（ShouldShowUnit）
     }
     // ✅ noFuelIcon 闪烁（从子类抽到基类统一处理）
     if (noFuelIcon != null)
