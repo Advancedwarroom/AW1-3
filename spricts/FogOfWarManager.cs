@@ -30,7 +30,10 @@ public partial class FogOfWarManager : Node
     [Export] public Color revealedColor = new Color(1, 1, 1, 0);
 
     private Dictionary<Grids, Sprite2D> fogSprites = new();
-    private readonly System.Collections.Generic.Dictionary<string, HashSet<Grids>> exploredByTeam = new();   // ✅ 已探索记忆层（按阵营持久保留）
+    private readonly System.Collections.Generic.Dictionary<string, HashSet<Grids>> exploredByTeam = new();
+
+    // ✅ AI内战观战模式：无视隐身规则，全场可见（否则公共视角把双方隐身单位全灭）
+    public bool spectatorViewing;   // ✅ 已探索记忆层（按阵营持久保留）
 
     // ✅ 敌方单位最后已知残影（AW规则）：消失的单位在最后一眼的位置留下暗色记号，不再"闹鬼"
     private sealed class UnitGhost { public Node Target; public Grids LastGrid; public Label Marker; public bool Dead; }
@@ -151,6 +154,8 @@ public partial class FogOfWarManager : Node
         // ✅ 先同步视角阵营——雾关时也必需：隐身/林地判定依赖 currentTeam，不同步则敌方回合泄隐
         currentTeam = gameManager != null ? TeamHelper.GetPhaseTeamName(gameManager.turnPhase) : "Player1";
         var aiMgr0 = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+        // ✅ 观战判定：双方皆AI → 观战者看全场
+        spectatorViewing = aiMgr0 != null && aiMgr0.IsAITeam(TeamHelper.Player1) && aiMgr0.IsAITeam(TeamHelper.Player2);
         if (aiMgr0 != null && aiMgr0.IsAITeam(currentTeam)) currentTeam = TeamHelper.Player;
 
         if (!isFogOfWarEnabled || gridManager == null) { UpdateUnitVisibility(); ClearAllFog(); return; }   // ✅ 雾关也重估单位可见性
@@ -492,7 +497,7 @@ public partial class FogOfWarManager : Node
         if (unit.team == currentTeam) return true;
         if (unit.grid == null) return false;
         // ✅ 隐身：按感知规则决定渲染（贴身/同格可见，否则隐藏——AW3规则）。与迷雾开关无关，始终生效
-        if (!Infantry.IsVisibleTo(unit, currentTeam, gridManager?.grids)) return false;
+        if (!spectatorViewing && !Infantry.IsVisibleTo(unit, currentTeam, gridManager?.grids)) return false;   // ✅ 隐身门（观战模式豁免）
         if (!isFogOfWarEnabled) return true;   // ✅ 雾关时：隐身门照跑，其余单位照常全显
         return visibleGridsThisTurn.Contains(unit.grid);
     }
