@@ -666,6 +666,23 @@ public override void TakeDamage(int damage)
         return $"{teamPrefix}_{dirSuffix}";
     }
 
+    /// <summary>✅ AI 入口：等同玩家点击射程内格子（走同一套弹药/冷却/目标筛选）。返回是否真的开火</summary>
+    public bool AIFireAtGrid(Grids targetGrid)
+    {
+        if (targetGrid == null || !CanAttack()) return false;
+        int before = remainingAttacks;
+        OnRangeGridClicked(targetGrid);
+        return remainingAttacks < before || hasActed;
+    }
+
+    /// <summary>✅ AI 用：该格子在玩家点击时会被选中的目标（与 OnRangeGridClicked 一致取第一个）</summary>
+    public Node2D AIPeekTargetInGrid(Grids targetGrid)
+    {
+        if (targetGrid == null) return null;
+        var t = GetValidTargetsInGrid(targetGrid);
+        return t.Count > 0 ? t[0] : null;
+    }
+
     private void OnRangeGridClicked(Grids targetGrid)
     {
         // ✅ 关键修复：检查格子是否还有效

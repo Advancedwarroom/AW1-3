@@ -182,12 +182,123 @@ public partial class AI_Manager : Node
         {
             var w = weaponQueue.Dequeue();
             if (w == null || !IsInstanceValid(w) || w.isDestroyed) continue;
-            w.ExecuteAI();
-            Next(stepDelay);
+            // 黑炮/巨炮/死光自带 AI 只服务 P0/P-1，阵营兵器由这里按"能力"操作；激光自带 AI 不设阵营门，直接用
+            bool acted = w is BlackCannon bc ? OperateCannon(bc) : RunBuiltinWeaponAI(w);
+            Next(acted ? stepDelay : 0.05f);
             return;
         }
         stage = 1;
         Next(0.05f);
+    }
+
+    private bool RunBuiltinWeaponAI(Weapon w)
+    {
+        bool before = w.hasActed; int ra = w.remainingAttacks;
+        w.ExecuteAI();
+        Log($"兵器 {w.GetType().Name}@{w.grid?.GridIndex} 自带AI 执行（已行动={w.hasActed} 剩余次数{ra}→{w.remainingAttacks}）");
+        return w.hasActed != before || w.remainingAttacks != ra;
+    }
+
+    /// <summary>
+    /// 阵营炮台 AI：遍历可转向的所有朝向，算出每个朝向下最佳开火方案（单体炮取最佳格，死光取整条光束），
+    /// 选最高分转过去开火；无利可图则恢复原朝向不动。
+    /// </summary>
+    private bool OperateCannon(BlackCannon bc)
+    {
+        if (bc.isDestroyed || !bc.CanAttack()) { Log($"兵器 {bc.GetType().Name}@{bc.grid?.GridIndex} 不可攻击（冷却/弹药/已行动）"); return false; }
+        BuildContext();
+        var origDir = bc.direction;
+        float bestScore = 0; BlackCannon.CannonDirection bestDir = origDir; Grids bestGrid = null; string bestNote = "";
+
+        var tried = new HashSet<BlackCannon.CannonDirection>();
+        for (int r = 0; r < 4; r++)
+        {
+            if (!tried.Add(bc.direction)) break;   // 不能转向时只评估当前朝向
+            var range = bc.CalculateAttackRange() ?? new List<Grids>();
+            if (bc is DeathRay dr)
+            {
+                // 光束一次打中射程内全部敌方单位（死光自身只打敌方）
+                float s = 0; int n = 0;
+                foreach (var g in range)
+                    foreach (var t in g.infantries)
+                    {
+                        if (t == null || !IsInstanceValid(t) || t.team == aiTeam || !CanSee(t)) continue;
+                        if (!TeamHelper.IsEnemyForAttacker(aiTeam, t.team)) continue;
+                        s += CannonHitValue(t, Mathf.Max(1, Mathf.RoundToInt(t.maxHealth * dr.fixedDamagePercent)), dr.CanDestroy); n++;
+                    }
+                if (s > bestScore && range.Count > 0) { bestScore = s; bestDir = bc.direction; bestGrid = range[0]; bestNote = $"光束命中{n}"; }
+            }
+            else
+            {
+                foreach (var g in range)
+                {
+                    if (!SeesGrid(g)) continue;
+                    var tgt = bc.AIPeekTargetInGrid(g);
+                    float s = 0; string note = null;
+                    if (tgt is Infantry t && IsInstanceValid(t))
+                    {
+                        if (t.team != aiTeam && !CanSee(t)) continue;
+                        s = CannonEffectValue(bc, t); note = $"{t.GetType().Name}@{g.GridIndex}";
+                    }
+                    else if (tgt is Weapon tw && IsInstanceValid(tw) && TeamHelper.IsEnemyForAttacker(aiTeam, tw.team))
+                    {
+                        float pct = bc.useModifiedDamage ? bc.modifiedHealthPercent : bc.fixedDamagePercent;
+                        if (pct <= 0) continue;
+                        int dmg = Mathf.RoundToInt(tw.maxHealth * pct);
+                        s = Math.Min(dmg, tw.health) / (float)Math.Max(1, tw.maxHealth) * Math.Max(8000, tw.cost);
+                        if (bc.CanDestroy && dmg >= tw.health) s += Math.Max(8000, tw.cost) * killBonusRatio;
+                        note = $"兵器{tw.GetType().Name}@{g.GridIndex}";
+                    }
+                    if (s > bestScore) { bestScore = s; bestDir = bc.direction; bestGrid = g; bestNote = note; }
+                }
+            }
+            if (!bc.canRotate) break;
+            bc.RotateDirection();
+        }
+
+        // 转到最佳朝向（没有目标则恢复原朝向）
+        var want = bestGrid != null ? bestDir : origDir;
+        for (int i = 0; i < 4 && bc.direction != want; i++) bc.RotateDirection();
+        if (bestGrid == null) { Log($"兵器 {bc.GetType().Name}@{bc.grid?.GridIndex} 四向无可打目标"); return false; }
+
+        bool fired;
+        if (bc is DeathRay ray) { int b = ray.remainingAttacks; ray.PerformAttack(null); fired = ray.remainingAttacks < b || ray.hasActed; }
+        else fired = bc.AIFireAtGrid(bestGrid);
+        if (fired)
+        {
+            Log($"兵器 {bc.GetType().Name}@{bc.grid?.GridIndex} 朝{bc.direction} 开火 {bestNote} 分{bestScore:F0}");
+            if (followCamera) FocusCamera(bestGrid);
+        }
+        return fired;
+    }
+
+    /// <summary>黑炮/巨炮对单个单位的效果价值：敌方掉血为正，己方回血为正，误伤为负</summary>
+    private float CannonEffectValue(BlackCannon bc, Infantry t)
+    {
+        float pct = bc.useModifiedDamage ? bc.modifiedHealthPercent : bc.fixedDamagePercent;
+        bool enemy = TeamHelper.IsEnemyForAttacker(aiTeam, t.team);
+        if (pct > 0)
+        {
+            int dmg = Mathf.Max(1, Mathf.RoundToInt(t.maxHealth * pct));
+            float v = CannonHitValue(t, dmg, bc.CanDestroy);
+            return enemy ? v : (t.team == aiTeam ? -v : 0);
+        }
+        if (pct < 0 && t.team == aiTeam)   // 治疗炮：给最缺血的己方单位
+        {
+            int heal = Mathf.RoundToInt(t.maxHealth * -pct);
+            int room = bc.canOverMaxHp ? heal : Math.Max(0, t.maxHealth - t.health);
+            return Math.Min(heal, room) / (float)t.maxHealth * UnitValue(t) * 0.8f;
+        }
+        return 0;
+    }
+
+    private float CannonHitValue(Infantry t, int dmg, bool canDestroy)
+    {
+        int real = canDestroy ? Math.Min(dmg, t.health) : Math.Min(dmg, Math.Max(0, t.health - 1));
+        float v = real / (float)Math.Max(1, t.maxHealth) * UnitValue(t);
+        if (canDestroy && dmg >= t.health) v += UnitValue(t) * killBonusRatio;
+        if (t.capturingGrid != null && t.currentCaptureProgress > 0) v += 800;   // 打断占领
+        return v;
     }
 
     // ==================== 阶段 1/3：单位 ====================
@@ -798,15 +909,16 @@ public partial class AI_Manager : Node
         }
 
         // 修理（修理艇）
-        if (u is RepairBoat rb && u.CanPerformRepair && (!moved || rb.canRepairAfterMove) && customOk)
+        var rp = RepairParams(u);
+        if (rp.can && (!moved || rp.afterMove) && customOk)
         {
             Infantry bestT = null; float bestV = 0;
-            foreach (var t in Ring(g, Math.Max(0, rb.minRepairRange), Math.Max(0, rb.maxRepairRange)).SelectMany(x => x.infantries))
+            foreach (var t in Ring(g, Math.Max(0, rp.min), Math.Max(0, rp.max)).SelectMany(x => x.infantries))
             {
                 if (t == null || !IsInstanceValid(t) || t.isTransported) continue;
-                bool ok = rb.repairTargetMode switch { 1 => t.team == u.team, 2 => IsEnemy(t.team), 3 => t == u, _ => true };
+                bool ok = rp.mode switch { 1 => t.team == u.team, 2 => IsEnemy(t.team), 3 => t == u, _ => true };
                 if (!ok) continue;
-                int amt = rb.repairAmountPerAction;
+                int amt = rp.amount;
                 float v;
                 if (amt > 0 && t.team == u.team) v = Math.Min(amt, t.maxHealth - t.health) / (float)t.maxHealth * UnitValue(t);
                 else if (amt < 0 && IsEnemy(t.team)) v = Math.Min(-amt, t.health) / (float)t.maxHealth * UnitValue(t);
@@ -1247,7 +1359,11 @@ public partial class AI_Manager : Node
                 u.PerformSupply();
                 break;
             case Act.Repair:
-                if (u is RepairBoat rb && p.target != null && IsInstanceValid(p.target)) rb.PerformRepair(p.target);
+                if (p.target != null && IsInstanceValid(p.target))
+                {
+                    if (u is RepairBoat rb) rb.PerformRepair(p.target);
+                    else if (u.HasMethod("PerformRepair")) u.Call("PerformRepair", p.target);   // 通用修理模块（任意开启 canRepair 的单位）
+                }
                 break;
             case Act.Illuminate:
                 if (p.actGrid != null && u.currentFlareAmmo > 0)
@@ -1338,6 +1454,23 @@ public partial class AI_Manager : Node
         if (cam == null) return;
         var t = cam.CreateTween();
         t.TweenProperty(cam, "position", g.Position, 0.25f).SetTrans(Tween.TransitionType.Sine);
+    }
+
+    /// <summary>修理能力参数：RepairBoat 用自身字段（子类隐藏了基类同名字段），其余单位用 Infantry 通用修复模块字段</summary>
+    private static (bool can, bool afterMove, int min, int max, int mode, int amount) RepairParams(Infantry u)
+    {
+        if (u is RepairBoat rb)
+            return (rb.CanPerformRepair, rb.canRepairAfterMove, rb.minRepairRange, rb.maxRepairRange, rb.repairTargetMode, rb.repairAmountPerAction);
+        bool exec = u.CanPerformRepair && u.HasMethod("PerformRepair");   // 按钮能显示且真能执行
+        return (exec, u.canRepairAfterMove, u.minRepairRange, u.maxRepairRange, u.repairTargetMode, u.repairAmountPerAction);
+    }
+
+    private void FocusCamera(Grids g)
+    {
+        if (!followCamera || g == null) return;
+        var cam = GetViewport()?.GetCamera2D();
+        if (cam == null) return;
+        cam.CreateTween().TweenProperty(cam, "position", g.Position, 0.25f).SetTrans(Tween.TransitionType.Sine);
     }
 
     private void MarkActed(Infantry u)
