@@ -165,7 +165,8 @@ public partial class Infantry : Node2D
     [Export] public Godot.Collections.Dictionary<string, int> stealthMatrixOverride = new();  // 隐身时替换的攻防表（键"攻击方_目标"，空=用默认表）                       // 0=不改 1=可重叠 2=不可重叠   // 🔁 合流后再行动：true=合流完成后可继续操作一次（默认关=AW原作）
     [Export] public string[] excludedWeaponTargets = System.Array.Empty<string>();  // ⚔ 兵器攻击准入(攻击方)：不能攻击的兵器类型，"Weapon"=全部兵器，留空=均可攻击              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
     [Export] public bool useDefaultConfig = true;           // ✅ 是否使用代码默认值（false=完全由Inspector控制，不执行ApplyUnitSpecificDefaults）
-    [Export] public bool canDevour = false;                // 是否能吞噬敌人（Oozium特性）
+    [Export] public bool canDevour = false;
+    [Export] public bool canDevourAllies = true;   // 吞噬友军（AW原作史莱姆不分敌我；关掉则只吞噬敌军）                // 是否能吞噬敌人（Oozium特性）
     [Export] public bool canCapture = true;                // 是否能占领城市
     [Export] public UnitCategory unitCategory = UnitCategory.Other;  // 手动指定分类
 
@@ -725,7 +726,7 @@ public List<Infantry> transportedUnits = new List<Infantry>();
     [Export]
     public AttackOverlapPolicy attackOverlap = AttackOverlapPolicy.AllowAttackEnemyOnSameTile;
     [Export]
-    public UnitOverlapType overlapType = UnitOverlapType.NonOverlapping;
+    public UnitOverlapType overlapType = UnitOverlapType.NonOverlapping;   // ✅ 覆盖方式：NonOverlapping=不可重叠 / Overlapping=仅重叠 / Oozium=覆盖+吞噬(自动，无需canDevour)
     [Export]
     public MoveType moveType = MoveType.Infantry;  
     [Export]

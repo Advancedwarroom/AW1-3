@@ -1098,9 +1098,12 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                     return;
 
                 case UnitOverlapType.Oozium:
-                    if (!infantry.canDevour) { MoveTo(infantry, to); return; }   // ✅ 不吞噬：仅重叠进入
+                    // ✅ 选Oozium=自动覆盖+吞噬（Overlapping值才是"只重叠不吞噬"）
                     foreach (var target in otherUnits)
+                    {
+                        if (!infantry.canDevourAllies && target.team == infantry.team) continue;
                         DevourUnit(target);
+                    }
                     to.infantries.Clear();
                     to.infantry = null;
                     
@@ -1304,9 +1307,9 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             }
         }
 
-        if (infantry.overlapType == UnitOverlapType.Oozium && infantry.canDevour)   // ✅ canDevour：可进入占用格之外，是否吞噬占用者
+        if (infantry.overlapType == UnitOverlapType.Oozium)   // ✅ 选Oozium覆盖方式即自动覆盖+吞噬   // ✅ canDevour：可进入占用格之外，是否吞噬占用者
         {
-            var targetsToRemove = to.infantries.Where(i => i != infantry && IsInstanceValid(i)).ToList();
+            var targetsToRemove = to.infantries.Where(i => i != infantry && IsInstanceValid(i) && (infantry.canDevourAllies || i.team != infantry.team)).ToList();
             foreach (var target in targetsToRemove)
                 DevourUnit(target);
             to.infantries.Clear();
