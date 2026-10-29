@@ -103,6 +103,13 @@ public partial class FogOfWarManager : Node
 
         // ✅ 添加照明弹照亮的格子（所有队伍都可见）
         var illuminatedGrids = CalculateIlluminatedGrids();
+
+        // ✅ 隐身×照明弹：亮格上的隐身单位，永久显形设置则现形
+        foreach (var ig in illuminatedGrids)
+            if (ig != null)
+                foreach (var iu in ig.infantries)
+                    if (iu.isStealthed && iu.stealthRevealOnFlare && iu.stealthFlareRevealPermanent)
+                        iu.RevealStealth();
         visibleGridsThisTurn.UnionWith(illuminatedGrids);
 
         if (visibleGridsThisTurn.Count == 0)
@@ -409,6 +416,9 @@ public partial class FogOfWarManager : Node
         if (unit.isTransported) return false;
         if (unit.team == currentTeam) return true;
         if (unit.grid == null) return false;
+        // ✅ 隐身：按感知规则决定渲染（贴身/同格可见，否则隐藏——AW3规则）。与迷雾开关无关，始终生效
+        if (!Infantry.IsVisibleTo(unit, currentTeam, gridManager?.grids)) return false;
+        if (!isFogOfWarEnabled) return true;   // ✅ 雾关时：隐身门照跑，其余单位照常全显
         return visibleGridsThisTurn.Contains(unit.grid);
     }
 
@@ -501,8 +511,8 @@ public partial class FogOfWarManager : Node
         return vision.Contains(grid);
     }
 
-    public void OnTurnChanged() { if (isFogOfWarEnabled) RefreshFog(); }
-    public void OnUnitMoved() { if (isFogOfWarEnabled) RefreshFog(); }
+    public void OnTurnChanged() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }   // ✅ 雾关也重估（隐身规则与迷雾无关）
+    public void OnUnitMoved() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }
 
     public string GetGridVisionStatus(Grids grid, string team)
     {
@@ -515,6 +525,13 @@ public partial class FogOfWarManager : Node
 
 
     // ✅ 计算所有照明弹照亮的格子
+    // ✅ 供隐身模块查询：某格当前是否被照明弹照亮
+    public bool IsGridIlluminated(Grids g)
+    {
+        if (g == null || activeIlluminations == null || activeIlluminations.Count == 0) return false;
+        return CalculateIlluminatedGrids().Contains(g);
+    }
+
     private HashSet<Grids> CalculateIlluminatedGrids()
     {
         var visible = new HashSet<Grids>();

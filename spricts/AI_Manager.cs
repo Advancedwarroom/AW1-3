@@ -399,7 +399,8 @@ public partial class AI_Manager : Node
         // 优先：能击杀的 > 血量最低的 > 最近的
         var validEnemies = enemies
             .Select(e => e is Infantry i ? i : null)
-            .Where(i => i != null && IsInstanceValid(i) && i.health > 0)
+            .Where(i => i != null && IsInstanceValid(i) && i.health > 0
+                && (!i.isStealthed || Infantry.CanTargetStealth(unit, i)))   // ✅ 隐身感知：AI无视看不见/打不了的隐身目标
             .ToList();
 
         if (validEnemies.Count == 0) return null;
@@ -563,7 +564,13 @@ public partial class AI_Manager : Node
             ["Rocket"] = 30,
             ["MdTank"] = 25,
             ["Oozium"] = 15,
-            ["FlyBomb"] = 10
+            ["FlyBomb"] = 10,
+            ["Fighter"] = 45,
+            ["Bomber"] = 42,
+            ["BCopter"] = 38,
+            ["TCopter"] = 25,
+            ["AntiAirMissile"] = 35,
+            ["Stealth"] = 44
         };
 
         foreach (var grid in gameManager.gridManager.grids)

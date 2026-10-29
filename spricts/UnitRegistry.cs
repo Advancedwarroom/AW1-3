@@ -46,6 +46,7 @@ public class UnitConfig
     // 燃料
     public int MaxFuel = 99;
     public bool ConsumeFuel = false;
+        public bool CanMerge { get; set; } = true;      // 合流模块：默认允许合流
     public int DailyFuelConsumption = 0;
     public bool DestroyOnOutOfFuel = false;
     public int LowFuelThreshold = 15;
@@ -417,7 +418,7 @@ public static class UnitRegistry
         {
             UnitId = "FlyBomb",
             DisplayName = TranslateGroup.T("飞弹"),
-            MoveType = MoveType.AirPlane,
+            MoveType = MoveType.Missile,
             MovePoints = 9,
             Cost = 25000,
             AnimPrefix = "flybomb",
@@ -432,8 +433,7 @@ public static class UnitRegistry
             DestroyOnOutOfFuel = true,
         },
 
-        // ==================== 空军（预留，你加贴图就行）====================
-        /*
+        // ==================== 战斗机（2026-10-28 正式启用）====================
         ["Fighter"] = new UnitConfig
         {
             UnitId = "Fighter",
@@ -443,16 +443,107 @@ public static class UnitRegistry
             Cost = 20000,
             AnimPrefix = "fighter",
             HasPrimaryWeapon = true,
-            MaxPrimaryAmmo = 99,
-            PrimaryHasLimitedAmmo = false,
-            PrimaryAntiAir = true,
+            MaxPrimaryAmmo = 9,
+            PrimaryHasLimitedAmmo = true,
             IsAirUnit = true,
+            VisionRange = 2,
             MaxFuel = 99,
             ConsumeFuel = true,
             DailyFuelConsumption = 5,
             DestroyOnOutOfFuel = true,
         },
-        */
+        // ==================== 轰炸机（2026-10-28 紧随战斗机服役）====================
+        ["Bomber"] = new UnitConfig
+        {
+            UnitId = "Bomber",
+            DisplayName = TranslateGroup.T("轰炸机"),
+            MoveType = MoveType.AirPlane,
+            MovePoints = 7,
+            Cost = 22000,
+            AnimPrefix = "bomber",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 9,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = true,
+            VisionRange = 2,
+            MaxFuel = 99,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 5,
+            DestroyOnOutOfFuel = true,
+        },
+        // ==================== 武装直升机（2026-10-28 空军补齐）====================
+        ["BCopter"] = new UnitConfig
+        {
+            UnitId = "BCopter",
+            DisplayName = TranslateGroup.T("武装直升机"),
+            MoveType = MoveType.HeliCopter,
+            MovePoints = 6,
+            Cost = 9000,
+            AnimPrefix = "bcopter",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 6,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = true,
+            VisionRange = 3,
+            MaxFuel = 99,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 2,
+            DestroyOnOutOfFuel = true,
+        },
+        // ==================== 运输直升机（2026-10-28 空军补齐）====================
+        ["TCopter"] = new UnitConfig
+        {
+            UnitId = "TCopter",
+            DisplayName = TranslateGroup.T("运输直升机"),
+            MoveType = MoveType.HeliCopter,
+            MovePoints = 6,
+            Cost = 5000,
+            AnimPrefix = "tcopter",
+            HasPrimaryWeapon = false,
+            IsAirUnit = true,
+            VisionRange = 2,
+            MaxFuel = 99,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 2,
+            DestroyOnOutOfFuel = true,
+        },
+        // ==================== 防空导弹车（2026-10-29 空军克星）====================
+        ["AntiAirMissile"] = new UnitConfig
+        {
+            UnitId = "AntiAirMissile",
+            DisplayName = TranslateGroup.T("防空导弹"),
+            MoveType = MoveType.Tire,
+            MovePoints = 4,
+            Cost = 12000,
+            AnimPrefix = "aamissile",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 6,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = false,
+            VisionRange = 5,
+            MaxFuel = 50,
+            ConsumeFuel = false,
+        },
+        // ==================== 隐身战机（2026-10-29 隐身模块首任用户，AW3官方值）====================
+        ["Stealth"] = new UnitConfig
+        {
+            UnitId = "Stealth",
+            DisplayName = TranslateGroup.T("隐身战机"),
+            MoveType = MoveType.AirPlane,
+            MovePoints = 6,
+            Cost = 24000,
+            AnimPrefix = "stealth",
+            HasPrimaryWeapon = true,
+            MaxPrimaryAmmo = 6,
+            PrimaryHasLimitedAmmo = true,
+            IsAirUnit = true,
+            VisionRange = 4,
+            MaxFuel = 60,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 5,
+            DestroyOnOutOfFuel = true,
+        },
+
     };
 
     /// <summary>

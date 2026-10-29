@@ -1,8 +1,12 @@
 <Project Sdk="Godot.NET.Sdk/4.7.1">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net10.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>AWone1Copy</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- CI 修复：Mono 运行时包在 nuget.org 不存在，Android 导出必须用 CoreCLR -->
+    <UseMonoRuntime>true</UseMonoRuntime>
   </PropertyGroup>
 </Project>

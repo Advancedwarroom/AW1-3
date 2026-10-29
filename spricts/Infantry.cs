@@ -73,6 +73,80 @@ public partial class Infantry : Node2D
     [Export] public bool cannotCounterWhenAttacked = false; // 攻击时不被反击（如Artillery/Rocket/AntiTank等间接攻击单位）
     [Export] public bool canCounterWhenDefending = true;   // 被攻击时能否反击（Artillery/Rocket=false，默认true）
     [Export] public bool canCounterAtRange = false;        // 能否远程反击（false=仅近战距离1可反击，true=在攻击范围内可反击）
+    [Export] public bool canMerge = true;
+    [Export] public bool canActAfterMerge = false;
+
+    [ExportGroup("隐身模块")]
+    [Export] public bool canStealth = false;
+    [Export] public bool stealthToggleCostsAction = true;    // 隐身/显形是否算独立操作：true=切换后待机；false=切换后仍可攻击移动                            // 可否隐身
+    [Export] public bool isStealthed = false;                           // 运行时：当前是否隐身
+    // —— 每日消耗（维持隐身时扣，0=该项不扣）——
+    [Export] public int stealthFuelCostPerDay = 0;                      // 燃油
+    [Export] public int stealthHpCostPerDay = 0;                        // 血量
+    [Export] public int stealthPrimaryAmmoCostPerDay = 0;             // 普通弹药
+    [Export] public int stealthExplodeAmmoCostPerDay = 0;             // 自爆弹
+    [Export] public int stealthFlareAmmoCostPerDay = 0;               // 照明弹
+    [Export] public bool stealthForceOneShot = false;    // 阈值效果一次性：true=触发一次后永久锁存；false=持续模式(条件成立期间强制且玩家不可改)
+    [Export] public bool stealthFormLocked = false;      // 形态锁定：true=玩家不可隐/现切换（阈值强制不受限，照常在条件满足时改写形态）
+    bool stealthForceLatched = false;                    // 运行时：一次性锁存标记
+    // —— 阈值矩阵：双方向(强制隐/强制显) × 双阈值(高/低) × 八资源 ——
+    // 语义=手机电量：高于等于高阈值触发(≥80%性能模式)，低于等于低阈值触发(≤20%省电模式)，两侧持续判定
+    [Export] public bool stealthForceHideOneShot = false;      // 强制隐阈值：true=只触发一次(终身)
+    [Export] public bool stealthForceRevealOneShot = false;    // 强制显阈值：true=只触发一次(终身)
+    [Export] public int stealthForceHideHpHigh = 0;        [Export] public int stealthForceHideHpLow = 0;
+    [Export] public int stealthForceRevealHpHigh = 0;      [Export] public int stealthForceRevealHpLow = 0;
+    [Export] public int stealthForceHideFuelHigh = 0;      [Export] public int stealthForceHideFuelLow = 0;
+    [Export] public int stealthForceRevealFuelHigh = 0;    [Export] public int stealthForceRevealFuelLow = 0;
+    [Export] public int stealthForceHidePrimaryHigh = 0;   [Export] public int stealthForceHidePrimaryLow = 0;
+    [Export] public int stealthForceRevealPrimaryHigh = 0; [Export] public int stealthForceRevealPrimaryLow = 0;
+    [Export] public int stealthForceHideExplodeHigh = 0;   [Export] public int stealthForceHideExplodeLow = 0;
+    [Export] public int stealthForceRevealExplodeHigh = 0; [Export] public int stealthForceRevealExplodeLow = 0;
+    [Export] public int stealthForceHideFlareHigh = 0;     [Export] public int stealthForceHideFlareLow = 0;
+    [Export] public int stealthForceRevealFlareHigh = 0;   [Export] public int stealthForceRevealFlareLow = 0;
+    [Export] public int stealthForceHideStealthBulletHigh = 0;   [Export] public int stealthForceHideStealthBulletLow = 0;
+    [Export] public int stealthForceRevealStealthBulletHigh = 0; [Export] public int stealthForceRevealStealthBulletLow = 0;
+    [Export] public int stealthForceHideRevealBulletHigh = 0;   [Export] public int stealthForceHideRevealBulletLow = 0;
+    [Export] public int stealthForceRevealRevealBulletHigh = 0; [Export] public int stealthForceRevealRevealBulletLow = 0;
+    [Export] public int stealthForceHideCamoBulletHigh = 0;   [Export] public int stealthForceHideCamoBulletLow = 0;
+    [Export] public int stealthForceRevealCamoBulletHigh = 0; [Export] public int stealthForceRevealCamoBulletLow = 0;
+    // —— 感知规则 ——
+    [Export] public bool stealthVisibleWhenAdjacent = true;           // 贴身可见（X-Y范围）
+    [Export] public int stealthVisibleMinRange = 1;                   // 贴身范围X
+    [Export] public int stealthVisibleMaxRange = 1;                   // 贴身范围Y
+    [Export] public bool stealthVisibleOnTile = true;                 // 同格单位可见（建筑判定见②）
+    [Export] public string[] stealthAttackableBy = System.Array.Empty<string>();  // 攻击白名单(空=隐身时无敌)
+    // —— 现形规则 ——
+    [Export] public bool stealthRevealOnAttack = false;             // 攻击后现形
+    [Export] public bool stealthRevealOnDamage = true;              // 受伤现形
+    [Export] public bool stealthRevealOnFlare = true;               // 照明弹使其现形
+    // —— 隐身中行为锁 ——
+    [Export] public bool canAttackWhileStealthed = true;            // 隐身时可攻击（AW3=true）
+    [Export] public bool canMoveWhileStealthed = true;              // 隐身时可移动
+    [Export] public bool canLoadUnloadWhileStealthed = false;         // 隐身时可搭载/卸载
+    [Export] public bool canCustomActionWhileStealthed = false;       // 隐身时可自爆等其他自定义动作
+    [Export] public bool canCaptureWhileStealthed = false;          // 隐身时可占点
+    // —— 照明弹显形 ——
+    [Export] public bool stealthFlareRevealPermanent = false;      // true=永久现形；false=仅照明生效期间显形
+    [Export] public bool stealthFlareRevealed = false;            // 运行时：照明弹临时显形标记
+    // —— 受伤现形阈值 ——
+    [Export] public bool stealthRevealOnDamageUseThreshold = false; // true=受伤后血量≤阈值才现形
+    [Export] public int stealthRevealOnDamageHpThreshold = 0;       // 受伤现形血量阈值
+    // —— 隐身弹系统（每单位三选一，不能通吃！）——
+    [Export] public int stealthAmmoMode = 0;                      // 0=无弹免费切换 / 1=双弹种(隐身弹+显形弹) / 2=迷彩弹(通用)
+    [Export] public int maxStealthBullets = 0;                    // 隐身弹上限
+    [Export] public int currentStealthBullets = 0;                // 隐身弹现有
+    [Export] public int maxRevealBullets = 0;                     // 显形弹上限
+    [Export] public int currentRevealBullets = 0;                 // 显形弹现有
+    [Export] public int maxCamoBullets = 0;                         // 迷彩弹上限
+    [Export] public int currentCamoBullets = 0;                     // 迷彩弹现有
+    [Export] public int stealthBulletCostPerDay = 0;              // 隐身弹日耗
+    [Export] public int revealBulletCostPerDay = 0;             // 显形弹日耗
+    [Export] public int camoBulletCostPerDay = 0;                   // 迷彩弹日耗
+    // —— 隐身中改写（②提交） ——
+    [Export] public int stealthMoveTypeOverride = -1;                 // 隐身移动方式改写(-1=不改)
+    [Export] public int stealthOverlapMode = 0;
+    [Export] public Godot.Collections.Dictionary<string, int> stealthMatrixOverride = new();  // 隐身时替换的攻防表（键"攻击方_目标"，空=用默认表）                       // 0=不改 1=可重叠 2=不可重叠   // 🔁 合流后再行动：true=合流完成后可继续操作一次（默认关=AW原作）
+    [Export] public string[] excludedWeaponTargets = System.Array.Empty<string>();  // ⚔ 兵器攻击准入(攻击方)：不能攻击的兵器类型，"Weapon"=全部兵器，留空=均可攻击              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
     [Export] public bool useDefaultConfig = true;           // ✅ 是否使用代码默认值（false=完全由Inspector控制，不执行ApplyUnitSpecificDefaults）
     [Export] public bool canDevour = false;                // 是否能吞噬敌人（Oozium特性）
     [Export] public bool canCapture = true;                // 是否能占领城市
@@ -202,6 +276,64 @@ public void InitializeDefaultMatrix()
 ["PipeRunner_Rocket"] = 85,     ["PipeRunner_Recon"] = 90,
 ["PipeRunner_APC"] = 80,        ["PipeRunner_AntiAir"] = 85,
 ["PipeRunner_Artillery"] = 80,  ["PipeRunner_FlyBomb"] = 120,
+            ["Fighter_FlyBomb"] = 100,
+            ["Fighter_Fighter"] = 55,
+            ["AntiAir_Fighter"] = 65,
+            ["PipeRunner_Fighter"] = 120,
+            // 轰炸机：对地/对海毁灭打击（AW官方值），对空完全无助（无对空行=不能攻击）
+            ["Bomber_Infantry"] = 110,
+            ["Bomber_Mech"] = 110,
+            ["Bomber_Bike"] = 105,
+            ["Bomber_Oozium"] = 35,
+            ["Bomber_Recon"] = 105,
+            ["Bomber_APC"] = 105,
+            ["Bomber_LightTank"] = 105,
+            ["Bomber_MdTank"] = 95,
+            ["Bomber_Artillery"] = 105,
+            ["Bomber_Rocket"] = 105,
+            ["Bomber_AntiAir"] = 95,
+            ["Bomber_AntiTank"] = 105,
+            ["Bomber_PipeRunner"] = 105,
+            ["Bomber_Flare"] = 105,
+            ["Bomber_RepairBoat"] = 75,
+            // 轰炸机挨揍表
+            ["Fighter_Bomber"] = 100,
+            ["AntiAir_Bomber"] = 75,
+            // 武装直升机主武器(导弹6发)：对车辆/兵器，对空无一格=打不了飞机
+            ["BCopter_Recon"] = 55,      ["BCopter_APC"] = 60,
+            ["BCopter_LightTank"] = 55,  ["BCopter_MdTank"] = 25,
+            ["BCopter_Artillery"] = 65,  ["BCopter_Rocket"] = 65,
+            ["BCopter_AntiAir"] = 25,    ["BCopter_AntiTank"] = 55,
+            ["BCopter_PipeRunner"] = 55, ["BCopter_Flare"] = 55,
+            ["BCopter_Bike"] = 55,       ["BCopter_Oozium"] = 25,
+            ["BCopter_RepairBoat"] = 25,
+            // 武装直升机副武器(机枪∞)：对步兵/直升机
+            // 挨揍表：直升机系
+            ["AntiAir_BCopter"] = 120,   ["Fighter_BCopter"] = 100,   ["PipeRunner_BCopter"] = 120,
+            ["AntiAir_TCopter"] = 120, ["Fighter_TCopter"] = 100,   ["PipeRunner_TCopter"] = 120,
+            // 防空导弹车(Anti-air Missile)：只对空，射程3-5（AW官方值）
+            ["AntiAirMissile_Fighter"] = 100,  ["AntiAirMissile_Bomber"] = 100,
+            ["AntiAirMissile_BCopter"] = 100,  ["AntiAirMissile_TCopter"] = 100,
+            ["AntiAirMissile_FlyBomb"] = 120,
+            // 防空导弹车挨揍表（AWDS矩阵Missiles列）：轻坦85 中坦105 轰105 武直65 步25 甲85
+            ["Infantry_AntiAirMissile"] = 25,  ["Mech_AntiAirMissile"] = 85,
+            ["Recon_AntiAirMissile"] = 28,     ["LightTank_AntiAirMissile"] = 85,
+            ["MdTank_AntiAirMissile"] = 105,   ["Artillery_AntiAirMissile"] = 80,
+            ["Rocket_AntiAirMissile"] = 90,    ["AntiAir_AntiAirMissile"] = 55,
+            ["AntiTank_AntiAirMissile"] = 85,  ["PipeRunner_AntiAirMissile"] = 90,
+            ["Flare_AntiAirMissile"] = 28,     ["Bike_AntiAirMissile"] = 10,
+            ["Bomber_AntiAirMissile"] = 105,   ["BCopter_AntiAirMissile"] = 65,
+            // 隐身战机(AWDS全量对空对地)：全能打，唯一例外水下潜艇
+            ["Stealth_Infantry"] = 95,  ["Stealth_Mech"] = 90,    ["Stealth_Bike"] = 90,
+            ["Stealth_Oozium"] = 15,    ["Stealth_Recon"] = 90,   ["Stealth_APC"] = 80,
+            ["Stealth_LightTank"] = 80, ["Stealth_MdTank"] = 55,  ["Stealth_Artillery"] = 80,
+            ["Stealth_Rocket"] = 85,    ["Stealth_AntiAir"] = 85, ["Stealth_AntiTank"] = 80,
+            ["Stealth_PipeRunner"] = 80,["Stealth_Flare"] = 80,   ["Stealth_RepairBoat"] = 60,
+            ["Stealth_Fighter"] = 65,   ["Stealth_Bomber"] = 75,  ["Stealth_BCopter"] = 105,
+            ["Stealth_TCopter"] = 105,  ["Stealth_Stealth"] = 75, ["Stealth_FlyBomb"] = 120,
+            // 隐身战机挨揍表（AWDS）：战斗机85 防空车75 导弹车100 管道炮75（打它必须先破隐）
+            ["Fighter_Stealth"] = 85,   ["AntiAir_Stealth"] = 75,
+            ["AntiAirMissile_Stealth"] = 100, ["PipeRunner_Stealth"] = 75,
 ["PipeRunner_PipeRunner"] = 80,["PipeRunner_Flare"] = 75,
 ["PipeRunner_AntiTank"] = 60,   ["PipeRunner_Bike"] = 90,
 // ✅ 其他单位主武器攻击 PipeRunner
@@ -231,6 +363,8 @@ public void InitializeDefaultMatrix()
     {
         defaultSecondaryMatrix = new Dictionary<string, int>
         {
+            ["BCopter_Infantry"] = 75,  ["BCopter_Mech"] = 75,
+            ["BCopter_BCopter"] = 65,   ["BCopter_TCopter"] = 95,
             // 步兵副武器（机枪）——通用但低
             ["Infantry_Infantry"] = 45,   ["Infantry_Mech"] = 35,   ["Infantry_LightTank"] = 5,
             ["Infantry_Artillery"] = 15,  ["Infantry_Rocket"] = 15, ["Infantry_APC"] = 5,
@@ -426,6 +560,12 @@ public virtual int GetBaseDamageFromMatrix(Infantry target, bool isCounter = fal
 {
     string key = $"{this.GetType().Name}_{target.GetType().Name}";
     
+    // ✅ 隐身攻防表替换（隐身时优先查专属表）
+    if (isStealthed && stealthMatrixOverride != null && stealthMatrixOverride.Count > 0)
+    {
+        string skey = $"{GetType().Name}_{target.GetType().Name}";
+        if (stealthMatrixOverride.TryGetValue(skey, out int sval)) return sval;
+    }
     int baseValue = 0; // 默认0，不是50！
     if (attackMatrix.TryGetValue(key, out int v)) baseValue = v;
     else if (defaultMatrix?.TryGetValue(key, out v) == true) baseValue = v;
@@ -780,14 +920,17 @@ public virtual bool ConsumePrimaryAmmo()
     // ✅ 每日回合开始时自动消耗燃料
     public virtual void ConsumeDailyFuel()
     {
-        if (!consumeFuel || dailyFuelConsumption <= 0) return;
-        fuel -= dailyFuelConsumption;
+        bool hasStealthCost = isStealthed && HasAnyStealthCost();
+        if ((!consumeFuel || dailyFuelConsumption <= 0) && !hasStealthCost) return;
+        if (consumeFuel && dailyFuelConsumption > 0) fuel -= dailyFuelConsumption;
 
         if (fuel <= 0 && destroyOnOutOfFuel)
         {
             // 延迟一帧销毁，避免在迭代中修改集合
             CallDeferred(nameof(DestroySelf));
         }
+        stealthFlareRevealed = false;   // 照明临时显形每回合刷新
+        ApplyStealthDailyCost();   // ✅ 隐身日耗（独立于燃料开关）
     }
 
     private void DestroySelf()
@@ -799,6 +942,7 @@ public virtual bool ConsumePrimaryAmmo()
     // ✅ 自爆接口（GameManager 调用执行）
     public virtual void OnExplode()
     {
+        if (isStealthed && !canCustomActionWhileStealthed) return; // ✅ 隐身行为锁
     }
 
     public Grids originalGrid;
@@ -1047,6 +1191,7 @@ protected virtual void ApplyUnitRegistryConfig()
     if (config.MoveType != default) moveType = config.MoveType;
     if (config.MovePoints > 0) defaultMovePoints = config.MovePoints;
     if (config.Cost > 0) cost = config.Cost;
+    if (config.CanMerge) canMerge = true;
     if (!string.IsNullOrEmpty(config.DisplayName) && string.IsNullOrEmpty(Name))
         Name = config.DisplayName;
 
@@ -1328,11 +1473,12 @@ public override void _Process(double delta)
 
 public virtual int GetMoveCost(GridType gridType)
 {
+    MoveType moveType = (isStealthed && stealthMoveTypeOverride >= 0) ? (MoveType)stealthMoveTypeOverride : this.moveType;   // ✅ 隐身移动方式改写（局部遮蔽）
         var extraSave = ExtraSave.Instance;
     if (extraSave != null)
     {
         string terrainName = gridType.ToString();
-        string moveTypeName = this.moveType.ToString();
+        string moveTypeName = moveType.ToString();
         int customCost = extraSave.GetMoveCost(moveTypeName, terrainName);
         if (customCost >= 0) return customCost; // -1 表示走内置逻辑，继续原有代码
     }
@@ -2199,6 +2345,7 @@ public virtual void SetWaitVisual(bool waiting)
     private bool isCapturingInProgress = false;
     public virtual void PerformCapture()
 {
+    if (isStealthed && !canCaptureWhileStealthed) return;   // ✅ 隐身占点锁
 
     if (isCapturingInProgress) return;
     
@@ -2367,8 +2514,212 @@ public virtual void SetWaitVisual(bool waiting)
     }
 
 // ✅ 新增：计算对兵器的伤害
-public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weaponType)
+    // ✅ 照明弹显形：本格是否处于照明弹亮格内
+    public bool IsFlareLit()
+    {
+        if (grid == null || !stealthRevealOnFlare) return false;
+        var gmx = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        return gmx?.fogOfWarManager?.IsGridIlluminated(grid) == true;
+    }
+
+    // ==================== 隐身模块 ====================
+    public void ToggleStealth()
+    {
+        if (!canStealth) return;
+        if (stealthFormLocked) return;   // ✅ 形态锁定：玩家不可操作（阈值强制改写不受此限）
+        // ✅ 弹系统（三选一模式，不能通吃）：切换扣弹，无弹拒绝
+        if (stealthAmmoMode == 1)
+        {
+            if (!isStealthed) { if (currentStealthBullets <= 0) return; currentStealthBullets--; }
+            else { if (currentRevealBullets <= 0) return; currentRevealBullets--; }
+        }
+        else if (stealthAmmoMode == 2)
+        {
+            if (currentCamoBullets <= 0) return;
+            currentCamoBullets--;
+        }
+        isStealthed = !isStealthed;
+        if (stealthToggleCostsAction)
+        {
+            SetWaitVisual(true);
+            state = UnitState.Acted;   // 算独立操作：切换即待机
+        }
+        // 不算独立操作：state 保持，切换后仍可攻击/移动
+        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1, 1);
+        CheckStealthThresholds();
+    }
+
+    public void RevealStealth()
+    {
+        if (!isStealthed && !stealthFlareRevealed) return;
+        isStealthed = false;
+        stealthFlareRevealed = false;
+        Modulate = new Color(1, 1, 1, 1);
+    }
+
+    public bool HasAnyStealthCost()
+    {
+        return stealthFuelCostPerDay > 0 || stealthHpCostPerDay > 0
+            || stealthPrimaryAmmoCostPerDay > 0 || stealthExplodeAmmoCostPerDay > 0
+            || stealthFlareAmmoCostPerDay > 0
+            || stealthBulletCostPerDay > 0 || revealBulletCostPerDay > 0 || camoBulletCostPerDay > 0;
+    }
+
+    public void ApplyStealthDailyCost()   // 由 ConsumeDailyFuel 末尾调用
+    {
+        if (!isStealthed) return;
+        fuel -= stealthFuelCostPerDay;
+        if (stealthHpCostPerDay > 0) { health = Math.Max(1, health - stealthHpCostPerDay); }  // 标签刷新走接线阶段
+        if (stealthPrimaryAmmoCostPerDay > 0) currentPrimaryAmmo = Math.Max(0, currentPrimaryAmmo - stealthPrimaryAmmoCostPerDay);
+        if (stealthExplodeAmmoCostPerDay > 0) currentExplodeAmmo = Math.Max(0, currentExplodeAmmo - stealthExplodeAmmoCostPerDay);
+        if (stealthFlareAmmoCostPerDay > 0) currentFlareAmmo = Math.Max(0, currentFlareAmmo - stealthFlareAmmoCostPerDay);
+        if (stealthBulletCostPerDay > 0) currentStealthBullets = Math.Max(0, currentStealthBullets - stealthBulletCostPerDay);
+        if (revealBulletCostPerDay > 0) currentRevealBullets = Math.Max(0, currentRevealBullets - revealBulletCostPerDay);
+        if (camoBulletCostPerDay > 0) currentCamoBullets = Math.Max(0, currentCamoBullets - camoBulletCostPerDay);
+        CheckStealthThresholds();
+        if (fuel <= 0 && destroyOnOutOfFuel) CallDeferred(nameof(DestroySelf));   // 沿用坠毁链
+    }
+
+    private bool forceHideTriggered = false;    // 运行时：强制隐已触发(OneShot用)
+    private bool forceRevealTriggered = false;  // 运行时：强制显已触发(OneShot用)
+
+    // ✅ 阈值矩阵统一判定：双方向(强制隐/强制显)×双阈值(高/低)×八资源，0=关，到达即触发
+    private void ForceStealthNow()   // 阈值强制隐：被动效果，不耗行动/不扣弹
+    {
+        if (isStealthed || !canStealth) return;
+        isStealthed = true;
+        Modulate = new Color(1, 1, 1, 0.45f);
+    }
+
+    private static bool ThresholdHit(int value, int high, int low)
+        => (high > 0 && value >= high) || (low > 0 && value <= low);
+
+    public void CheckStealthThresholds()
+    {
+        // 一次性模式：已锁存则永不重判
+        if (stealthForceOneShot && stealthForceLatched) return;
+
+        bool anyActive = false;
+
+        // —— Hp：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideHpHigh > 0 && health >= stealthForceHideHpHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideHpLow > 0 && health <= stealthForceHideHpLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealHpHigh > 0 && health >= stealthForceRevealHpHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealHpLow > 0 && health <= stealthForceRevealHpLow) { RevealStealth(); anyActive = true; }
+        // —— Fuel：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideFuelHigh > 0 && fuel >= stealthForceHideFuelHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideFuelLow > 0 && fuel <= stealthForceHideFuelLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealFuelHigh > 0 && fuel >= stealthForceRevealFuelHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealFuelLow > 0 && fuel <= stealthForceRevealFuelLow) { RevealStealth(); anyActive = true; }
+        // —— Primary：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHidePrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceHidePrimaryHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHidePrimaryLow > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealPrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceRevealPrimaryHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealPrimaryLow > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryLow) { RevealStealth(); anyActive = true; }
+        // —— Explode：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideExplodeHigh > 0 && currentExplodeAmmo >= stealthForceHideExplodeHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideExplodeLow > 0 && currentExplodeAmmo <= stealthForceHideExplodeLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealExplodeHigh > 0 && currentExplodeAmmo >= stealthForceRevealExplodeHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealExplodeLow > 0 && currentExplodeAmmo <= stealthForceRevealExplodeLow) { RevealStealth(); anyActive = true; }
+        // —— Flare：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideFlareHigh > 0 && currentFlareAmmo >= stealthForceHideFlareHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideFlareLow > 0 && currentFlareAmmo <= stealthForceHideFlareLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealFlareHigh > 0 && currentFlareAmmo >= stealthForceRevealFlareHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealFlareLow > 0 && currentFlareAmmo <= stealthForceRevealFlareLow) { RevealStealth(); anyActive = true; }
+        // —— StealthBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideStealthBulletHigh > 0 && currentStealthBullets >= stealthForceHideStealthBulletHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideStealthBulletLow > 0 && currentStealthBullets <= stealthForceHideStealthBulletLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealStealthBulletHigh > 0 && currentStealthBullets >= stealthForceRevealStealthBulletHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealStealthBulletLow > 0 && currentStealthBullets <= stealthForceRevealStealthBulletLow) { RevealStealth(); anyActive = true; }
+        // —— RevealBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideRevealBulletHigh > 0 && currentRevealBullets >= stealthForceHideRevealBulletHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideRevealBulletLow > 0 && currentRevealBullets <= stealthForceHideRevealBulletLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealRevealBulletHigh > 0 && currentRevealBullets >= stealthForceRevealRevealBulletHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealRevealBulletLow > 0 && currentRevealBullets <= stealthForceRevealRevealBulletLow) { RevealStealth(); anyActive = true; }
+        // —— CamoBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
+        if (stealthForceHideCamoBulletHigh > 0 && currentCamoBullets >= stealthForceHideCamoBulletHigh) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceHideCamoBulletLow > 0 && currentCamoBullets <= stealthForceHideCamoBulletLow) { ForceStealthNow(); anyActive = true; }
+        if (stealthForceRevealCamoBulletHigh > 0 && currentCamoBullets >= stealthForceRevealCamoBulletHigh) { RevealStealth(); anyActive = true; }
+        if (stealthForceRevealCamoBulletLow > 0 && currentCamoBullets <= stealthForceRevealCamoBulletLow) { RevealStealth(); anyActive = true; }
+
+        // ✅ 模式结算
+        if (stealthForceOneShot)
+        {
+            if (anyActive) stealthForceLatched = true;   // 一次性：触发即锁存，永不重判
+        }
+        else
+        {
+            stealthFormLocked = anyActive;   // 持续模式：条件成立期间形态锁定，解除即还玩家自由
+        }
+    }
+
+    // 感知：viewerTeam 是否"看见"该单位（视觉层）
+    public static bool IsVisibleTo(Infantry unit, string viewerTeam, System.Collections.Generic.List<Grids> allGrids)
+    {
+        if (unit == null) return false;
+        if (unit.team == viewerTeam) return true;
+        if (!unit.isStealthed || unit.stealthFlareRevealed) return true;   // 没隐身/被照明弹照出的照常
+        if (unit.stealthVisibleOnTile && unit.grid != null)
+        {
+            foreach (var u in unit.grid.infantries)
+                if (u.team == viewerTeam) return true;   // 同格单位看得见
+            var fac = unit.grid.city;   // ✅ 脚下建筑：所属方看得见（AW3规则，接线完成）
+            if (fac != null && fac.facilityTeam == viewerTeam) return true;
+        }
+        if (unit.stealthVisibleWhenAdjacent && allGrids != null)
+            foreach (var g in allGrids)
+            {
+                if (g == null || g == unit.grid) continue;
+                int dist = Math.Abs(g.GridIndex.X - unit.grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - unit.grid.GridIndex.Y);
+                if (dist < unit.stealthVisibleMinRange || dist > unit.stealthVisibleMaxRange) continue;
+                foreach (var u in g.infantries)
+                    if (u.team == viewerTeam) return true;
+            }
+        if (unit.stealthRevealOnFlare && unit.IsFlareLit()) return true;   // ✅ 照明弹照出（实时查询，离开亮格自动恢复）
+        return false;
+    }
+
+    // 攻击准入：attacker 能否打 target（隐身白名单）
+    public static bool CanTargetStealth(Infantry attacker, Infantry target)
+    {
+        if (target == null || !target.isStealthed) return true;
+        if (target.stealthRevealOnFlare && target.IsFlareLit()) return true;   // ✅ 照明弹照出：可攻击
+        if (target.stealthAttackableBy == null || target.stealthAttackableBy.Length == 0) return false;
+        return System.Array.IndexOf(target.stealthAttackableBy, attacker.GetType().Name) >= 0;
+    }
+
+    // 现形三触发器之"受伤"（在战斗伤害点调用）
+    public static void ApplyStealthRevealOnDamage(Infantry damaged)
+    {
+        if (damaged == null || !damaged.stealthRevealOnDamage) return;
+        // 阈值模式：血量已在此调用前扣减，≤阈值才现形；非阈值模式受任何伤即现形
+        if (!damaged.stealthRevealOnDamageUseThreshold || damaged.health <= damaged.stealthRevealOnDamageHpThreshold)
+            damaged.RevealStealth();
+    }
+
+    // ✅ 兵器攻击准入：双向名单判定（攻击方排除表 + 兵器拒绝表），空表=不限制
+    public bool CanTargetWeapon(Weapon w)
+    {
+        if (w == null || w.isDestroyed) return false;
+        string myName = GetType().Name;
+        if (w.excludedAttackerTypes != null && w.excludedAttackerTypes.Length > 0
+            && System.Array.IndexOf(w.excludedAttackerTypes, myName) >= 0)
+            return false;
+        if (excludedWeaponTargets != null && excludedWeaponTargets.Length > 0)
+        {
+            Type t = w.GetType();
+            while (t != null && t != typeof(object))
+            {
+                if (System.Array.IndexOf(excludedWeaponTargets, t.Name) >= 0) return false;
+                t = t.BaseType;
+            }
+        }
+        return true;
+    }
+
+    public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weaponType)
 {
+    if (!CanTargetWeapon(target)) return 0;   // ✅ 兵器攻击准入闸门
     // 兵器没有类型名在攻防表中，使用基础攻击力的百分比
     float healthPercent = (float)health / maxHealth;
     
@@ -2406,6 +2757,7 @@ public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weapon
 
     public virtual void OnMoveSelected()
     {
+        if (isStealthed && !canMoveWhileStealthed) return; // ✅ 隐身行为锁
         if (consumeFuel && fuel <= 0) return;
         EnsureGridBound();
         ShowAnimState("move");
@@ -2480,6 +2832,7 @@ public virtual int CalculateDamageAgainstWeapon(Weapon target, WeaponType weapon
             originalGrid = null;
 
             // ✅ 修复3：使用攻防表计算伤害（兵器没有对应条目，需要处理）
+                        if (!CanTargetWeapon(weapon)) return;   // ✅ 准入拒绝
             int damage = CalculateDamageAgainstWeapon(weapon, selectedWeapon);
             weapon.TakeDamage(damage);
 
@@ -2696,6 +3049,9 @@ public virtual (int damage, string info) CalculateCounterPreview(Infantry attack
 
 public virtual void Attack(Infantry target)
 {
+        // ✅ 隐身攻击门：白名单外的单位打不了隐身目标（所有攻击路径的唯一闸门）
+        if (!CanTargetStealth(this, target)) return;
+        if (isStealthed && !canAttackWhileStealthed) return;   // ✅ 隐身行为锁：攻击
     if (attackType == AttackType.NoAttack) return;
     if (isAttacked) return;
     if (!canAttackAfterMoving && state == UnitState.Moved) return;
@@ -2737,7 +3093,12 @@ public virtual void Attack(Infantry target)
     
     // 应用伤害
     target.health -= attackDamage;
+        ApplyStealthRevealOnDamage(target);   // ✅ 受伤现形（含阈值模式）
+        target.CheckStealthThresholds();   // ✅ 受伤后阈值矩阵重判
+        if (stealthRevealOnAttack) RevealStealth();   // ✅ 攻击后现形（先于反击结算：现形即暴露给反击）
+        if (!CanTargetStealth(target, this)) counterDamage = 0;   // ✅ 隐身反击门：防守方打不了隐身攻击者则不能反击（AW3规则）
     this.health -= counterDamage;
+        CheckStealthThresholds();   // ✅ 反击掉血后阈值矩阵重判
     
     target.UpdateHpLabel();
     this.UpdateHpLabel();
@@ -2943,6 +3304,7 @@ public virtual void ReloadAmmo()
 // ========== ✅ 究极自由：通用装载方法（从 APC 迁移） ==========
 public virtual bool LoadUnit(Infantry unit)
 {
+        if (isStealthed && !canLoadUnloadWhileStealthed) return false; // ✅ 隐身行为锁
     if (!CanTransportUnit(unit)) return false;
     
     // ✅ 彻底停止所有视觉组件的动画残留（sprite + animSprite + 嵌套子节点）
@@ -3029,6 +3391,7 @@ public virtual bool LoadUnit(Infantry unit)
 // ========== ✅ 究极自由：通用卸载方法（从 APC 迁移） ==========
 public virtual bool UnloadUnit(Infantry unit, Grids targetGrid)
 {
+        if (isStealthed && !canLoadUnloadWhileStealthed) return false; // ✅ 隐身行为锁
     if (!transportedUnits.Contains(unit)) return false;
     if (targetGrid == null) return false;
     if (targetGrid.gridType == GridType.METEORITE) return false;

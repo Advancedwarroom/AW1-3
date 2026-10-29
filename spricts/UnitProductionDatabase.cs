@@ -32,6 +32,12 @@ public static class UnitProductionDatabase
         ["AntiTank"]   = new("res://Prefabs/Anti_Tank.tscn",    11000, "反坦克炮"),
         ["Flare"]      = new("res://Prefabs/Flare.tscn",        5000,  "照明车"),
         ["FlyBomb"]    = new("res://Prefabs/FlyBomb.tscn",      25000, "飞弹"),
+        ["Fighter"]    = new("res://Prefabs/Fighter.tscn",       20000, "战斗机"),
+        ["Bomber"]     = new("res://Prefabs/Bomber.tscn",        22000, "轰炸机"),
+        ["BCopter"]    = new("res://Prefabs/BCopter.tscn",        9000, "武装直升机"),
+        ["TCopter"]    = new("res://Prefabs/TCopter.tscn",        5000, "运输直升机"),
+        ["AntiAirMissile"] = new("res://Prefabs/AntiAirMissile.tscn", 12000, "防空导弹"),
+        ["Stealth"]      = new("res://Prefabs/Stealth.tscn",          24000, "隐身战机"),
     };
 
     public static bool HasUnit(string unitName) => Units.ContainsKey(unitName);

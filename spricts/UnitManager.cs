@@ -270,6 +270,10 @@ public bool CanMoveTo(Vector2I gridPos, Infantry unit)
     if (!IsValidGrid(gridPos)) return false;
     
     var grid = gridManager.map[gridPos.X, gridPos.Y];
+        // ✅ 隐身重叠方式2=不可重叠：隐身时拒绝进入被占格
+        if (unit != null && unit.isStealthed && unit.stealthOverlapMode == 2 && grid != null
+            && (grid.infantries.Count > 0 || grid.weapons.Count > 0))
+            return false;
     if (grid == null) return false;
     // ✅ 使用 GetMoveCost 检查地形是否可通行（替代硬编码的 METEORITE 检查）
     if (unit != null)
