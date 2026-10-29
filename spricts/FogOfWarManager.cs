@@ -505,6 +505,8 @@ public partial class FogOfWarManager : Node
     private bool ShouldShowWeapon(Weapon weapon)
     {
         if (weapon.team == currentTeam) return true;
+        if (spectatorViewing) return true;   // ✅ 观战模式：兵器全场可见
+        if (!isFogOfWarEnabled) return true;   // ✅ 雾关：兵器可见（兵器无隐身概念，AW也如此）
         if (weapon.grid == null) return false;
         return visibleGridsThisTurn.Contains(weapon.grid);
     }
