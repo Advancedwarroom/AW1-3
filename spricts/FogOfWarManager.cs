@@ -409,8 +409,9 @@ public partial class FogOfWarManager : Node
         if (unit.isTransported) return false;
         if (unit.team == currentTeam) return true;
         if (unit.grid == null) return false;
-        // ✅ 隐身：按感知规则决定渲染（贴身/同格可见，否则隐藏——AW3规则）
+        // ✅ 隐身：按感知规则决定渲染（贴身/同格可见，否则隐藏——AW3规则）。与迷雾开关无关，始终生效
         if (!Infantry.IsVisibleTo(unit, currentTeam, gridManager?.grids)) return false;
+        if (!isFogOfWarEnabled) return true;   // ✅ 雾关时：隐身门照跑，其余单位照常全显
         return visibleGridsThisTurn.Contains(unit.grid);
     }
 
@@ -503,8 +504,8 @@ public partial class FogOfWarManager : Node
         return vision.Contains(grid);
     }
 
-    public void OnTurnChanged() { if (isFogOfWarEnabled) RefreshFog(); }
-    public void OnUnitMoved() { if (isFogOfWarEnabled) RefreshFog(); }
+    public void OnTurnChanged() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }   // ✅ 雾关也重估（隐身规则与迷雾无关）
+    public void OnUnitMoved() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }
 
     public string GetGridVisionStatus(Grids grid, string team)
     {
