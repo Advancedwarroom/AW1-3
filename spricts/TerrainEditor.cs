@@ -259,6 +259,16 @@ public override void _Ready()
 {
     AddToGroup("terrain_editor");
 
+    // ✅ 自定义兵种（res://Prefabs/CustomUnits/）自动加入编辑器单位面板
+    foreach (var kv in UnitProductionDatabase.Units)
+    {
+        if (!kv.Value.ScenePath.StartsWith(UnitProductionDatabase.CustomUnitDir)) continue;
+        if (unitTemplates.Any(t => t.ScenePath == kv.Value.ScenePath)) continue;
+        unitTemplates.Add(new UnitTemplate { DisplayName = kv.Value.DisplayName, ScenePath = kv.Value.ScenePath,
+            Category = TranslateGroup.T("自定义"), Team = "Player1", DisplayColor = new Color(0.7f, 0.6f, 0.4f),
+            Description = $"{TranslateGroup.T("自定义兵种")} {kv.Key}  {TranslateGroup.T("造价")}{kv.Value.Cost}" });
+    }
+
     if (gameManager == null)
         gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     if (gridManager == null)

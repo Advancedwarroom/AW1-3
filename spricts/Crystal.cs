@@ -251,19 +251,19 @@ public partial class Crystal : Weapon
     private bool WouldSupplyUnit(Infantry unit)
     {
         if (!CheckTeamFilter(unit.team, crystalSupplyTeamMode)) return false;
-        if (!CheckTypeFilter(unit.GetType().Name, crystalSupplyUnitTypes)) return false;
+        if (!CheckTypeFilter(unit.UnitTypeId, crystalSupplyUnitTypes)) return false;
         // 检查是否有任何一种补给会实际改变数值
         if (crystalSupplyFlareAmmo != 0 && unit.canIlluminate)
-            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.currentFlareAmmo, unit.maxFlareAmmo, crystalSupplyFlareAmmo, crystalSupplyFlareCanOverMax, crystalSupplyFlareMaxCap) != unit.currentFlareAmmo) return true;
         if (crystalSupplyExplodeAmmo != 0 && unit.canExplode && !unit.explosionDestroysSelf)
-            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.currentExplodeAmmo, unit.maxExplodeAmmo, crystalSupplyExplodeAmmo, crystalSupplyExplodeCanOverMax, crystalSupplyExplodeMaxCap) != unit.currentExplodeAmmo) return true;
         if (crystalSupplyPrimaryAmmo != 0 && unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && unit.maxPrimaryAmmo < 99)
-            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.currentPrimaryAmmo, unit.maxPrimaryAmmo, crystalSupplyPrimaryAmmo, crystalSupplyPrimaryCanOverMax, crystalSupplyPrimaryMaxCap) != unit.currentPrimaryAmmo) return true;
         if (crystalSupplyFuel != 0 && unit.consumeFuel)
-            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.fuel, unit.maxFuel, crystalSupplyFuel, crystalSupplyFuelCanOverMax, crystalSupplyFuelMaxCap) != unit.fuel) return true;
         return false;
     }
@@ -294,7 +294,7 @@ public partial class Crystal : Weapon
         // 队伍判定
         if (!CheckTeamFilter(unit.team, crystalHealTeamMode)) return;
         // 类型判定
-        if (!CheckTypeFilter(unit.GetType().Name, crystalHealUnitTypes)) return;
+        if (!CheckTypeFilter(unit.UnitTypeId, crystalHealUnitTypes)) return;
         // 治疗量
         if (Mathf.Abs(crystalHealPercent) < 0.001f) return; // 0没反应
 
@@ -373,7 +373,7 @@ public partial class Crystal : Weapon
         // Flare 弹
         if (crystalSupplyFlareAmmo != 0 && unit.canIlluminate)
         {
-            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.currentFlareAmmo;
                 int newVal = ApplySupply(unit.currentFlareAmmo, unit.maxFlareAmmo, crystalSupplyFlareAmmo,
@@ -384,7 +384,7 @@ public partial class Crystal : Weapon
         // 自爆弹
         if (crystalSupplyExplodeAmmo != 0 && unit.canExplode && !unit.explosionDestroysSelf)
         {
-            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.currentExplodeAmmo;
                 int newVal = ApplySupply(unit.currentExplodeAmmo, unit.maxExplodeAmmo, crystalSupplyExplodeAmmo,
@@ -395,7 +395,7 @@ public partial class Crystal : Weapon
         // 主武器弹药
         if (crystalSupplyPrimaryAmmo != 0 && unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && unit.maxPrimaryAmmo < 99)
         {
-            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.currentPrimaryAmmo;
                 int newVal = ApplySupply(unit.currentPrimaryAmmo, unit.maxPrimaryAmmo, crystalSupplyPrimaryAmmo,
@@ -406,7 +406,7 @@ public partial class Crystal : Weapon
         // 燃料
         if (crystalSupplyFuel != 0 && unit.consumeFuel)
         {
-            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.fuel;
                 int newVal = ApplySupply(unit.fuel, unit.maxFuel, crystalSupplyFuel,
@@ -556,7 +556,7 @@ public partial class Crystal : Weapon
     public int AIPreviewHealDelta(Infantry unit)
     {
         if (unit == null || !CheckTeamFilter(unit.team, crystalHealTeamMode)) return 0;
-        if (!CheckTypeFilter(unit.GetType().Name, crystalHealUnitTypes)) return 0;
+        if (!CheckTypeFilter(unit.UnitTypeId, crystalHealUnitTypes)) return 0;
         int amt = Mathf.RoundToInt(unit.maxHealth * crystalHealPercent);
         if (amt > 0)
         {

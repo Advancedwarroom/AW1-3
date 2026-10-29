@@ -498,7 +498,7 @@ public partial class Facility : Node2D
             bool canSupply = TeamHelper.CanFacilitySupply(facilityTeam, unit.team);
             if (!canSupply) continue;
 
-            string unitType = unit.GetType().Name;
+            string unitType = unit.UnitTypeId;
             bool supplied = false;
             string supplyText = "";
             Color supplyColor = Colors.Green;

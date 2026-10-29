@@ -16,7 +16,38 @@ public static class UnitProductionDatabase
         }
     }
 
-    public static readonly Dictionary<string, UnitInfo> Units = new()
+    /// <summary>全部可生产兵种（内置 + res://Prefabs/CustomUnits/ 下自动注册的自定义兵种）</summary>
+    public static Dictionary<string, UnitInfo> Units { get { EnsureCustomUnits(); return builtinUnits; } }
+
+    // ✅ 不写代码造新兵种：把单位场景放进此目录并填写 unitTypeId，即自动加入生产数据库
+    //    工厂/机场/港口的 producibleUnitNames 里填这个 unitTypeId 就能生产
+    public const string CustomUnitDir = "res://Prefabs/CustomUnits/";
+    private static bool customLoaded = false;
+
+    private static void EnsureCustomUnits()
+    {
+        if (customLoaded) return;
+        customLoaded = true;
+        using var dir = DirAccess.Open(CustomUnitDir);
+        if (dir == null) return;
+        foreach (var f in dir.GetFiles())
+        {
+            string fn = f.EndsWith(".remap") ? f[..^6] : f;   // 导出包里场景带 .remap 后缀
+            if (!fn.EndsWith(".tscn") && !fn.EndsWith(".scn")) continue;
+            string path = CustomUnitDir + fn;
+            var node = GD.Load<PackedScene>(path)?.Instantiate();
+            if (node is not Infantry u) { node?.Free(); GD.PushWarning($"[自定义兵种] {path} 根节点不是单位脚本，已跳过"); continue; }
+            string id = u.unitTypeId;
+            if (string.IsNullOrEmpty(id)) { GD.PushWarning($"[自定义兵种] {path} 未填写 unitTypeId，已跳过"); u.Free(); continue; }
+            if (builtinUnits.ContainsKey(id)) { GD.PushWarning($"[自定义兵种] {path} 的 unitTypeId \"{id}\" 与已有兵种重名，已跳过"); u.Free(); continue; }
+            int cost = u.cost > 0 ? u.cost : (UnitRegistry.Get(u.TemplateId)?.Cost ?? 0);
+            builtinUnits[id] = new UnitInfo(path, cost, string.IsNullOrEmpty(u.unitDisplayName) ? id : u.unitDisplayName);
+            GD.Print($"[自定义兵种] 注册 {id}（{builtinUnits[id].DisplayName}） 造价{cost} ← {path}");
+            u.Free();
+        }
+    }
+
+    private static readonly Dictionary<string, UnitInfo> builtinUnits = new()
     {
         ["Infantry"]   = new("res://Prefabs/infantry(1).tscn", 1000,  "步兵"),
         ["Mech"]       = new("res://Prefabs/mech.tscn",         3000,  "机甲"),

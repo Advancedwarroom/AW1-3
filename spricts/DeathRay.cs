@@ -247,7 +247,7 @@ public partial class DeathRay : BlackCannon
             {
                 var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
                 gm?.RemovePiece(t);
-                t.CallDeferred("QueueFree");
+                t.CallDeferred(Node.MethodName.QueueFree);
             }
         }
 

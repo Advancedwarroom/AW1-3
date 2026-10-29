@@ -584,7 +584,7 @@ public partial class AI_Manager : Node
                 if (n == null) continue;
                 int sc = StepCost(u, n);
                 if (sc < 0) continue;
-                if (n.weapon != null && IsInstanceValid(n.weapon) && u is not Oozium) continue;
+                if (n.weapon != null && IsInstanceValid(n.weapon) && u.overlapType != UnitOverlapType.Oozium) continue;
                 int nc = cc + sc;
                 if (nc > movePts) continue;
                 int nf = fuelUsed[cur] + (n.gridType == GridType.TP ? 0 : sc);
@@ -616,7 +616,7 @@ public partial class AI_Manager : Node
     {
         partner = null;
         if (g == u.grid) return EndKind.Free;
-        if (g.weapon != null && IsInstanceValid(g.weapon) && u is not Oozium) return EndKind.None;
+        if (g.weapon != null && IsInstanceValid(g.weapon) && u.overlapType != UnitOverlapType.Oozium) return EndKind.None;
         var others = g.infantries.Where(o => o != null && o != u && IsInstanceValid(o) && !o.isTransported).ToList();
         // AI 不知道雾中/隐身敌军：当作空格（真实移动时会被截断）
         var known = others.Where(o => !IsEnemy(o.team) || ctx.enemies.Contains(o)).ToList();
@@ -640,7 +640,7 @@ public partial class AI_Manager : Node
     {
         if (g == u.grid) return true;
         var others = g.infantries.Where(o => o != null && o != u && IsInstanceValid(o) && !o.isTransported).ToList();
-        if (others.Count == 0) return g.weapon == null || u is Oozium;
+        if (others.Count == 0) return g.weapon == null || u.overlapType == UnitOverlapType.Oozium;
         if (others.Any(o => o.team != u.team && o.team != TeamHelper.Player)) return false;
         return u.overlapType == UnitOverlapType.Overlapping || u.overlapType == UnitOverlapType.Oozium;
     }
@@ -650,7 +650,7 @@ public partial class AI_Manager : Node
 
     private Dictionary<Grids, int> DistanceField(Infantry u, string key, Func<IEnumerable<Grids>> goalsFn)
     {
-        string k = u.GetType().Name + "|" + key;
+        string k = u.UnitTypeId + "|" + key;
         if (ctx.distCache.TryGetValue(k, out var f)) return f;
         var goals = goalsFn();
         f = new Dictionary<Grids, int>();
@@ -677,20 +677,21 @@ public partial class AI_Manager : Node
     private static int FieldAt(Dictionary<Grids, int> f, Grids g) => f != null && g != null && f.TryGetValue(g, out int v) ? v : 999;
 
     // ==================== 伤害估算（复刻 Infantry.CalculateFinalDamage，可指定假想位置/血量） ====================
-    private int BaseDamage(Infantry att, Infantry def, out WeaponType wt)
+    private int BaseDamage(Infantry att, Infantry def, out WeaponType wt, bool? attStealthed = null)
     {
         wt = WeaponType.None;
         if (att.attackType == AttackType.NoAttack) return 0;
-        int p = att.CanUsePrimaryWeapon() ? att.GetPrimaryDamageFromMatrix(def) : 0;
+        // 与引擎同一查表入口（含隐身专属攻防表），可假设攻击时是否隐身
+        int p = att.CanUsePrimaryWeapon() ? att.GetMatrixDamage(def, false, attStealthed) : 0;
         if (p > 0) { wt = WeaponType.Primary; return p; }
-        int s = att.CanUseSecondaryWeapon() ? att.GetSecondaryDamageFromMatrix(def) : 0;
+        int s = att.CanUseSecondaryWeapon() ? att.GetMatrixDamage(def, true, attStealthed) : 0;
         if (s > 0) { wt = WeaponType.Secondary; return s; }
         return 0;
     }
 
-    private int EstDamage(Infantry att, int attHp, Infantry def, int defHp, Grids defGrid, bool counter)
+    private int EstDamage(Infantry att, int attHp, Infantry def, int defHp, Grids defGrid, bool counter, bool? attStealthed = null)
     {
-        int baseValue = BaseDamage(att, def, out _);
+        int baseValue = BaseDamage(att, def, out _, attStealthed);
         if (baseValue <= 0 || attHp <= 0) return 0;
         float dmg = baseValue * (attHp / (float)Math.Max(1, att.maxHealth));
         float terrain = (def.defenseBonusType == Infantry.DefenseBonusType.CanDefenseBonus && defGrid != null) ? defGrid.TerrainDefenseBonus : 0f;
@@ -723,13 +724,15 @@ public partial class AI_Manager : Node
             && !(att.stealthRevealOnFlare && att.IsFlareLit())) return 0;
         int d = Dist(attFrom, def.grid);
         if (!def.canCounterAtRange ? d != 1 : !CanHitAtDistance(def, d)) return 0;
-        return EstDamage(def, def.health, att, attHp, attFrom, counter: true);
+        // 与引擎一致：默认按挨打后的血量反击（counterUsePreDamageHp=true 时按挨打前）
+        int counterHp = def.counterUsePreDamageHp ? def.health : def.health - dmgDealt;
+        return EstDamage(def, counterHp, att, attHp, attFrom, counter: true);
     }
 
     private static bool StealthAttackable(Infantry attacker, Infantry target)
     {
         if (target.stealthAttackableBy == null || target.stealthAttackableBy.Length == 0) return false;
-        return Array.IndexOf(target.stealthAttackableBy, attacker.GetType().Name) >= 0;
+        return Array.IndexOf(target.stealthAttackableBy, attacker.UnitTypeId) >= 0;
     }
 
     /// <summary>AI 档案目标权重：空表=1；先查兵种名，再查 "*"</summary>
@@ -737,7 +740,7 @@ public partial class AI_Manager : Node
     {
         var w = u.aiTargetWeights;
         if (w == null || w.Count == 0) return 1f;
-        if (w.TryGetValue(e.GetType().Name, out float v)) return v;
+        if (w.TryGetValue(e.UnitTypeId, out float v)) return v;
         if (w.TryGetValue("*", out float d)) return d;
         return 1f;
     }
@@ -872,7 +875,7 @@ public partial class AI_Manager : Node
             int d = Dist(g, e.grid);
             if (d > maxR || !CanHitAtDistance(u, d)) continue;
             if (!Infantry.CanTargetStealth(u, e)) continue;
-            int dmg = EstDamage(u, u.health, e, e.health, e.grid, false);
+            int dmg = EstDamage(u, u.health, e, e.health, e.grid, false, attStealthed);
             if (dmg <= 0) continue;
             int dealt = Math.Min(dmg, e.health);
             bool kill = dmg >= e.health;
@@ -987,8 +990,7 @@ public partial class AI_Manager : Node
             foreach (var t in Ring(g, Math.Max(0, rp.min), Math.Max(0, rp.max)).SelectMany(x => x.infantries))
             {
                 if (t == null || !IsInstanceValid(t) || t.isTransported) continue;
-                bool ok = rp.mode switch { 1 => t.team == u.team, 2 => IsEnemy(t.team), 3 => t == u, _ => true };
-                if (!ok) continue;
+                if (!u.IsRepairTargetAllowed(t)) continue;   // 与引擎/界面同一判定
                 int amt = rp.amount;
                 float v;
                 if (amt > 0 && t.team == u.team) v = Math.Min(amt, t.maxHealth - t.health) / (float)t.maxHealth * UnitValue(t);
@@ -1345,7 +1347,7 @@ public partial class AI_Manager : Node
     {
         if (f.healAmount <= 0 && f.healPercent <= 0) return false;
         if (f.supportedUnitTypesForHeal == null || f.supportedUnitTypesForHeal.Count == 0) return true;
-        return f.supportedUnitTypesForHeal.Contains(u.GetType().Name);
+        return f.supportedUnitTypesForHeal.Contains(u.UnitTypeId);
     }
 
     private static bool IsIndirect(Infantry u) => u.attackType != AttackType.NoAttack && (!u.canAttackAfterMoving || (u.useMinMaxAttackRange && u.minAttackRange > 1));
@@ -1445,8 +1447,7 @@ public partial class AI_Manager : Node
             case Act.Repair:
                 if (p.target != null && IsInstanceValid(p.target))
                 {
-                    if (u is RepairBoat rb) rb.PerformRepair(p.target);
-                    else if (u.HasMethod("PerformRepair")) u.Call("PerformRepair", p.target);   // 通用修理模块（任意开启 canRepair 的单位）
+                    u.PerformRepair(p.target);   // 通用修理模块（任意开启 canRepair 的单位）
                 }
                 break;
             case Act.Illuminate:
@@ -1523,6 +1524,7 @@ public partial class AI_Manager : Node
         u.isMoved = true;
         u.state = UnitState.Moved;
         u.originalGrid = start;
+        u.movedThisTurnForAutoRepair = true;   // 与 GridManager.MoveTo 一致：行动结束时触发 autoRepairAfterMove
 
         // 动画
         var tween = u.CreateTween();
@@ -1540,14 +1542,9 @@ public partial class AI_Manager : Node
         t.TweenProperty(cam, "position", g.Position, 0.25f).SetTrans(Tween.TransitionType.Sine);
     }
 
-    /// <summary>修理能力参数：RepairBoat 用自身字段（子类隐藏了基类同名字段），其余单位用 Infantry 通用修复模块字段</summary>
+    /// <summary>修理能力参数（字段已统一到 Infantry 基类）</summary>
     private static (bool can, bool afterMove, int min, int max, int mode, int amount) RepairParams(Infantry u)
-    {
-        if (u is RepairBoat rb)
-            return (rb.CanPerformRepair, rb.canRepairAfterMove, rb.minRepairRange, rb.maxRepairRange, rb.repairTargetMode, rb.repairAmountPerAction);
-        bool exec = u.CanPerformRepair && u.HasMethod("PerformRepair");   // 按钮能显示且真能执行
-        return (exec, u.canRepairAfterMove, u.minRepairRange, u.maxRepairRange, u.repairTargetMode, u.repairAmountPerAction);
-    }
+        => (u.CanPerformRepair, u.canRepairAfterMove, u.minRepairRange, u.maxRepairRange, u.repairTargetMode, u.repairAmountPerAction);
 
     private void FocusCamera(Grids g)
     {
@@ -1585,7 +1582,7 @@ public partial class AI_Manager : Node
             .ToList();
         if (facilities.Count == 0) { Log($"生产：无可用工厂 资金{funds}"); return; }
 
-        var myCounts = ctx.mine.GroupBy(u => u.GetType().Name).ToDictionary(x => x.Key, x => x.Count());
+        var myCounts = ctx.mine.GroupBy(u => u.UnitTypeId).ToDictionary(x => x.Key, x => x.Count());
         // 占领兵计数包含正在运输中的
         int capturers = (gm.unitManager?.AllUnits ?? new List<Infantry>())
             .Count(u => u != null && IsInstanceValid(u) && u.team == aiTeam && u.health > 0 && u.captureAbility != CaptureAbility.CannotCapture);
@@ -1651,13 +1648,14 @@ public partial class AI_Manager : Node
             foreach (var (e, hp) in known)
             {
                 if (e == null || !IsInstanceValid(e)) continue;
-                string et = e.GetType().Name;
-                int dealt = Math.Max(Infantry.LookupDefaultMatrix(name, et), Infantry.LookupDefaultMatrix(name, et, true));
-                var proto = ctx.mine.FirstOrDefault(m => m.GetType().Name == name);
+                // 按兵种ID+参照兵种查表（自定义兵种同样适用）；优先用场上同类/场景原型的实例攻防表
+                var proto = ctx.mine.FirstOrDefault(m => m.UnitTypeId == name) ?? GetPrototype(name);
+                string tpl = proto?.TemplateId ?? name;
+                int dealt = Math.Max(Infantry.LookupDefaultMatrix(name, tpl, e.UnitTypeId, e.TemplateId), Infantry.LookupDefaultMatrix(name, tpl, e.UnitTypeId, e.TemplateId, true));
                 if (proto != null) dealt = Math.Max(proto.GetPrimaryDamageFromMatrix(e), proto.GetSecondaryDamageFromMatrix(e));
                 if (e.isStealthed && Array.IndexOf(e.stealthAttackableBy ?? Array.Empty<string>(), name) < 0) dealt = 0;
-                int taken = Math.Max(Infantry.LookupDefaultMatrix(et, name), Infantry.LookupDefaultMatrix(et, name, true));
-                if (e.attackMatrix.TryGetValue($"{et}_{name}", out int ov)) taken = Math.Max(taken, ov);
+                int taken = Math.Max(Infantry.LookupDefaultMatrix(e.UnitTypeId, e.TemplateId, name, tpl), Infantry.LookupDefaultMatrix(e.UnitTypeId, e.TemplateId, name, tpl, true));
+                if (proto != null) taken = Math.Max(taken, Math.Max(e.GetMatrixDamage(proto, false), e.GetMatrixDamage(proto, true)));
                 trade += dealt / 100f * Math.Max(e.cost, 1000) * (hp / (float)e.maxHealth) - taken / 100f * cost * 0.6f;
             }
             s += trade / known.Count * 2.2f;
@@ -1692,7 +1690,7 @@ public partial class AI_Manager : Node
         if (pr != null && pr.canStealth && known.Count > 0)
         {
             var by = pr.stealthAttackableBy ?? Array.Empty<string>();
-            if (!known.Any(k => Array.IndexOf(by, k.e.GetType().Name) >= 0)) s += 2500;
+            if (!known.Any(k => Array.IndexOf(by, k.e.UnitTypeId) >= 0)) s += 2500;
         }
 
         // 4) 多样性：同兵种越多越不想要

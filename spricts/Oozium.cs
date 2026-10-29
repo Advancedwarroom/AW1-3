@@ -3,6 +3,8 @@ using System;
 
 public partial class Oozium : Infantry
 {
+    public Oozium() { canDevour = true; }   // ✅ 默认吞噬（原行为）；检查器取消勾选即变为只重叠不吞噬
+
     public override void _Ready()
     {
         overlapType = UnitOverlapType.Oozium;

@@ -69,6 +69,19 @@ public partial class Infantry : Node2D
 {
     // ========== ✅ 究极自由系统：所有单位类型特性都可通过Inspector控制 ==========
 
+    // ========== ✅ 兵种身份：不写代码造新兵种 ==========
+    // 新兵种 = 复制一个现有单位场景 → 填 unitTypeId（唯一）→ 在检查器里调参数 → 放进 res://Prefabs/CustomUnits/ 即自动进入生产名单
+    [ExportGroup("兵种身份（自定义兵种）")]
+    [Export] public string unitTypeId = "";          // 兵种ID：留空=脚本类名（原有兵种不用填）；攻防表/过滤名单/运输/补给/AI 全部按它识别
+    [Export] public string unitDisplayName = "";     // 生产菜单显示名（留空=兵种ID）
+    [Export] public string templateType = "";        // 参照兵种：攻防表查不到本ID条目、视野/默认配置时按此兵种（留空=脚本类名）
+    /// <summary>兵种身份ID（替代 GetType().Name 的所有身份判定）</summary>
+    public string UnitTypeId => string.IsNullOrEmpty(unitTypeId) ? GetType().Name : unitTypeId;
+    /// <summary>参照兵种ID（静态配置表/攻防表兜底）</summary>
+    public string TemplateId => string.IsNullOrEmpty(templateType) ? GetType().Name : templateType;
+    /// <summary>显示名：unitDisplayName → 兵种配置显示名 → 兵种ID</summary>
+    public string DisplayLabel => !string.IsNullOrEmpty(unitDisplayName) ? unitDisplayName : (UnitRegistry.Get(UnitTypeId)?.DisplayName ?? UnitTypeId);
+
     [ExportGroup("究极自由：单位类型特性")]
     [Export] public bool cannotCounterWhenAttacked = false; // 攻击时不被反击（如Artillery/Rocket/AntiTank等间接攻击单位）
     [Export] public bool canCounterWhenDefending = true;   // 被攻击时能否反击（Artillery/Rocket=false，默认true）
@@ -121,6 +134,7 @@ public partial class Infantry : Node2D
     // —— 现形规则 ——
     [Export] public bool stealthRevealOnAttack = false;             // 攻击后现形
     [Export] public bool stealthRevealOnDamage = true;              // 受伤现形
+    [Export(PropertyHint.Enum, "仅单位攻击,任何掉血")] public int stealthRevealDamageScope = 1;   // 受伤现形的"受伤"范围：0=狭义(只有单位攻击/反击)，1=广义(自爆/兵器/地格/修理扣血等任何掉血)
     [Export] public bool stealthRevealOnFlare = true;               // 照明弹使其现形
     // —— 隐身中行为锁 ——
     [Export] public bool canAttackWhileStealthed = true;            // 隐身时可攻击（AW3=true）
@@ -180,7 +194,7 @@ public int ActualVisionRange
     get 
     {
         if (!useConfigVision && visionRange >= 0) return visionRange;
-        return VisionConfig.GetUnitVisionRange(this.GetType().Name);
+        return VisionConfig.GetUnitVisionRange(TemplateId);
     }
 }
 
@@ -194,7 +208,7 @@ public int GetTerrainVisionBonus(GridType gridType)
         return 0; // 单位矩阵中未定义的地形=0加成
     }
     // 使用全局配置
-    return VisionConfig.GetUnitTerrainVisionBonus(this.GetType().Name, gridType);
+    return VisionConfig.GetUnitTerrainVisionBonus(TemplateId, gridType);
 }
 
 // ✅ AI 档案（提案 docs/proposals/ai-brain.md）：全部默认=自动，AI 按单位实际能力字段推断行为；填写后覆盖推断
@@ -207,6 +221,7 @@ public int GetTerrainVisionBonus(GridType gridType)
 [Export] public float aiRiskMultiplier = 1f;       // 威胁规避倍率：0=无畏，1=默认，>1=更怕死
 
 [ExportGroup("攻防表")]
+[Export] public bool counterUsePreDamageHp = false;   // 反击按挨打前血量计算（旧行为）；默认 false=AW 原作按挨打后血量
 [Export] public Godot.Collections.Dictionary<string, int> attackMatrix = new();      // 主武器
 [Export] public Godot.Collections.Dictionary<string, int> secondaryAttackMatrix = new(); // 副武器
 
@@ -515,6 +530,7 @@ public virtual void OnTurnEnd()
     state = UnitState.Idle;
     isMoved = false;
     isAttacked = false;
+    movedThisTurnForAutoRepair = false; autoRepairAfterMoveDone = false;
     hasActed = false;   // ✅ 修复：此前从不重置，生产/合流/补给/修理过的单位永久失去补给/修理/自爆等按钮
     movePoints = defaultMovePoints;
     SetWaitVisual(false);
@@ -524,15 +540,43 @@ public virtual void OnTurnEnd()
     StartBreath();
 }
 // 查主武器表
-public virtual int GetPrimaryDamageFromMatrix(Infantry target)
+public virtual int GetPrimaryDamageFromMatrix(Infantry target) => GetMatrixDamage(target, false);
+
+/// <summary>
+/// ✅ 统一查表入口：隐身专属表（仅隐身中）→ 实例表 → 默认表。
+/// stealthMatrixOverride 此前只写在从未被调用的 GetBaseDamageFromMatrix 里，实际攻击/反击都不生效。
+/// assumeStealthed：AI 估算用，假设"此刻是否隐身"（null=按当前状态）。
+/// </summary>
+public int GetMatrixDamage(Infantry target, bool secondary, bool? assumeStealthed = null)
 {
-    string key = $"{this.GetType().Name}_{target.GetType().Name}";
-    
-    int baseValue = 0;
-    if (attackMatrix.TryGetValue(key, out int v)) baseValue = v;
-    else if (defaultMatrix?.TryGetValue(key, out v) == true) baseValue = v;
-    
-    return baseValue;
+    if (target == null) return 0;
+    // 键优先级：本ID_目标ID → 参照_目标ID → 本ID_目标参照 → 参照_目标参照（原有兵种四个键相同）
+    var keys = MatrixKeys(UnitTypeId, TemplateId, target.UnitTypeId, target.TemplateId);
+    // 隐身攻防表替换：隐身时同一张表同时替换主/副武器（填 0 = 隐身状态下打不了该目标）
+    if ((assumeStealthed ?? isStealthed) && stealthMatrixOverride != null && stealthMatrixOverride.Count > 0)
+        foreach (var k in keys) if (stealthMatrixOverride.TryGetValue(k, out int sval)) return sval;
+    var inst = secondary ? secondaryAttackMatrix : attackMatrix;
+    var def = secondary ? defaultSecondaryMatrix : defaultMatrix;
+    if (inst != null) foreach (var k in keys) if (inst.TryGetValue(k, out int v)) return v;
+    if (def != null) foreach (var k in keys) if (def.TryGetValue(k, out int v)) return v;
+    return 0;
+}
+
+private static List<string> MatrixKeys(string att, string attTpl, string def, string defTpl)
+{
+    var r = new List<string>(4);
+    foreach (var k in new[] { $"{att}_{def}", $"{attTpl}_{def}", $"{att}_{defTpl}", $"{attTpl}_{defTpl}" })
+        if (!r.Contains(k)) r.Add(k);
+    return r;
+}
+
+/// <summary>AI 生产评估：按兵种ID+参照兵种查默认攻防表</summary>
+public static int LookupDefaultMatrix(string att, string attTpl, string def, string defTpl, bool secondary = false)
+{
+    var m = secondary ? defaultSecondaryMatrix : defaultMatrix;
+    if (m == null) return 0;
+    foreach (var k in MatrixKeys(att, attTpl ?? att, def, defTpl ?? def)) if (m.TryGetValue(k, out int v)) return v;
+    return 0;
 }
 
 // ✅ AI 生产评估用：按类型名查默认攻防表（无实例时使用）
@@ -544,16 +588,7 @@ public static int LookupDefaultMatrix(string attackerType, string defenderType, 
 }
 
 // 查副武器表
-public virtual int GetSecondaryDamageFromMatrix(Infantry target)
-{
-    string key = $"{this.GetType().Name}_{target.GetType().Name}";
-    
-    int baseValue = 0;
-    if (secondaryAttackMatrix.TryGetValue(key, out int v)) baseValue = v;
-    else if (defaultSecondaryMatrix?.TryGetValue(key, out v) == true) baseValue = v;
-    
-    return baseValue;
-}
+public virtual int GetSecondaryDamageFromMatrix(Infantry target) => GetMatrixDamage(target, true);
 
 public virtual WeaponType SelectWeaponByMatrix(Infantry target)
 {
@@ -576,26 +611,6 @@ public virtual WeaponType SelectWeaponByMatrix(Infantry target)
 
 
 
-// 查表
-public virtual int GetBaseDamageFromMatrix(Infantry target, bool isCounter = false)
-{
-    string key = $"{this.GetType().Name}_{target.GetType().Name}";
-    
-    // ✅ 隐身攻防表替换（隐身时优先查专属表）
-    if (isStealthed && stealthMatrixOverride != null && stealthMatrixOverride.Count > 0)
-    {
-        string skey = $"{GetType().Name}_{target.GetType().Name}";
-        if (stealthMatrixOverride.TryGetValue(skey, out int sval)) return sval;
-    }
-    int baseValue = 0; // 默认0，不是50！
-    if (attackMatrix.TryGetValue(key, out int v)) baseValue = v;
-    else if (defaultMatrix?.TryGetValue(key, out v) == true) baseValue = v;
-    
-    if (isCounter)
-        return Mathf.RoundToInt(baseValue * counterMul);
-    
-    return baseValue;
-}
 
 // 防御力（动态衰减：baseDefense × 血量% + 地形加成）
 public int GetEffectiveDefense(Grids targetGrid)
@@ -696,23 +711,6 @@ public static Dictionary<Infantry, int> unitsCannotMove = new Dictionary<Infantr
 // 私有
 private Tween loadedIconTween;
 
-// ========== 新增：查攻防表获取基础伤害 ==========
-public virtual int GetBaseDamageFromMatrix(Infantry target)
-{
-    string attackerType = this.GetType().Name;
-    string defenderType = target.GetType().Name;
-    string key = $"{attackerType}_{defenderType}";
-    
-    // 先查实例的Export表，再查默认表
-    if (attackMatrix.TryGetValue(key, out int value))
-        return value;
-    
-    if (defaultMatrix?.TryGetValue(key, out value) == true)
-        return value;
-    
-    // 默认回退：50（避免崩溃）
-    return 50;
-}
 
 // ========== 新增：核心伤害公式 ==========
 
@@ -926,6 +924,148 @@ public virtual bool ConsumePrimaryAmmo()
     public int currentCaptureProgress = 0;
     public Grids capturingGrid = null;  // 正在占领的格子
     private CaptureEffect currentCaptureEffect;
+    // ========== ✅ 通用修理模块（任何 canRepair 单位可用；原 RepairBoat 专属逻辑上移） ==========
+    /// <summary>修理范围：[min,max] 环；repairTargetMode=3（仅自己）时只含自身格</summary>
+    public virtual List<Grids> CalculateRepairRange()
+    {
+        var result = new List<Grids>();
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager == null || grid == null) return result;
+        if (repairTargetMode == 3) { result.Add(grid); return result; }
+        var allRange = gm.gridManager.FindRange(grid, maxRepairRange, false);
+        if (minRepairRange > 1)
+        {
+            var blindZone = gm.gridManager.FindRange(grid, minRepairRange - 1, false);
+            allRange = allRange.Where(g => !blindZone.Contains(g)).ToList();
+        }
+        return allRange.Where(g => g != grid).ToList();
+    }
+
+    /// <summary>目标是否符合修理模式：0=所有 1=仅友方 2=仅敌方 3=仅自己</summary>
+    public bool IsRepairTargetAllowed(Infantry unit)
+    {
+        if (unit == null || !IsInstanceValid(unit) || unit.isTransported) return false;
+        bool isAlly = unit.team == team;
+        switch (repairTargetMode)
+        {
+            case 1: if (!isAlly || unit == this) return false; break;
+            case 2: if (isAlly) return false; break;
+            case 3: if (unit != this) return false; break;
+            default: if (unit == this) return false; break;
+        }
+        // 加血模式：满血（且不能超上限）无意义
+        if (repairAmountPerAction > 0 && !canExceedMaxHealth && unit.health >= unit.maxHealth) return false;
+        if (repairAmountPerAction == 0) return false;
+        return true;
+    }
+
+    public virtual List<Infantry> GetRepairableTargets()
+    {
+        var result = new List<Infantry>();
+        foreach (var g in CalculateRepairRange())
+        {
+            if (g == null) continue;
+            foreach (var unit in g.infantries)
+                if (IsRepairTargetAllowed(unit)) result.Add(unit);
+        }
+        return result;
+    }
+
+    /// <summary>执行修理：正值加血（可耗资），负值扣血（受伤现形按广义规则处理）</summary>
+    public virtual bool PerformRepair(Infantry target)
+    {
+        if (target == null || !IsInstanceValid(target) || !CanPerformRepair) return false;
+        if (!CalculateRepairRange().Contains(target.grid)) return false;
+        if (!IsRepairTargetAllowed(target)) return false;
+
+        int actualRepair = repairAmountPerAction;
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (actualRepair > 0)
+        {
+            int oldHealth = target.health;
+            int healCap = canExceedMaxHealth ? exceededMaxHealth : target.maxHealth;
+            int newHealth = Mathf.Min(healCap, target.health + actualRepair);
+            int actualHealed = newHealth - oldHealth;
+            if (actualHealed <= 0) return false;
+            if (repairCostsFunds && gm != null)
+            {
+                int cost = actualHealed * repairCostPerHp;
+                int currentFunds = gm.GetTeamFunds(team);
+                if (currentFunds < cost) return false; // 资金不足
+                gm.SetTeamFunds(team, currentFunds - cost);
+            }
+            target.health = newHealth;
+            target.UpdateHpLabel();
+            ShowRepairEffect(target, actualHealed);
+        }
+        else
+        {
+            int damage = Mathf.Abs(actualRepair);
+            target.health -= damage;
+            target.UpdateHpLabel();
+            ShowRepairEffect(target, -damage);
+            if (target.health <= 0)
+            {
+                target.OnDestroyed();
+                if (target.grid != null)   // 与 Attack 的死亡处理一致：从格子移除，避免残留引用
+                {
+                    target.grid.infantries.Remove(target);
+                    if (target.grid.infantry == target)
+                        target.grid.infantry = target.grid.infantries.Count > 0 ? target.grid.infantries[0] : null;
+                    target.grid = null;
+                }
+                gm?.RemovePiece(target);
+                target.CallDeferred(Node.MethodName.QueueFree);
+            }
+        }
+        return true;
+    }
+
+    public virtual void PerformAreaRepair()
+    {
+        if (!isAreaRepair) return;
+        foreach (var target in GetRepairableTargets()) PerformRepair(target);
+    }
+
+    /// <summary>自动修理（回合开始 / 移动后），不占用操作</summary>
+    public virtual void PerformAutoRepair()
+    {
+        if (!CanPerformRepair) return;
+        if (isAreaRepair) PerformAreaRepair();
+        else
+        {
+            var targets = GetRepairableTargets();
+            if (targets.Count > 0) PerformRepair(targets.OrderBy(t => t.health).First());
+        }
+    }
+
+    public virtual void OnTurnStartAutoRepair()
+    {
+        if (!autoRepairOnTurnStart) return;
+        PerformAutoRepair();
+    }
+
+    // 移动后自动修理：移动标记 + 本回合行动结束（state=Acted）时触发一次，避免撤销移动刷血
+    public bool movedThisTurnForAutoRepair = false;
+    private bool autoRepairAfterMoveDone = false;
+
+    protected void ShowRepairEffect(Infantry target, int amount)
+    {
+        var label = new Label();
+        label.Text = amount > 0 ? $"+{amount}" : $"{amount}";
+        label.Modulate = amount > 0 ? new Color(1, 0.4f, 0.7f) : new Color(0.8f, 0.2f, 0.2f);
+        label.Position = target.GlobalPosition + new Godot.Vector2(0, -20);
+        label.ZIndex = 300;
+        label.AddThemeFontSizeOverride("font_size", 16);
+        label.AddThemeConstantOverride("outline_size", 3);
+        label.AddThemeColorOverride("font_outline_color", Colors.Black);
+        GetTree()?.CurrentScene?.AddChild(label);
+        var tween = CreateTween();
+        tween.TweenProperty(label, "position", label.Position + new Godot.Vector2(0, -40), 1.2f);
+        tween.TweenProperty(label, "modulate:a", 0.0f, 0.5f);
+        tween.TweenCallback(Callable.From(() => label.QueueFree()));
+    }
+
     public virtual bool CanMove()
     {
         if (!consumeFuel) return true;
@@ -1181,7 +1321,7 @@ public override void _Ready()
         // ========== ✅ 战争迷雾视野初始化 ==========
         if (visionRange < 0 && useConfigVision)
         {
-            visionRange = VisionConfig.GetUnitVisionRange(this.GetType().Name);
+            visionRange = VisionConfig.GetUnitVisionRange(TemplateId);
         }
         else if (visionRange >= 0)
         {
@@ -1190,7 +1330,7 @@ public override void _Ready()
         // ✅ 初始化单位专属地形加成矩阵（如果为空则填充默认值）
         if (overrideGlobalTerrainBonus && (unitTerrainVisionBonus == null || unitTerrainVisionBonus.Count == 0))
         {
-            var defaultTable = VisionConfig.GetUnitTerrainBonusTable(this.GetType().Name);
+            var defaultTable = VisionConfig.GetUnitTerrainBonusTable(TemplateId);
             unitTerrainVisionBonus = new Godot.Collections.Dictionary<GridType, int>();
             foreach (var kvp in defaultTable)
                 unitTerrainVisionBonus[kvp.Key] = kvp.Value;
@@ -1210,8 +1350,8 @@ public virtual void ApplyUnitSpecificDefaults() { }
 // ✅ 从 UnitRegistry 读取兵种配置
 protected virtual void ApplyUnitRegistryConfig()
 {
-    string unitId = this.GetType().Name;
-    var config = UnitRegistry.Get(unitId);
+    string unitId = UnitTypeId;
+    var config = UnitRegistry.Get(unitId) ?? UnitRegistry.Get(TemplateId);   // 自定义兵种无专属配置时用参照兵种
     if (config == null) return;
 
     // 基础属性
@@ -1432,6 +1572,26 @@ public virtual void UpdateTeamVisual()
 
 public override void _Process(double delta)
 {
+    // ✅ 广义受伤现形
+    if (damageRevealLastHp < 0) damageRevealLastHp = health;
+    else if (health < damageRevealLastHp)
+    {
+        if (stealthRevealDamageScope == 1 && isStealthed && health > 0)
+        {
+            ApplyStealthRevealOnDamage(this);
+            CheckStealthThresholds();
+        }
+        damageRevealLastHp = health;
+    }
+    else if (health > damageRevealLastHp) damageRevealLastHp = health;
+
+    // ✅ 移动后自动修理：移动过且本回合行动已结束时触发一次（不占操作；撤销移动不会刷血）
+    if (autoRepairAfterMove && movedThisTurnForAutoRepair && !autoRepairAfterMoveDone && state == UnitState.Acted && CanPerformRepair)
+    {
+        autoRepairAfterMoveDone = true;
+        PerformAutoRepair();
+    }
+
     // ✅ 隐身半透明与状态同步（修复：读档/编辑器载入 isStealthed=true 时不会重设半透明）
     if (isStealthed != stealthVisualApplied)
     {
@@ -2731,10 +2891,14 @@ public virtual void SetWaitVisual(bool waiting)
         if (target == null || !target.isStealthed) return true;
         if (target.stealthRevealOnFlare && target.IsFlareLit()) return true;   // ✅ 照明弹照出：可攻击
         if (target.stealthAttackableBy == null || target.stealthAttackableBy.Length == 0) return false;
-        return System.Array.IndexOf(target.stealthAttackableBy, attacker.GetType().Name) >= 0;
+        return System.Array.IndexOf(target.stealthAttackableBy, attacker.UnitTypeId) >= 0;
     }
 
     // 现形三触发器之"受伤"（在战斗伤害点调用）
+    // ✅ 广义受伤现形：监听血量下降（覆盖自爆/兵器/激光/死光/地格伤害/修理扣血等所有来源）
+    private int damageRevealLastHp = -1;
+    public void SyncDamageRevealTracker() => damageRevealLastHp = health;
+
     public static void ApplyStealthRevealOnDamage(Infantry damaged)
     {
         if (damaged == null || !damaged.stealthRevealOnDamage) return;
@@ -2747,7 +2911,7 @@ public virtual void SetWaitVisual(bool waiting)
     public bool CanTargetWeapon(Weapon w)
     {
         if (w == null || w.isDestroyed) return false;
-        string myName = GetType().Name;
+        string myName = UnitTypeId;
         if (w.excludedAttackerTypes != null && w.excludedAttackerTypes.Length > 0
             && System.Array.IndexOf(w.excludedAttackerTypes, myName) >= 0)
             return false;
@@ -3131,9 +3295,11 @@ public virtual void Attack(Infantry target)
     bool targetWillDie = (target.health - attackDamage) <= 0;
     bool canTargetCounter = !targetWillDie 
         && target.attackType != AttackType.NoAttack
-        && target.IsTargetInCounterRange(this);
+        && target.IsTargetInCounterRange(this)
+        && TeamHelper.CanCounterAttack(target.team);
     
-    if (canTargetCounter && TeamHelper.CanCounterAttack(target.team))
+    // 旧行为（可选）：按挨打前血量算反击
+    if (canTargetCounter && target.counterUsePreDamageHp)
     {
         WeaponType counterWeapon = target.SelectWeaponByMatrix(this);
         counterDamage = target.CalculateFinalDamage(this, counterWeapon, isCounter: true);
@@ -3143,10 +3309,20 @@ public virtual void Attack(Infantry target)
     target.health -= attackDamage;
         ApplyStealthRevealOnDamage(target);   // ✅ 受伤现形（含阈值模式）
         target.CheckStealthThresholds();   // ✅ 受伤后阈值矩阵重判
+        target.SyncDamageRevealTracker();     // ✅ 已按"单位攻击"处理过，广义监听不重复触发
+
+    // ✅ AW 原作：反击按挨打后的血量计算（先手优势）
+    if (canTargetCounter && !target.counterUsePreDamageHp)
+    {
+        WeaponType counterWeapon = target.SelectWeaponByMatrix(this);
+        counterDamage = target.CalculateFinalDamage(this, counterWeapon, isCounter: true);
+    }
         if (stealthRevealOnAttack) RevealStealth();   // ✅ 攻击后现形（先于反击结算：现形即暴露给反击）
         if (!CanTargetStealth(target, this)) counterDamage = 0;   // ✅ 隐身反击门：防守方打不了隐身攻击者则不能反击（AW3规则）
     this.health -= counterDamage;
+        if (counterDamage > 0) ApplyStealthRevealOnDamage(this);   // ✅ 反击也是单位攻击：攻击方受伤同样走受伤现形
         CheckStealthThresholds();   // ✅ 反击掉血后阈值矩阵重判
+        SyncDamageRevealTracker();
     
     target.UpdateHpLabel();
     this.UpdateHpLabel();
@@ -3262,7 +3438,7 @@ public virtual void ReloadAmmo()
         if (unit.team != this.team) return false;
 
         // 1. 按类型名过滤（精确匹配类名，如 "Infantry", "Mech"）
-        string unitType = unit.GetType().Name;
+        string unitType = unit.UnitTypeId;
         if (canTransportUnitTypes != null && canTransportUnitTypes.Count > 0)
         {
             if (!canTransportUnitTypes.Contains(unitType)) return false;

@@ -1943,9 +1943,10 @@ public void RestartGame()
                 apc.OnTurnStartAutoSupply();
             }
             // RepairBoat 自动修复
-            if (unit is RepairBoat rb && rb.autoRepairOnTurnStart)
+            // ✅ 通用：任何开启修理模块的单位
+            if (unit.CanPerformRepair && unit.autoRepairOnTurnStart)
             {
-                rb.OnTurnStartAutoRepair();
+                unit.OnTurnStartAutoRepair();
             }
         }
 

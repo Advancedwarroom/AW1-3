@@ -637,7 +637,7 @@ public class UnitVisionProvider : IVisionProvider
         int bonus = 0;
         bonus += unit.GetTerrainVisionBonus(unit.grid.gridType);  // 单位×地形加成
         bonus += unit.grid.visionBonus;                           // 格子额外加成
-        bonus += VisionConfig.GetUnitTypeVisionBonus(unit.GetType().Name); // 单位类型加成
+        bonus += VisionConfig.GetUnitTypeVisionBonus(unit.TemplateId); // 单位类型加成
         return bonus;
     }
 }

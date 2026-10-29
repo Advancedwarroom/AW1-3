@@ -622,7 +622,7 @@ public partial class Laser : Weapon
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
-            target.CallDeferred("QueueFree");
+            target.CallDeferred(Node.MethodName.QueueFree);
         }
     }
 
@@ -669,7 +669,7 @@ public partial class Laser : Weapon
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
-            target.CallDeferred("QueueFree");
+            target.CallDeferred(Node.MethodName.QueueFree);
         }
     }
 
@@ -684,7 +684,7 @@ public partial class Laser : Weapon
             target.health -= damage;
         target.UpdateHpLabel();
         if (target.health <= 0)
-            target.CallDeferred("QueueFree");
+            target.CallDeferred(Node.MethodName.QueueFree);
     }
 
     // ========== 激光特效 ==========

@@ -170,7 +170,7 @@ public bool BindUnitToGrid(Infantry unit, bool forceRebind = false)
     
     unit.Position = grid.Position;
     unit.team = team;
-    string typeName = unit.GetType().Name;
+    string typeName = unit.UnitTypeId;
     unit.Name = $"{team}_{typeName}_{AllUnits.Count}";
     
     units.AddChild(unit);

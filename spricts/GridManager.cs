@@ -163,13 +163,7 @@ public partial class GridManager : Node
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         if (gm?.gridManager == null) return;
 
-        var allRange = FindRange(unit.grid, unit.maxRepairRange, false);
-        if (unit.minRepairRange > 1)
-        {
-            var blindZone = FindRange(unit.grid, unit.minRepairRange - 1, false);
-            allRange = allRange.Where(g => !blindZone.Contains(g)).ToList();
-        }
-        repairRange = allRange.Where(g => g != unit.grid).ToList();
+        repairRange = unit.CalculateRepairRange();   // ✅ 与执行同一范围（含 repairTargetMode=3 仅自身格）
 
         Grids.IsForceActionMode = true;
         foreach (var grid in repairRange)
@@ -1104,6 +1098,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                     return;
 
                 case UnitOverlapType.Oozium:
+                    if (!infantry.canDevour) { MoveTo(infantry, to); return; }   // ✅ 不吞噬：仅重叠进入
                     foreach (var target in otherUnits)
                         DevourUnit(target);
                     to.infantries.Clear();
@@ -1309,7 +1304,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             }
         }
 
-        if (infantry.overlapType == UnitOverlapType.Oozium)
+        if (infantry.overlapType == UnitOverlapType.Oozium && infantry.canDevour)   // ✅ canDevour：可进入占用格之外，是否吞噬占用者
         {
             var targetsToRemove = to.infantries.Where(i => i != infantry && IsInstanceValid(i)).ToList();
             foreach (var target in targetsToRemove)
@@ -1363,6 +1358,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         infantry.state = UnitState.Moved;
         infantry.isMoved = true;
+        infantry.movedThisTurnForAutoRepair = true;   // ✅ autoRepairAfterMove：行动结束时触发
 
         // ✅ 移动完成后立即刷新战争迷雾
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
