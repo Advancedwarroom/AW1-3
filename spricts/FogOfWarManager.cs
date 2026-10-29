@@ -148,9 +148,12 @@ public partial class FogOfWarManager : Node
     // ========== ✅ 核心：刷新迷雾（全局视野池模式）==========
     public void RefreshFog()
     {
-        if (!isFogOfWarEnabled || gridManager == null) { ClearAllFog(); return; }
+        // ✅ 先同步视角阵营——雾关时也必需：隐身/林地判定依赖 currentTeam，不同步则敌方回合泄隐
+        currentTeam = gameManager != null ? TeamHelper.GetPhaseTeamName(gameManager.turnPhase) : "Player1";
+        var aiMgr0 = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+        if (aiMgr0 != null && aiMgr0.IsAITeam(currentTeam)) currentTeam = TeamHelper.Player;
 
-        currentTeam = gameManager != null ? TeamHelper.GetPhaseTeamName(gameManager.turnPhase) : "Player1";   // ✅ 多阵营：与 GameManager 同源回合映射
+        if (!isFogOfWarEnabled || gridManager == null) { UpdateUnitVisibility(); ClearAllFog(); return; }   // ✅ 雾关也重估单位可见性
 
         // ✅ AI 操控时，切换为 P-1 视角（玩家只能看到公开领域）
         var aiManager = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
@@ -583,8 +586,8 @@ public partial class FogOfWarManager : Node
         return vision.Contains(grid);
     }
 
-    public void OnTurnChanged() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }   // ✅ 雾关也重估（隐身规则与迷雾无关）
-    public void OnUnitMoved() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }
+    public void OnTurnChanged() { RefreshFog(); }   // ✅ 统一入口：阵营同步+可见性重估，与雾开关无关
+    public void OnUnitMoved() { RefreshFog(); }
 
     public string GetGridVisionStatus(Grids grid, string team)
     {
