@@ -31,6 +31,66 @@ public partial class FogOfWarManager : Node
 
     private Dictionary<Grids, Sprite2D> fogSprites = new();
     private readonly System.Collections.Generic.Dictionary<string, HashSet<Grids>> exploredByTeam = new();   // ✅ 已探索记忆层（按阵营持久保留）
+
+    // ✅ 敌方单位最后已知残影（AW规则）：消失的单位在最后一眼的位置留下暗色记号，不再"闹鬼"
+    private sealed class UnitGhost { public Node Target; public Grids LastGrid; public Label Marker; public bool Dead; }
+    private readonly System.Collections.Generic.Dictionary<string, List<UnitGhost>> unitGhostsByTeam = new();
+
+    private List<UnitGhost> GetGhostList(string team)
+    {
+        if (!unitGhostsByTeam.TryGetValue(team, out var list)) { list = new List<UnitGhost>(); unitGhostsByTeam[team] = list; }
+        return list;
+    }
+
+    private void MaintainGhosts()
+    {
+        if (currentTeam == null || !isFogOfWarEnabled) return;
+        var ghosts = GetGhostList(currentTeam);
+
+        // 遍历所有非本队单位与兵器
+        var seen = new HashSet<Node>();
+        if (unitManager?.AllUnits != null)
+            foreach (var u in unitManager.AllUnits)
+                if (u != null && IsInstanceValid(u) && u.team != currentTeam) { seen.Add(u); UpdateGhostFor(ghosts, u, u.Visible, u.grid, u.health <= 0); }
+        if (weaponManager?.AllWeapons != null)
+            foreach (var w in weaponManager.AllWeapons)
+                if (w != null && IsInstanceValid(w) && w.team != currentTeam) { seen.Add(w); UpdateGhostFor(ghosts, w, w.Visible, w.grid, w.isDestroyed); }
+
+        // 清理：已消失/死亡的残影
+        for (int i = ghosts.Count - 1; i >= 0; i--)
+        {
+            var g = ghosts[i];
+            if (!seen.Contains(g.Target) || g.Dead)
+            {
+                if (IsInstanceValid(g.Marker)) g.Marker.QueueFree();
+                ghosts.RemoveAt(i);
+            }
+        }
+    }
+
+    private void UpdateGhostFor(List<UnitGhost> ghosts, Node target, bool visibleNow, Grids currentGrid, bool dead)
+    {
+        var existing = ghosts.Find(g => g.Target == target);
+        if (visibleNow || dead)
+        {
+            if (existing != null)
+            {
+                if (dead) { if (IsInstanceValid(existing.Marker)) existing.Marker.QueueFree(); ghosts.Remove(existing); }
+                else existing.Dead = false;   // 重新可见：下次循环若又消失，会用新位置重建（先移除再立）
+                if (!dead && existing != null && visibleNow) { if (IsInstanceValid(existing.Marker)) existing.Marker.QueueFree(); ghosts.Remove(existing); }
+            }
+            return;
+        }
+        if (existing != null) return;   // 已有残影：保留在最后一眼的位置（LAST KNOWN）
+        if (currentGrid == null) return;
+        var marker = new Label();
+        marker.Text = "?";
+        marker.AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.72f, 0.75f));
+        marker.AddThemeFontSizeOverride("font_size", 18);
+        marker.Position = currentGrid.GlobalPosition + new Vector2(6, -8);
+        AddChild(marker);
+        ghosts.Add(new UnitGhost { Target = target, LastGrid = currentGrid, Marker = marker });
+    }
     private HashSet<Grids> visibleGridsThisTurn = new();
     public List<IlluminationEffect> activeIlluminations = new(); // ✅ 活跃照明弹效果
 
@@ -420,6 +480,7 @@ public partial class FogOfWarManager : Node
         if (weaponManager?.AllWeapons != null)
             foreach (var weapon in weaponManager.AllWeapons)
                 if (weapon != null && IsInstanceValid(weapon)) weapon.Visible = ShouldShowWeapon(weapon);
+        MaintainGhosts();   // ✅ 残影维护
     }
 
     private bool ShouldShowUnit(Infantry unit)

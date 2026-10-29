@@ -2717,6 +2717,23 @@ public virtual void SetWaitVisual(bool waiting)
         return gmx?.fogOfWarManager?.IsGridIlluminated(grid) == true;
     }
 
+    // ✅ 隐身视觉中枢：Modulate + 头顶"隐"指示器（所有隐/现/强制改写的唯一出口）
+    private Label _stealthIcon;
+    public void UpdateStealthVisual()
+    {
+        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1, 1);
+        if (_stealthIcon == null)
+        {
+            _stealthIcon = new Label();
+            _stealthIcon.Text = "隐";
+            _stealthIcon.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f));
+            _stealthIcon.AddThemeFontSizeOverride("font_size", 12);
+            _stealthIcon.Position = new Vector2(-6, -34);
+            AddChild(_stealthIcon);
+        }
+        _stealthIcon.Visible = isStealthed;
+    }
+
     // ==================== 隐身模块 ====================
     public void ToggleStealth()
     {
@@ -2740,7 +2757,7 @@ public virtual void SetWaitVisual(bool waiting)
             state = UnitState.Acted;   // 算独立操作：切换即待机
         }
         // 不算独立操作：state 保持，切换后仍可攻击/移动
-        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1, 1);
+        UpdateStealthVisual();   // ✅ 中枢：半透明+指示器
         CheckStealthThresholds();
     }
 
@@ -2749,7 +2766,7 @@ public virtual void SetWaitVisual(bool waiting)
         if (!isStealthed && !stealthFlareRevealed) return;
         isStealthed = false;
         stealthFlareRevealed = false;
-        Modulate = new Color(1, 1, 1, 1);
+        UpdateStealthVisual();
     }
 
     public bool HasAnyStealthCost()
@@ -2783,7 +2800,7 @@ public virtual void SetWaitVisual(bool waiting)
     {
         if (isStealthed || !canStealth) return;
         isStealthed = true;
-        Modulate = new Color(1, 1, 1, 0.45f);
+        UpdateStealthVisual();
     }
 
     private static bool ThresholdHit(int value, int high, int low)
