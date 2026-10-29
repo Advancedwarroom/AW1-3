@@ -95,7 +95,8 @@ func _input(event):
 				# 空地 → 启动拖拽
 				is_holding = true
 				hold_timer = 0.0
-				mouse_pressed_pos = get_global_mouse_position()
+				# 用屏幕坐标记录按下点（世界坐标会随相机移动而变化，导致抖动）
+				mouse_pressed_pos = get_viewport().get_mouse_position()
 				drag_start_pos = mouse_pressed_pos
 				camera_start_pos = camera.position
 			else:
@@ -113,7 +114,7 @@ func _process(delta):
 	
 	if is_holding and not is_dragging:
 		hold_timer += delta
-		var current_pos = get_global_mouse_position()
+		var current_pos = get_viewport().get_mouse_position()
 		var move_dist = current_pos.distance_to(mouse_pressed_pos)
 		
 		# 严格判定
@@ -123,8 +124,9 @@ func _process(delta):
 			camera_start_pos = camera.position
 	
 	if is_dragging and camera:
-		var current_mouse_pos = get_global_mouse_position()
-		var delta_pos = current_mouse_pos - drag_start_pos
+		var current_mouse_pos = get_viewport().get_mouse_position()
+		# 屏幕位移 ÷ 缩放 = 世界位移，缩放后拖拽依然跟手
+		var delta_pos = (current_mouse_pos - drag_start_pos) / camera.zoom
 		camera.position = camera_start_pos - delta_pos
 
 func zoom_in():
