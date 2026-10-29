@@ -87,6 +87,7 @@ public partial class AI_Manager : Node
         public Dictionary<Grids, List<Infantry>> threat = new();
         public HashSet<Grids> rememberedThreat = new();   // 记忆中敌军的大致威胁区
         public List<Grids> capturables = new();            // 非己方据点
+        public List<Crystal> crystals = new();             // 会作用到我方的黑水晶（己方 + 中立按过滤器）
         public Dictionary<Grids, Infantry> captureClaims = new();
         public Dictionary<string, Dictionary<Grids, int>> distCache = new();
     }
@@ -183,12 +184,57 @@ public partial class AI_Manager : Node
             var w = weaponQueue.Dequeue();
             if (w == null || !IsInstanceValid(w) || w.isDestroyed) continue;
             // 黑炮/巨炮/死光自带 AI 只服务 P0/P-1，阵营兵器由这里按"能力"操作；激光自带 AI 不设阵营门，直接用
+            if (w is Crystal) continue;   // 黑水晶等单位走位完再脉冲（见 PulseCrystals）
             bool acted = w is BlackCannon bc ? OperateCannon(bc) : RunBuiltinWeaponAI(w);
             Next(acted ? stepDelay : 0.05f);
             return;
         }
         stage = 1;
         Next(0.05f);
+    }
+
+    /// <summary>己方黑水晶：所有单位走位完成后再脉冲，净收益为正才用（避免给敌人回血）</summary>
+    private void PulseCrystals()
+    {
+        foreach (var c in (gameManager.weaponManager?.AllWeapons ?? new List<Weapon>()).OfType<Crystal>().ToList())
+        {
+            if (!IsInstanceValid(c) || c.isDestroyed || c.team != aiTeam || !c.CanAttack()) continue;
+            float v = 0; int supplyCount = 0;
+            foreach (var u in gameManager.unitManager.AllUnits)
+            {
+                if (u == null || !IsInstanceValid(u) || u.grid == null || u.isTransported || u.health <= 0) continue;
+                float sign = u.team == aiTeam ? 1f : TeamHelper.IsEnemyForAttacker(aiTeam, u.team) ? -1f : 0f;
+                if (c.AIInHealRange(u.grid)) v += sign * c.AIPreviewHealDelta(u) / (float)Math.Max(1, u.maxHealth) * UnitValue(u);
+                if (c.AIInSupplyRange(u.grid) && c.AIWouldSupply(u)) { supplyCount++; v += sign * 300; }
+            }
+            if (supplyCount > 0 && c.AISupplyBlockedByAmmo(supplyCount)) Log($"黑水晶@{c.grid?.GridIndex} 弹药不足，本次补给会被跳过");
+            if (v <= 0) { Log($"黑水晶@{c.grid?.GridIndex} 不脉冲（净收益{v:F0}）"); continue; }
+            c.ExecuteAI();
+            Log($"黑水晶@{c.grid?.GridIndex} 脉冲 治疗/补给 净收益{v:F0}");
+        }
+    }
+
+    /// <summary>单位站在 g 时能从会作用到我方的黑水晶拿到的收益（回血价值 + 补给需求）</summary>
+    private float CrystalBonus(Infantry u, Grids g)
+    {
+        float b = 0;
+        foreach (var c in ctx.crystals)
+        {
+            if (c.AIInHealRange(g)) b += c.AIPreviewHealDelta(u) / (float)Math.Max(1, u.maxHealth) * UnitValue(u);
+            if (c.AIInSupplyRange(g) && c.AIWouldSupply(u)) b += 200 + SupplyNeed(u) * 0.5f;
+        }
+        return b;
+    }
+
+    private IEnumerable<Grids> CrystalTilesFor(Infantry u)
+    {
+        foreach (var c in ctx.crystals)
+        {
+            bool heal = c.AIPreviewHealDelta(u) > 0, sup = c.AIWouldSupply(u);
+            if (!heal && !sup) continue;
+            foreach (var g in Ring(c.grid, 0, Math.Max(c.crystalHealMaxRange, c.crystalSupplyMaxRange)))
+                if ((heal && c.AIInHealRange(g)) || (sup && c.AIInSupplyRange(g))) yield return g;
+        }
     }
 
     private bool RunBuiltinWeaponAI(Weapon w)
@@ -283,6 +329,28 @@ public partial class AI_Manager : Node
             float v = CannonHitValue(t, dmg, bc.CanDestroy);
             return enemy ? v : (t.team == aiTeam ? -v : 0);
         }
+        if (bc.useModifiedDamage && pct == 0)
+        {
+            // 纯弹药/燃料效果：正=扣，负=补
+            float v = 0;
+            if (t.maxPrimaryAmmo > 0 && bc.modifiedAmmoPercent != 0)
+            {
+                int a = Mathf.RoundToInt(t.maxPrimaryAmmo * Math.Abs(bc.modifiedAmmoPercent));
+                int real = bc.modifiedAmmoPercent > 0 ? Math.Min(a, t.currentPrimaryAmmo) : Math.Min(a, t.maxPrimaryAmmo - t.currentPrimaryAmmo);
+                v += real / (float)t.maxPrimaryAmmo * UnitValue(t) * 0.3f;
+            }
+            if (t.consumeFuel && t.maxFuel > 0 && bc.modifiedFuelPercent != 0)
+            {
+                int f = Mathf.RoundToInt(t.maxFuel * Math.Abs(bc.modifiedFuelPercent));
+                int real = bc.modifiedFuelPercent > 0 ? Math.Min(f, t.fuel) : Math.Min(f, t.maxFuel - t.fuel);
+                v += real / (float)t.maxFuel * UnitValue(t) * 0.2f;
+                if (bc.modifiedFuelPercent > 0 && t.fuel - f <= 0 && t.destroyOnOutOfFuel) v += UnitValue(t) * 0.8f;   // 油耗尽坠毁
+            }
+            bool drain = bc.modifiedAmmoPercent > 0 || bc.modifiedFuelPercent > 0;
+            if (enemy) return drain ? v : -v;
+            if (t.team == aiTeam) return drain ? -v : v;
+            return 0;
+        }
         if (pct < 0 && t.team == aiTeam)   // 治疗炮：给最缺血的己方单位
         {
             int heal = Mathf.RoundToInt(t.maxHealth * -pct);
@@ -308,6 +376,7 @@ public partial class AI_Manager : Node
         var pending = ctx.mine.Where(u => !handled.Contains(u) && u.state != UnitState.Acted && !u.hasActed).ToList();
         if (pending.Count == 0)
         {
+            if (stage == 1) PulseCrystals();
             stage = stage == 1 ? 2 : 4;
             Next(0.05f);
             return;
@@ -417,6 +486,8 @@ public partial class AI_Manager : Node
             if (g?.city == null) continue;
             if (g.city.facilityTeam != aiTeam && !g.city.isPublicFacility) ctx.capturables.Add(g);
         }
+        ctx.crystals = (gm.weaponManager?.AllWeapons ?? new List<Weapon>()).OfType<Crystal>()
+            .Where(c => IsInstanceValid(c) && !c.isDestroyed && c.grid != null).ToList();
         foreach (var k in moveClaims.Keys.ToList())
         {
             var c = moveClaims[k];
@@ -1152,6 +1223,19 @@ public partial class AI_Manager : Node
                    : u.aiRetreatHpThreshold > 0 && u.health <= u.aiRetreatHpThreshold;
         bool noAmmo = u.maxPrimaryAmmo > 0 && u.maxPrimaryAmmo < 99 && u.currentPrimaryAmmo <= 0 && !u.CanUseSecondaryWeapon();
         bool lowFuel = u.consumeFuel && u.fuel <= Math.Max(u.lowFuelThreshold, (u.dailyFuelConsumption + (u.isStealthed ? u.stealthFuelCostPerDay : 0)) * 3);
+        // 黑水晶优先：站进范围就能回血/补给（己方水晶由 AI 在全员走位后脉冲）
+        float crystal = ctx.crystals.Count > 0 ? CrystalBonus(u, g) : 0;
+        bool needCrystal = u.health < u.maxHealth * 0.8f || SupplyNeed(u) > 0;
+        if (crystal > 0 || (ctx.crystals.Count > 0 && (lowHp || noAmmo || lowFuel || needCrystal)))
+        {
+            var cf = DistanceField(u, "crystal#" + u.GetInstanceId(), () => CrystalTilesFor(u).ToList());
+            int c0 = FieldAt(cf, u.grid), c1 = FieldAt(cf, g);
+            int reach = (lowHp || noAmmo || lowFuel) ? 998 : Math.Max(1, u.defaultMovePoints) * 2;   // 轻伤只在约两回合内可达时绕过去
+            if (c0 < 999 && c0 <= reach && (lowHp || noAmmo || lowFuel || needCrystal))
+                return s + (c0 - c1) * 300 + crystal * 2f + (c1 == 0 ? 2500 : 0);
+        }
+        s += crystal;
+
         if (lowHp || noAmmo || lowFuel)
         {
             var f = DistanceField(u, "haven", () => gameManager.gridManager.grids

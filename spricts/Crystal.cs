@@ -145,7 +145,9 @@ public partial class Crystal : Weapon
         gm.gridManager.ClearWeaponRange();
         Grids.IsForceActionMode = true;
 
-        var rangeGrids = CalculateRingRange(crystalHealMinRange, crystalHealMaxRange);
+        // ✅ 显示治疗圈 ∪ 补给圈（两者半径可不同，此前只显示治疗圈）
+        var rangeGrids = CalculateRingRange(crystalHealMinRange, crystalHealMaxRange)
+            .Union(CalculateRingRange(crystalSupplyMinRange, crystalSupplyMaxRange)).ToList();
         var fog = gm.fogOfWarManager;
         bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
 
@@ -159,6 +161,8 @@ public partial class Crystal : Weapon
                 g.attackRangeIcon.Modulate = new Color(0.2f, 0.9f, 0.3f, 0.85f);
             }
             g.OnClickGrid = (to) => OnRangeGridClicked(to, gm);
+            g.IsInWeaponRange = true;                       // ✅ 让 ClearWeaponRange 能清掉回调（闭包 Target 不是 Weapon）
+            gm.gridManager.OverrideUnitInput(g, true);      // ✅ 范围内有单位时点击也落到格子上，与黑炮一致
         }
     }
 
@@ -537,6 +541,36 @@ public partial class Crystal : Weapon
         pt.Parallel().TweenProperty(pulse, "modulate:a", 0f, 0.6f);
         pt.TweenCallback(Callable.From(() => { if (IsInstanceValid(pulse)) pulse.QueueFree(); }));
     }
+
+    // ========== ✅ AI 查询接口（只读，不改任何状态） ==========
+    private int AIDist(Grids g) => (g == null || grid == null) ? 9999
+        : Mathf.Abs(g.GridIndex.X - grid.GridIndex.X) + Mathf.Abs(g.GridIndex.Y - grid.GridIndex.Y);
+    public bool AIInHealRange(Grids g) { int d = AIDist(g); return d >= crystalHealMinRange && d <= crystalHealMaxRange; }
+    public bool AIInSupplyRange(Grids g)
+    {
+        int d = AIDist(g);
+        if (!crystalSupplyAffectsSelf && g == grid) return false;
+        return d >= crystalSupplyMinRange && d <= crystalSupplyMaxRange;
+    }
+    /// <summary>单位若站在治疗范围内，本次脉冲的血量变化（正=回血，负=扣血，0=无效）</summary>
+    public int AIPreviewHealDelta(Infantry unit)
+    {
+        if (unit == null || !CheckTeamFilter(unit.team, crystalHealTeamMode)) return 0;
+        if (!CheckTypeFilter(unit.GetType().Name, crystalHealUnitTypes)) return 0;
+        int amt = Mathf.RoundToInt(unit.maxHealth * crystalHealPercent);
+        if (amt > 0)
+        {
+            int cap = crystalHealCanOverMaxHp ? Mathf.RoundToInt(unit.maxHealth * Mathf.Max(1, crystalHealMaxHpCapPercent) / 100f) : unit.maxHealth;
+            return Mathf.Max(0, Mathf.Min(unit.health + amt, cap) - unit.health);
+        }
+        if (amt < 0) return Mathf.Max(1, unit.health + amt) - unit.health;
+        return 0;
+    }
+    /// <summary>单位若站在补给范围内，本次脉冲是否会被补给（与实际执行同一判定）</summary>
+    public bool AIWouldSupply(Infantry unit) => unit != null && WouldSupplyUnit(unit);
+    /// <summary>补给是否会因自身弹药不足整体跳过</summary>
+    public bool AISupplyBlockedByAmmo(int targetCount)
+        => crystalSupplyConsumesAmmo && useAmmoSystem && targetCount * crystalSupplyAmmoCostPerTarget > currentAmmo;
 
     // ========== AI 执行入口 ==========
     public override void ExecuteAI()

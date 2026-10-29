@@ -200,7 +200,14 @@ public partial class GridManager : Node
         foreach (var grid in grids)
         {
             if (grid == null || !IsInstanceValid(grid)) continue;
-            
+
+            // ✅ 修复：兵器回调多为闭包（捕获 g/gm），Target 不是 Weapon，下方判定清不掉 → 取消后残留，
+            //    之后点到这些格子会意外触发兵器。凡兵器标记过的格子一律清回调并恢复单位可点击
+            if (grid.IsInWeaponRange)
+            {
+                grid.OnClickGrid = null;
+                OverrideUnitInput(grid, false);
+            }
             grid.IsInWeaponRange = false;
             
             if (!moveRange.Contains(grid))
