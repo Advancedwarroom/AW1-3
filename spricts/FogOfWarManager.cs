@@ -103,6 +103,13 @@ public partial class FogOfWarManager : Node
 
         // ✅ 添加照明弹照亮的格子（所有队伍都可见）
         var illuminatedGrids = CalculateIlluminatedGrids();
+
+        // ✅ 隐身×照明弹：亮格上的隐身单位，永久显形设置则现形
+        foreach (var ig in illuminatedGrids)
+            if (ig != null)
+                foreach (var iu in ig.infantries)
+                    if (iu.isStealthed && iu.stealthRevealOnFlare && iu.stealthFlareRevealPermanent)
+                        iu.RevealStealth();
         visibleGridsThisTurn.UnionWith(illuminatedGrids);
 
         if (visibleGridsThisTurn.Count == 0)
@@ -518,6 +525,13 @@ public partial class FogOfWarManager : Node
 
 
     // ✅ 计算所有照明弹照亮的格子
+    // ✅ 供隐身模块查询：某格当前是否被照明弹照亮
+    public bool IsGridIlluminated(Grids g)
+    {
+        if (g == null || activeIlluminations == null || activeIlluminations.Count == 0) return false;
+        return CalculateIlluminatedGrids().Contains(g);
+    }
+
     private HashSet<Grids> CalculateIlluminatedGrids()
     {
         var visible = new HashSet<Grids>();

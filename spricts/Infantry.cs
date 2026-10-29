@@ -144,7 +144,8 @@ public partial class Infantry : Node2D
     [Export] public int camoBulletCostPerDay = 0;                   // 迷彩弹日耗
     // —— 隐身中改写（②提交） ——
     [Export] public int stealthMoveTypeOverride = -1;                 // 隐身移动方式改写(-1=不改)
-    [Export] public int stealthOverlapMode = 0;                       // 0=不改 1=可重叠 2=不可重叠   // 🔁 合流后再行动：true=合流完成后可继续操作一次（默认关=AW原作）
+    [Export] public int stealthOverlapMode = 0;
+    [Export] public Godot.Collections.Dictionary<string, int> stealthMatrixOverride = new();  // 隐身时替换的攻防表（键"攻击方_目标"，空=用默认表）                       // 0=不改 1=可重叠 2=不可重叠   // 🔁 合流后再行动：true=合流完成后可继续操作一次（默认关=AW原作）
     [Export] public string[] excludedWeaponTargets = System.Array.Empty<string>();  // ⚔ 兵器攻击准入(攻击方)：不能攻击的兵器类型，"Weapon"=全部兵器，留空=均可攻击              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
     [Export] public bool useDefaultConfig = true;           // ✅ 是否使用代码默认值（false=完全由Inspector控制，不执行ApplyUnitSpecificDefaults）
     [Export] public bool canDevour = false;                // 是否能吞噬敌人（Oozium特性）
@@ -559,6 +560,12 @@ public virtual int GetBaseDamageFromMatrix(Infantry target, bool isCounter = fal
 {
     string key = $"{this.GetType().Name}_{target.GetType().Name}";
     
+    // ✅ 隐身攻防表替换（隐身时优先查专属表）
+    if (isStealthed && stealthMatrixOverride != null && stealthMatrixOverride.Count > 0)
+    {
+        string skey = $"{GetType().Name}_{target.GetType().Name}";
+        if (stealthMatrixOverride.TryGetValue(skey, out int sval)) return sval;
+    }
     int baseValue = 0; // 默认0，不是50！
     if (attackMatrix.TryGetValue(key, out int v)) baseValue = v;
     else if (defaultMatrix?.TryGetValue(key, out v) == true) baseValue = v;
@@ -1466,11 +1473,12 @@ public override void _Process(double delta)
 
 public virtual int GetMoveCost(GridType gridType)
 {
+    MoveType moveType = (isStealthed && stealthMoveTypeOverride >= 0) ? (MoveType)stealthMoveTypeOverride : this.moveType;   // ✅ 隐身移动方式改写（局部遮蔽）
         var extraSave = ExtraSave.Instance;
     if (extraSave != null)
     {
         string terrainName = gridType.ToString();
-        string moveTypeName = this.moveType.ToString();
+        string moveTypeName = moveType.ToString();
         int customCost = extraSave.GetMoveCost(moveTypeName, terrainName);
         if (customCost >= 0) return customCost; // -1 表示走内置逻辑，继续原有代码
     }
@@ -2337,6 +2345,7 @@ public virtual void SetWaitVisual(bool waiting)
     private bool isCapturingInProgress = false;
     public virtual void PerformCapture()
 {
+    if (isStealthed && !canCaptureWhileStealthed) return;   // ✅ 隐身占点锁
 
     if (isCapturingInProgress) return;
     
@@ -2505,6 +2514,14 @@ public virtual void SetWaitVisual(bool waiting)
     }
 
 // ✅ 新增：计算对兵器的伤害
+    // ✅ 照明弹显形：本格是否处于照明弹亮格内
+    public bool IsFlareLit()
+    {
+        if (grid == null || !stealthRevealOnFlare) return false;
+        var gmx = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        return gmx?.fogOfWarManager?.IsGridIlluminated(grid) == true;
+    }
+
     // ==================== 隐身模块 ====================
     public void ToggleStealth()
     {
@@ -2658,6 +2675,7 @@ public virtual void SetWaitVisual(bool waiting)
                 foreach (var u in g.infantries)
                     if (u.team == viewerTeam) return true;
             }
+        if (unit.stealthRevealOnFlare && unit.IsFlareLit()) return true;   // ✅ 照明弹照出（实时查询，离开亮格自动恢复）
         return false;
     }
 
@@ -2665,6 +2683,7 @@ public virtual void SetWaitVisual(bool waiting)
     public static bool CanTargetStealth(Infantry attacker, Infantry target)
     {
         if (target == null || !target.isStealthed) return true;
+        if (target.stealthRevealOnFlare && target.IsFlareLit()) return true;   // ✅ 照明弹照出：可攻击
         if (target.stealthAttackableBy == null || target.stealthAttackableBy.Length == 0) return false;
         return System.Array.IndexOf(target.stealthAttackableBy, attacker.GetType().Name) >= 0;
     }

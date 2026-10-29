@@ -1077,7 +1077,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                 if (mergeTarget != null)
                 {
                     var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-                    if (gm != null && gm.CanMerge(infantry, mergeTarget))
+                    if (gm != null && !(infantry.isStealthed && infantry.stealthOverlapMode == 1) && gm.CanMerge(infantry, mergeTarget))
                     {
                         MoveTo(infantry, to);
                         return;
@@ -1249,7 +1249,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         if (mergeTarget != null)
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
-            if (gm != null && gm.CanMerge(requestingUnit, mergeTarget))
+            if (gm != null && !(requestingUnit.isStealthed && requestingUnit.stealthOverlapMode == 1) && gm.CanMerge(requestingUnit, mergeTarget))
                 return true;
         }
 
@@ -1277,7 +1277,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                 // ✅ 允许合流：同类型友方残血单位
                 var mergeTarget = otherUnits.FirstOrDefault(u => u.team == infantry.team && u.GetType() == infantry.GetType());
                 var gmer = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
-                bool canMerge = mergeTarget != null && gmer != null && gmer.CanMerge(infantry, mergeTarget);
+                bool canMerge = mergeTarget != null && gmer != null && !(infantry.isStealthed && infantry.stealthOverlapMode == 1) && gmer.CanMerge(infantry, mergeTarget);
                 // ✅ 允许搭载：友方运输单位
                 var transported = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == infantry.team && u.CanTransportUnit(infantry));
                 // ✅ P-1 公共运输单位可以搭载任何势力
@@ -1385,7 +1385,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             .Where(u => u != infantry && IsInstanceValid(u) && u.team == infantry.team && u.GetType() == infantry.GetType())
             .OrderBy(u => u.health)
             .FirstOrDefault() as Infantry;
-        if (mergeTarget != null && gm != null && gm.CanMerge(infantry, mergeTarget))
+        if (mergeTarget != null && gm != null && !(infantry.isStealthed && infantry.stealthOverlapMode == 1) && gm.CanMerge(infantry, mergeTarget))
         {
             gm.MergeUnits(infantry, mergeTarget);
             hasMerged = true;
