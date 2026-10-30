@@ -16,6 +16,10 @@ MdSprite = NodePath("Md2D")
 useDefaultConfig = false
 movePoints = 5
 baseAttack = 450
+hasPrimaryWeapon = true
+maxPrimaryAmmo = 8
+currentPrimaryAmmo = 8
+primaryHasLimitedAmmo = true
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

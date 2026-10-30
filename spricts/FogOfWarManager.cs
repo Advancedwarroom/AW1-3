@@ -33,7 +33,25 @@ public partial class FogOfWarManager : Node
     private readonly System.Collections.Generic.Dictionary<string, HashSet<Grids>> exploredByTeam = new();
 
     // ✅ AI内战观战模式：无视隐身规则，全场可见（否则公共视角把双方隐身单位全灭）
-    public bool spectatorViewing;   // ✅ 已探索记忆层（按阵营持久保留）
+    public bool spectatorViewing;
+
+    private double _sweepTimer;
+    // ✅ 可见性清扫器：0.25s 强制校正，任何野路径翻出来的隐身/迷雾单位都会被压回
+    public override void _Process(double delta)
+    {
+        _sweepTimer += delta;
+        if (_sweepTimer < 0.25f) return;
+        _sweepTimer = 0;
+        if (spectatorViewing) return;
+        if (unitManager?.AllUnits != null)
+            foreach (var u in unitManager.AllUnits)
+                if (u != null && IsInstanceValid(u) && u.Visible && !ShouldShowUnit(u))
+                    u.Visible = false;
+        if (weaponManager?.AllWeapons != null)
+            foreach (var w in weaponManager.AllWeapons)
+                if (w != null && IsInstanceValid(w) && w.Visible && !ShouldShowWeapon(w))
+                    w.Visible = false;
+    }   // ✅ 已探索记忆层（按阵营持久保留）
 
     // ✅ 敌方单位最后已知残影（AW规则）：消失的单位在最后一眼的位置留下暗色记号，不再"闹鬼"
     private sealed class UnitGhost { public Node Target; public Grids LastGrid; public Label Marker; public bool Dead; }
