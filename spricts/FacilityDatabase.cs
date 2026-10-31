@@ -14,7 +14,23 @@ public static class FacilityDatabase
         ["Base"]   = "res://Prefabs/Base.tscn",
         ["AirPort"] = "res://Prefabs/AirPort.tscn",
         ["Port"]   = "res://Prefabs/Port.tscn",
+        // DoR Rig 搭建的临时设施：可维修/补给，不能生产、无收入
+        ["TempAirPort"] = "res://Prefabs/TempAirPort.tscn",
+        ["TempPort"]    = "res://Prefabs/TempPort.tscn",
     };
+
+    // ✅ 建筑地形要求（未登记=任意地形）：DoR 原作——临时机场建在平原/道路，临时港口建在海滩
+    private static readonly Dictionary<string, GridType[]> allowedTerrains = new()
+    {
+        ["TempAirPort"] = new[] { GridType.GROUND, GridType.ROAD },
+        ["TempPort"]    = new[] { GridType.BEACH },
+    };
+
+    public static bool IsTerrainAllowed(string facilityType, GridType terrain)
+    {
+        if (string.IsNullOrEmpty(facilityType) || !allowedTerrains.TryGetValue(facilityType, out var list)) return true;
+        return System.Array.IndexOf(list, terrain) >= 0;
+    }
 
     /// <summary>按类型名取场景路径（未登记返回 null）</summary>
     public static string GetScenePath(string facilityType)

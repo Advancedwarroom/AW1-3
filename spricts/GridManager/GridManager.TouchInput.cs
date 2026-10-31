@@ -139,7 +139,7 @@ public partial class GridManager
         {
             var g = path[i];
             if (g?.infantries == null) continue;
-            if (g.infantries.Any(u => u != null && u != selectedUnit && Infantry.IsVisibleTo(u, selectedUnit.team, grids)))
+            if (g.infantries.Any(u => Infantry.IsTruncationBlocker(selectedUnit, u) && Infantry.IsVisibleTo(u, selectedUnit.team, grids)))
             {
                 g.pathIcon?.Show();
                 g.pathIcon?.SetDeferred("modulate", Colors.Red);
@@ -165,8 +165,8 @@ public partial class GridManager
             int dist = Mathf.Abs(wp.GridIndex.X - prev.GridIndex.X) + Mathf.Abs(wp.GridIndex.Y - prev.GridIndex.Y);
             if (dist != 1) break;   // 断链（快速滑动跳格）
             int c = GetActualMoveCost(infantry, wp);
-            // 路上有单位即截断（可见判定——隐形的存在不截断、不泄漏，雾战同标准）
-            var blockerU = wp.infantries.FirstOrDefault(u => u != null && u != infantry && Infantry.IsVisibleTo(u, infantry.team, grids));
+            // 路上有“敌方”单位即截断（可见判定——隐形的存在不截断、不泄漏，雾战同标准）；友军可穿过
+            var blockerU = wp.infantries.FirstOrDefault(u => Infantry.IsTruncationBlocker(infantry, u) && Infantry.IsVisibleTo(u, infantry.team, grids));
             if (blockerU != null)
             {
                 pendingEncounterBlocker = blockerU;   // ✅ 记录截断者，落定后结算遭遇战
@@ -177,9 +177,27 @@ public partial class GridManager
             valid.Add(wp);
             prev = wp;
         }
-        if (valid.Count == 0) return false;
+        if (valid.Count == 0) { pendingEncounterBlocker = null; return false; }
         var dest = valid[valid.Count - 1];
-        if (dest == infantry.grid) return false;
+        if (dest == infantry.grid) { pendingEncounterBlocker = null; return false; }
+        // ✅ 终点有友军：无敌情时——能上车/合流就走统一点击入口（搭载菜单/合流），否则是非法落点，拒绝而非静默截断；
+        //    被敌方截断时——退到最后一个空的可停留格
+        if (pendingEncounterBlocker == null)   // 终点藏着看不见的敌人 → 视为伏击截断
+            pendingEncounterBlocker = dest.infantries.FirstOrDefault(u => Infantry.IsTruncationBlocker(infantry, u));
+        bool Occupied(Grids g) => g.infantries.Any(u => u != null && u != infantry && IsInstanceValid(u));
+        if (Occupied(dest))
+        {
+            if (pendingEncounterBlocker == null)
+            {
+                if (!CanStayOnGrid(dest, infantry)) return false;
+                HandleGridClick(infantry, dest);
+                return true;
+            }
+            while (valid.Count > 0 && (Occupied(valid[valid.Count - 1]) || !CanStayOnGrid(valid[valid.Count - 1], infantry)))
+                valid.RemoveAt(valid.Count - 1);
+            if (valid.Count == 0) { pendingEncounterBlocker = null; return false; }
+            dest = valid[valid.Count - 1];
+        }
         CloseRange();   // ✅ 手画路径直接执行，须自清范围（点按流由回调收拾；不清=全局输入卡死）
         MoveTo(infantry, dest, showMenu: true, forcedPath: valid);
         // ✅ 截断遭遇结算：落定后按双方Export仲裁（总开关=是否攻击）

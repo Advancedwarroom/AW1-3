@@ -357,17 +357,28 @@ private void StartUnloadMode(Infantry transport, Infantry unit, bool afterMove)
     // 显示卸下范围
     foreach (var grid in availableGrids)
     {
-        if (transport.CanUnloadToGrid(grid))
+        if (transport.CanUnloadUnitToGrid(unit, grid))   // ✅ 乘员必须能站上该地形
         {
+            bool launching = transport.CanLaunchCargoUnit(unit);   // ✅ 舰载起飞：青色范围
             grid.pathIcon?.Show();
-            grid.pathIcon.Modulate = new Color(0, 1, 0, 0.7f);
+            grid.pathIcon.Modulate = launching ? new Color(0, 1, 1, 0.7f) : new Color(0, 1, 0, 0.7f);
 
             grid.OnClickGrid = to => 
             {
-                bool success = transport.UnloadUnit(unit, to);
+                bool success = launching ? transport.LaunchCargoUnit(unit, to) : transport.UnloadUnit(unit, to);
 
                 // 立即强制关闭所有绿色范围
                 ForceCloseUnloadRange(gm, availableGrids);
+
+                if (success && launching)
+                {
+                    // 起飞：舰载机保留完整行动，载具只是本回合不能再移动
+                    var gmL = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+                    gmL?.ClearSelectedInfantry();
+                    if (transport.transportedUnits.Any(transport.CanLaunchCargoUnit)) ShowTransportUnloadMenu(transport, afterMove);
+                    else Hide();
+                    return;
+                }
 
 if (success)
 {

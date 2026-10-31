@@ -40,6 +40,14 @@ public enum UnitCategory
     Lander,       // 登陆艇
     Carrier,      // 航母
     Gunboat,      // 炮艇
+    Neotank,        // 新型坦克
+    Megatank,       // 巨型坦克
+    WarTank,        // 弩级坦克
+    Rig,            // 工程车
+    Duster,         // 螺旋桨机
+    Seaplane,       // 水上飞机
+    ProducibleBoat, // 生产舰
+    KamikazeBoat,   // 突击舰
 
     Other       // 其他未分类单位
 }

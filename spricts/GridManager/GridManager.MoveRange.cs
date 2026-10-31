@@ -151,7 +151,7 @@ public partial class GridManager
                 bool blocked = false;
 
                 g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team && u.team != TeamHelper.Player
+                if (g.infantries.Any(u => Infantry.IsTruncationBlocker(selectedUnit, u)
                         && Infantry.IsVisibleTo(u, selectedUnit.team, grids)))
                     blocked = true; // 敌方单位阻挡（✅ 隐身中看不见的不参与预览截断，防暴露；实际移动仍会被截断）
                 else if (selectedUnit is not Oozium && g.weapon != null)
@@ -444,11 +444,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         if (canStay)
         {
-            var transport = g.infantries.FirstOrDefault(u => 
-                u.canTransportUnits 
-                && u.maxTransportCapacity > 0 
-                && u.team == infantry.team 
-                && u != infantry) as Infantry;
+            var transport = Infantry.FindTransportFor(g.infantries, infantry);
 
             if (infantry.overlapType != UnitOverlapType.Overlapping 
                 && transport != null 

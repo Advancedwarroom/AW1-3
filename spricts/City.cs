@@ -8,7 +8,8 @@ public partial class City : Facility
     {
         "Infantry", "Mech", "Bike", "Oozium",
         "LightTank", "Artillery", "APC", "AntiAir",
-        "AntiTank", "MdTank", "Recon", "Flare"
+        "AntiTank", "MdTank", "Recon", "Flare",
+        "Neotank", "Megatank", "WarTank", "Rig"
     };
 
     public override void _Ready()

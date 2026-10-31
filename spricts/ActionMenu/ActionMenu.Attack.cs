@@ -21,61 +21,36 @@ public partial class ActionMenu
         return gm != null && HasAttackableEnemyInRange(unit, gm);
     }
 
-    // 射程内是否存在“实际能造成伤害”的敌人（infantry 用伤害矩阵判定，weapon 维持队伍判定）
+    // ✅ 射程内是否存在“实际能打”的目标——与 GridManager.ShowAttackRange / ShowMinMaxAttackRange 的高亮判定逐条一致：
+    //    射程形状一致（环形=min~max；否则=攻击邻格）/ 迷雾不可见格不算 / 多格兵器只认弱点格 /
+    //    隐身看不见、运输中、阵亡、同队都不算 / 伤害矩阵打不动不算
+    private bool HasAttackableEnemyInGrid(Infantry unit, Grids g, FogOfWarManager fog, List<Grids> all, bool ringMode)
+    {
+        if (g == null) return false;
+        if (fog != null && fog.isFogOfWarEnabled && !fog.IsGridVisible(g)) return false;
+        bool weaponOk = g.weapon != null && IsInstanceValid(g.weapon) && g.weapon.team != unit.team
+                        && (!g.weapon.isMultiTile || g.weapon.IsWeakPointGrid(g))
+                        && (ringMode || !g.weapon.hasActed);
+        if (weaponOk) return true;
+        if (ringMode && g.weapon != null && g.weapon.isMultiTile && !g.weapon.IsWeakPointGrid(g)) return false;
+        return g.HasAttackableEnemyInfantry(unit, all);
+    }
+
     private bool HasAttackableEnemyInRange(Infantry unit, GameManager gm)
     {
         if (gm?.gridManager == null || unit.grid == null) return false;
-
-        bool hasEnemyInRange;
-        if (unit.useMinMaxAttackRange)
-        {
-            hasEnemyInRange = CheckMinMaxRangeEnemy(unit, gm);
-        }
-        else if (unit.attackRange > 1)
-        {
-            // 当 attackRange > 1 时，使用 FindRange 检查更大范围
-            var extendedRange = gm.gridManager.FindRange(unit.grid, unit.attackRange, false);
-            hasEnemyInRange = extendedRange.Any(g =>
-                g.HasAttackableEnemyInfantry(unit) || g.HasEnemyWeapon(unit.team)
-            );
-            if (!hasEnemyInRange && unit.overlapType == UnitOverlapType.Overlapping)
-                if (unit.grid.HasAttackableEnemyInfantry(unit) || unit.grid.HasEnemyWeapon(unit.team))
-                    hasEnemyInRange = true;
-        }
-        else
-        {
-            // 默认4邻域
-            var range = gm.gridManager.GetAttackNeighbours(unit.grid);
-            hasEnemyInRange = range.Any(g =>
-                g.HasAttackableEnemyInfantry(unit) || g.HasEnemyWeapon(unit.team)
-            );
-            if (!hasEnemyInRange && unit.overlapType == UnitOverlapType.Overlapping)
-                if (unit.grid.HasAttackableEnemyInfantry(unit) || unit.grid.HasEnemyWeapon(unit.team))
-                    hasEnemyInRange = true;
-        }
-        return hasEnemyInRange;
+        var fog = gm.fogOfWarManager;
+        var all = gm.gridManager.grids;
+        bool ring = unit.useMinMaxAttackRange;
+        IEnumerable<Grids> candidates = ring
+            ? all.Where(g => g != null && g != unit.grid && Dist(g, unit.grid) >= unit.minAttackRange && Dist(g, unit.grid) <= unit.maxAttackRange)
+            : gm.gridManager.GetAttackNeighbours(unit.grid);
+        if (candidates.Any(g => HasAttackableEnemyInGrid(unit, g, fog, all, ring))) return true;
+        // 重叠型单位可打同格（与 ShowAttackRange 同格分支一致）
+        return !ring && unit.overlapType == UnitOverlapType.Overlapping
+               && (fog == null || !fog.isFogOfWarEnabled || fog.IsGridVisible(unit.grid))
+               && unit.grid.HasAttackableEnemyInfantry(unit, all);
     }
 
-    private bool CheckMinMaxRangeEnemy(Infantry unit, GameManager gm)
-    {
-        if (unit.grid == null) return false;
-
-        int minRange = unit.minAttackRange;
-        int maxRange = unit.maxAttackRange;
-
-        foreach (var grid in gm.gridManager.grids)
-        {
-            if (grid == null || grid == unit.grid) continue;
-
-            int distance = Mathf.Abs(grid.GridIndex.X - unit.grid.GridIndex.X) 
-                         + Mathf.Abs(grid.GridIndex.Y - unit.grid.GridIndex.Y);
-
-            if (distance >= minRange && distance <= maxRange)
-            {
-                if (grid.HasAttackableEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team))
-                    return true;
-            }
-        }
-        return false;
-    }
+    private static int Dist(Grids a, Grids b) => Mathf.Abs(a.GridIndex.X - b.GridIndex.X) + Mathf.Abs(a.GridIndex.Y - b.GridIndex.Y);
 }

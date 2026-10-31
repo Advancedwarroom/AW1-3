@@ -381,7 +381,7 @@ public partial class ActionMenu
         if (gm == null || currentUnit == null) return;
 
         pendingConstructionType = facilityType;
-        productionTargetGrids = currentUnit.GetValidExternalConstructionGrids();
+        productionTargetGrids = currentUnit.GetValidExternalConstructionGrids(facilityType);
 
         foreach (var g in productionTargetGrids)
         {

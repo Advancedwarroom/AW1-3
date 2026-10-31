@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://spricts/TempPort.cs" id="1_port"]
+[ext_resource type="SpriteFrames" path="res://asscets/AnimatedSprite/Port.tres" id="2_anim"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_port"]
+size = Vector2(33, 33)
+
+[node name="TempPort" type="Node2D" unique_id=380588754]
+z_index = 1
+script = ExtResource("1_port")
+canProduce = false
+fundsPerTurn = 0
+
+[node name="Area2D" type="Area2D" parent="." unique_id=1321245440]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=854254127]
+position = Vector2(16.5, 16.5)
+shape = SubResource("RectangleShape2D_port")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1314300434]
+position = Vector2(16, 16)
+scale = Vector2(0.99999994, 0.9166667)
+offset = Vector2(0, -4)
+sprite_frames = ExtResource("2_anim")
+animation = &"P0Port"

@@ -30,3 +30,10 @@
 - 勾选了 `useDefaultConfig` 的兵种（目前是摩托兵 Bike、照明车 Flare）同样以检查器 cost 为准：UnitRegistry 不再覆盖 cost，其余默认值照常应用。
 - 无例外：代码里不再有任何写死造价。维修艇 RepairBoat(7500)、黑炮 BlackCannon(18000)、巨炮 LargeCannon(18000)、激光 Laser(19000)、死光 DeathRay(25000) 原本在 `_Ready` 里写死 cost，现已移入各自 `.tscn` 检查器。
 - 造价在游戏启动后首次打开生产时读取一次，改完检查器需重新运行游戏。
+
+## 新增原版兵种与临时设施（2026-11-01）
+
+- 兵种脚本：`spricts/{Neotank,Megatank,WarTank,Rig,Duster,Seaplane,ProducibleBoat,KamikazeBoat}.cs`（只负责动画名，数值全部在 `Prefabs/<名>.tscn` 检查器）
+- 临时设施：`spricts/TempAirPort.cs`（继承 AirPort）、`spricts/TempPort.cs`（继承 Port），场景 `Prefabs/TempAirPort.tscn` / `TempPort.tscn`（不生产、收入 0），登记在 `FacilityDatabase`（含地形要求）
+- 贴图：`asscets/units/<名>/`，动画资源 `asscets/AnimatedSprite/<名>.tres`
+- 三代 / 四代差异与 DoR 原作数据：见 `docs/DoR_UNITS.md`

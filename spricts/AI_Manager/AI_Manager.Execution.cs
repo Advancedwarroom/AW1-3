@@ -152,7 +152,7 @@ public partial class AI_Manager
         for (int i = 1; i < path.Count; i++)
         {
             var n = path[i];
-            if (n.infantries.Any(o => o != null && IsInstanceValid(o) && !o.isTransported && o.team != u.team && o.team != TeamHelper.Player))
+            if (n.infantries.Any(o => Infantry.IsTruncationBlocker(u, o)))
             {
                 stop = i - 1; ambushed = true; break;
             }

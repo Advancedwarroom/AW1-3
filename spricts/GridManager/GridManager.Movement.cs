@@ -41,8 +41,8 @@ public partial class GridManager
             switch (infantry.overlapType)
             {
                 case UnitOverlapType.NonOverlapping:
-                var friendlyTransport = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == infantry.team);
-                if (friendlyTransport != null && friendlyTransport.CanTransportUnit(infantry))
+                var friendlyTransport = Infantry.FindTransportFor(otherUnits, infantry);
+                if (friendlyTransport != null)
                 {
                     var menu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
                     menu?.ShowTransportLoadMenu(friendlyTransport, infantry);
@@ -51,7 +51,7 @@ public partial class GridManager
                 }
                 // ✅ 合流检测：同类型友方残血单位 → 自动合流
                 var mergeTarget = otherUnits
-                    .Where(u => u.team == infantry.team && u.GetType() == infantry.GetType())
+                    .Where(u => u.team == infantry.team && u.UnitTypeId == infantry.UnitTypeId)
                     .OrderBy(u => u.health)
                     .FirstOrDefault();
                 if (mergeTarget != null)
@@ -100,7 +100,7 @@ public partial class GridManager
                     
                     // 检查1: 敌方单位阻挡
                     g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                    var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player).ToList();
+                    var enemies = g.infantries.Where(u => Infantry.IsTruncationBlocker(infantry, u)).ToList();
                     if (enemies.Count > 0)
                     {
                         // 截断到最后一个可停留的格子
@@ -186,14 +186,14 @@ public partial class GridManager
                 }
                 else if (hasAlly)
                 {
-                    var allyTransport = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == requestingUnit.team && u.CanTransportUnit(requestingUnit));
+                    var allyTransport = Infantry.FindTransportFor(otherUnits, requestingUnit);
                     if (allyTransport != null)
                     {
                     return true;
                     }
 
                     // ✅ P-1 公共运输单位可以搭载任何势力
-                    var p1Transport = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == TeamHelper.Player && u.CanTransportUnit(requestingUnit));
+                    var p1Transport = Infantry.FindTransportFor(otherUnits, requestingUnit);
                     if (p1Transport != null)
                     {
                         return true;
@@ -226,7 +226,7 @@ public partial class GridManager
         var otherUnits = grid.infantries.Where(i => i != requestingUnit && IsInstanceValid(i)).ToList();
         if (otherUnits.Count == 0) return true;
 
-        var friendlyTransport = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == requestingUnit.team && u.CanTransportUnit(requestingUnit));
+        var friendlyTransport = Infantry.FindTransportFor(otherUnits, requestingUnit);
         if (friendlyTransport != null)
         {
         return true;
@@ -234,11 +234,11 @@ public partial class GridManager
 
 
         // ✅ P-1 公共运输单位可以搭载任何势力的单位
-        var p1Transport = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == TeamHelper.Player && u.CanTransportUnit(requestingUnit));
+        var p1Transport = Infantry.FindTransportFor(otherUnits, requestingUnit);
         if (p1Transport != null) return true;
 
         // ✅ 合流检测：同类型友方残血单位可以合流
-        var mergeTarget = otherUnits.FirstOrDefault(u => u.team == requestingUnit.team && u.GetType() == requestingUnit.GetType());
+        var mergeTarget = otherUnits.FirstOrDefault(u => u.team == requestingUnit.team && u.UnitTypeId == requestingUnit.UnitTypeId);
         if (mergeTarget != null)
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
@@ -269,14 +269,14 @@ public partial class GridManager
             if (otherUnits.Count > 0)
             {
                 // ✅ 允许合流：同类型友方残血单位
-                var mergeTarget = otherUnits.FirstOrDefault(u => u.team == infantry.team && u.GetType() == infantry.GetType());
+                var mergeTarget = otherUnits.FirstOrDefault(u => u.team == infantry.team && u.UnitTypeId == infantry.UnitTypeId);
                 var gmer = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
                 bool canMerge = mergeTarget != null && gmer != null && !(infantry.isStealthed && infantry.stealthOverlapMode == 1) && gmer.CanMerge(infantry, mergeTarget);
                 // ✅ 允许搭载：友方运输单位
-                var transported = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == infantry.team && u.CanTransportUnit(infantry));
+                var transported = Infantry.FindTransportFor(otherUnits, infantry);
                 // ✅ P-1 公共运输单位可以搭载任何势力
                 if (transported == null)
-                    transported = otherUnits.FirstOrDefault(u => u.canTransportUnits && u.maxTransportCapacity > 0 && u.team == TeamHelper.Player && u.CanTransportUnit(infantry));
+                    transported = Infantry.FindTransportFor(otherUnits, infantry);
                 if (transported == null && !canMerge)
                     return;
             }
@@ -380,7 +380,7 @@ public partial class GridManager
     if (!hasMountedToTransport)
     {
         var mergeTarget = to.infantries
-            .Where(u => u != infantry && IsInstanceValid(u) && u.team == infantry.team && u.GetType() == infantry.GetType())
+            .Where(u => u != infantry && IsInstanceValid(u) && u.team == infantry.team && u.UnitTypeId == infantry.UnitTypeId)
             .OrderBy(u => u.health)
             .FirstOrDefault() as Infantry;
         if (mergeTarget != null && gm != null && !(infantry.isStealthed && infantry.stealthOverlapMode == 1) && gm.CanMerge(infantry, mergeTarget))
@@ -440,59 +440,37 @@ public partial class GridManager
 
 
         // 从起点正序检查路径，找最后一个可停留的格子
+        // ✅ 友军格：可穿过不可停留（继续往前找）；只有敌方/兵器/地形/规则阻挡才截断
         Grids truncatedTarget = infantry.grid;
+        bool hardBlocked = false;
         for (int i = 1; i < path.Count; i++)
         {
             var g = path[i];
-            
+            g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
+
             // ✅ 检查1: 敌方单位（NonOverlapping单位才被阻挡）
-            if (infantry.overlapType == UnitOverlapType.NonOverlapping)
-            {
-                g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player).ToList();
-                if (enemies.Count > 0)
-                {
-                    break; // 截断到上一个可停留格
-                }
-            }
-            if (infantry.overlapType == UnitOverlapType.NonOverlapping)
-            {
-                g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                var enemies = g.infantries.Where(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player).ToList();
-                if (enemies.Count > 0)
-                {
-                    break; // 截断到上一个可停留格
-                }
-            }
-            
+            if (infantry.overlapType == UnitOverlapType.NonOverlapping
+                && g.infantries.Any(u => Infantry.IsTruncationBlocker(infantry, u)))
+            { hardBlocked = true; break; }
+
             // ✅ 检查2: 兵器阻挡（非Oozium）
-            if (infantry is not Oozium && g.weapon != null)
-            {
-                break; // 截断到上一个可停留格
-            }
-            
+            if (infantry is not Oozium && g.weapon != null) { hardBlocked = true; break; }
+
             // ✅ 检查3: 地形不可移动
             int moveCost = infantry.GetMoveCostOnGrid(g);
-            if (moveCost >= 999 || moveCost == int.MaxValue)
-            {
-                break; // 截断到上一个可停留格
-            }
-            
+            if (moveCost >= 999 || moveCost == int.MaxValue) { hardBlocked = true; break; }
+
             // ✅ 检查4: CanMoveTo判定
-            if (unitManager?.CanMoveTo(g.GridIndex, infantry) == false)
-            {
-                break; // 截断到上一个可停留格
-            }
-            
+            if (unitManager?.CanMoveTo(g.GridIndex, infantry) == false) { hardBlocked = true; break; }
+
             if (CanStayOnGrid(g, infantry))
-            {
                 truncatedTarget = g;
-            }
-            else
-            {
-                break; // 截断到上一个可停留的格子
-            }
+            // 否则=友军占用：穿过，不更新落点
         }
+
+        // ✅ 没有任何真实阻挡、只是终点被友军占着 → 这是非法落点，拒绝移动（保持选择），而不是静默截断
+        if (!hardBlocked && truncatedTarget != target)
+            return;
 
         if (truncatedTarget != infantry.grid)
         {

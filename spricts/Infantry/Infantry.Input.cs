@@ -127,8 +127,8 @@ if (Input.IsKeyPressed(Key.Ctrl))
                     .Where(u => u.team == currentTeam 
                         && u.canTransportUnits 
                         && u.maxTransportCapacity > 0
-                        && u.transportedUnits.Count < u.maxTransportCapacity
-                        && IsInstanceValid(u))
+                        && IsInstanceValid(u)
+                        && u.CanTransportUnit(this))   // ✅ 统一搭载判定（白名单/容量/套娃）
                     .ToList();
 
                 // 如果有可搭载单位且当前单位可以被搭载，显示搭载菜单

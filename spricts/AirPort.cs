@@ -6,7 +6,13 @@ public partial class AirPort : City
     // ✅ 检查器优先：默认补给兵种列表重写为空军（仅当检查器未配置时才使用）
     protected override string[] DefaultSupplyUnitTypes() => new string[]
     {
-        "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth"
+        "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth", "Duster", "Seaplane"
+    };
+
+    /// <summary>默认可生产兵种（子类可重写；空数组=不生产，如临时机场）</summary>
+    protected virtual string[] DefaultProducibleUnits() => new string[]
+    {
+        "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth", "Duster"
     };
 
     public override void _Ready()
@@ -23,8 +29,12 @@ public partial class AirPort : City
         // 初始化生产模块默认值（检查器优先）
         if (producibleUnitNames.Count == 0)
         {
-            canProduce = true;
-            producibleUnitNames = new Godot.Collections.Array<string> { "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "Stealth" };
+            var defs = DefaultProducibleUnits();
+            if (defs.Length > 0)
+            {
+                canProduce = true;
+                producibleUnitNames = new Godot.Collections.Array<string>(defs);
+            }
         }
 
         UpdateCityVisual();

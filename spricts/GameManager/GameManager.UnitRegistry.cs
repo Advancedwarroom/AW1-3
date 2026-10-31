@@ -107,6 +107,31 @@ private void AutoCategorizeUnit(Infantry unit)
 
     switch (unit)
     {
+        // ✅ 新增 8 个原版兵种（Rig 必须在 APC 之前；全部在 Infantry 之前）
+        case Neotank _:
+            category = UnitCategory.Neotank;
+            break;
+        case Megatank _:
+            category = UnitCategory.Megatank;
+            break;
+        case WarTank _:
+            category = UnitCategory.WarTank;
+            break;
+        case Rig _:
+            category = UnitCategory.Rig;
+            break;
+        case Duster _:
+            category = UnitCategory.Duster;
+            break;
+        case Seaplane _:
+            category = UnitCategory.Seaplane;
+            break;
+        case ProducibleBoat _:
+            category = UnitCategory.ProducibleBoat;
+            break;
+        case KamikazeBoat _:
+            category = UnitCategory.KamikazeBoat;
+            break;
         case APC _:         // ✅ 添加 APC 检查（必须在 Infantry 之前）
             category = UnitCategory.APC;
             apcUnits.Add(unit);
@@ -213,6 +238,14 @@ private void AutoCategorizeUnit(Infantry unit)
     {
         return unit switch
         {
+            Neotank _ => UnitCategory.Neotank,
+            Megatank _ => UnitCategory.Megatank,
+            WarTank _ => UnitCategory.WarTank,
+            Rig _ => UnitCategory.Rig,
+            Duster _ => UnitCategory.Duster,
+            Seaplane _ => UnitCategory.Seaplane,
+            ProducibleBoat _ => UnitCategory.ProducibleBoat,
+            KamikazeBoat _ => UnitCategory.KamikazeBoat,
             APC _ => UnitCategory.APC,
             Recon _ => UnitCategory.Recon,
             Mech _ => UnitCategory.Mech,

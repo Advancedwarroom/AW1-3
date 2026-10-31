@@ -152,6 +152,7 @@ public partial class GameManager
         {
             unit.OnTurnStartAutoSupply();
         }
+        if (isNewTurn && unit.canTransportUnits) unit.ResetCargoBoardTracking();   // ✅ 舰载起飞：新回合起舱内单位均可起飞
             if (unit.currentCaptureProgress > 0)
             {
                 if (unit.grid != unit.capturingGrid)

@@ -83,6 +83,14 @@ public partial class GridManager
         var blindZoneGrids = new HashSet<Grids>();
         
         blindZoneGrids.Add(unit.grid);
+        if (minRange > 1)
+        {
+            var nearGrids = FindRange(unit.grid, minRange - 1, false);
+            foreach (var g in nearGrids) 
+                blindZoneGrids.Add(g);
+        }
+        
+        // ✅ 修复：盲区必须先算好再扫描（原顺序会让盲区内目标被高亮可打）
             foreach (var grid in allRangeGrids)
     {
         if (blindZoneGrids.Contains(grid)) continue;
@@ -90,7 +98,7 @@ public partial class GridManager
         // 多格兵器：只有弱点格子可被攻击
         if (grid.weapon != null && grid.weapon.isMultiTile && !grid.weapon.IsWeakPointGrid(grid)) continue;
         
-        bool hasEnemyTarget = grid.HasAttackableEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team);
+        bool hasEnemyTarget = grid.HasAttackableEnemyInfantry(unit, grids) || grid.HasEnemyWeapon(unit.team);
         if (hasEnemyTarget)
         {
             if (isFogEnabled && !fog.IsGridVisible(grid)) continue;
@@ -106,13 +114,6 @@ public partial class GridManager
             grid.OnMouseExitedAttackGrid = () => HideDamagePreview();
         }
     }
-        if (minRange > 1)
-        {
-            var nearGrids = FindRange(unit.grid, minRange - 1, false);
-            foreach (var g in nearGrids) 
-                blindZoneGrids.Add(g);
-        }
-        
         foreach (var grid in allRangeGrids)
         {
             if (blindZoneGrids.Contains(grid)) continue;
@@ -147,7 +148,7 @@ public partial class GridManager
                 grid.OnMouseExitedAttackGrid = () => HideDamagePreview();
             }
             
-            bool hasEnemyTarget = grid.HasAttackableEnemyInfantry(unit) || grid.HasEnemyWeapon(unit.team);
+            bool hasEnemyTarget = grid.HasAttackableEnemyInfantry(unit, grids) || grid.HasEnemyWeapon(unit.team);
             if (hasEnemyTarget)
             {
                 // 多格兵器：只有弱点格子显示为可攻击
@@ -228,7 +229,7 @@ public partial class GridManager
                 neighbor.OnMouseExitedAttackGrid = () => HideDamagePreview();
             }
             
-            if (neighbor.HasAttackableEnemyInfantry(unit))
+            if (neighbor.HasAttackableEnemyInfantry(unit, grids))
             {
                 if (isFogEnabled && fog != null && !fog.IsGridVisible(neighbor)) continue;
                 attackRange.Add(neighbor);
@@ -247,7 +248,7 @@ public partial class GridManager
             }
         }
 
-        if (unit.overlapType == UnitOverlapType.Overlapping && unit.grid.HasAttackableEnemyInfantry(unit))
+        if (unit.overlapType == UnitOverlapType.Overlapping && unit.grid.HasAttackableEnemyInfantry(unit, grids))
         {
             if (isFogEnabled && fog != null && !fog.IsGridVisible(unit.grid)) { /* 不添加 */ }
             else

@@ -13,6 +13,7 @@ public partial class Infantry
 
 [Export] public int maxTransportCapacity = 0;
 [Export] public Godot.Collections.Array<string> canTransportUnitTypes = new();
+[Export] public bool canLaunchCargo = false;   // ✅ 舰载起飞（DoR 航母/生产舰）：回合开始时已在舱内的单位，载具本回合未移动时可直接“起飞”到相邻格并正常行动；起飞后载具本回合不能再移动
 [Export] public int maxLoadCapacity { get => maxTransportCapacity; set => maxTransportCapacity = value; }
 [Export] public int minSupplyRange = 1;
 [Export] public int maxSupplyRange = 1;
@@ -105,19 +106,21 @@ public List<Infantry> transportedUnits = new List<Infantry>();
     /// </summary>
     public virtual bool CanTransportUnit(Infantry unit)
     {
-        if (!canTransportUnits) return false;
+        if (!canTransportUnits || maxTransportCapacity <= 0) return false;
+        if (unit == null || unit == this || !IsInstanceValid(unit) || unit.isTransported) return false;
         if (transportedUnits.Count >= maxTransportCapacity) return false;
-        if (unit == this) return false;
-        if (unit.team != this.team) return false;
+        // 同队可搭；P-1 公共运输单位任何队都可搭
+        if (unit.team != this.team && this.team != TeamHelper.Player) return false;
+        // 载着人的运输单位不能再被装（套娃会丢失内部单位）
+        if (unit.canTransportUnits && unit.transportedUnits.Count > 0) return false;
 
-        // 1. 按类型名过滤（精确匹配类名，如 "Infantry", "Mech"）
-        string unitType = unit.UnitTypeId;
-        if (canTransportUnitTypes != null && canTransportUnitTypes.Count > 0)
-        {
-            if (!canTransportUnitTypes.Contains(unitType)) return false;
-        }
+        // 1. 显式白名单（兵种ID 或 参照兵种ID 命中均可）——白名单是权威：命中即放行，不再被属性过滤误伤
+        //    （此前航母白名单全是空军却勾了“排除空军”，导致什么都装不了）
+        bool hasWhitelist = canTransportUnitTypes != null && canTransportUnitTypes.Count > 0;
+        if (hasWhitelist)
+            return canTransportUnitTypes.Contains(unit.UnitTypeId) || canTransportUnitTypes.Contains(unit.TemplateId);
 
-        // 2. 按单位类别过滤（如 Infantry, Tank, Mech 等）
+        // 2. 未配白名单 → 按单位类别过滤
         if (canTransportUnitCategories != null && canTransportUnitCategories.Count > 0)
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
@@ -127,7 +130,7 @@ public List<Infantry> transportedUnits = new List<Infantry>();
             }
         }
 
-        // 3. 按属性标志过滤（零代码扩展新单位）
+        // 3. 按属性标志过滤（零代码扩展新单位；只在无白名单时生效）
         if (transportExcludeAirUnits && unit.IsAirUnit) return false;
         if (transportExcludeArmored && unit.isArmoredUnit) return false;
         if (transportRequireCanCapture && unit.captureAbility != CaptureAbility.CanCapture) return false;
@@ -136,65 +139,46 @@ public List<Infantry> transportedUnits = new List<Infantry>();
         return true;
     }
 
-    /// <summary>
-    /// 搭载单位
-    /// </summary>
-    public virtual bool TransportUnit(Infantry unit)
+    /// <summary>✅ 统一搭载查找：格上第一个“确实能装下 rider”的运输单位（同队优先，其次 P-1 公共）。
+    /// 所有入口（点击移动/移动范围/拖动路径/AI）都走这里，避免“取到第一个运输单位却装不下”而误判。</summary>
+    public static Infantry FindTransportFor(System.Collections.Generic.IEnumerable<Infantry> units, Infantry rider)
     {
-        if (!CanTransportUnit(unit)) return false;
-
-        transportedUnits.Add(unit);
-
-        unit.Hide();
-        unit.ProcessMode = ProcessModeEnum.Disabled;
-
-        if (unit.grid != null)
+        if (units == null || rider == null) return null;
+        Infantry p1 = null;
+        foreach (var u in units)
         {
-            unit.grid.infantries.Remove(unit);
-            if (unit.grid.infantry == unit)
-                unit.grid.infantry = unit.grid.infantries.Count > 0 ? unit.grid.infantries[0] : null;
+            if (u == null || u == rider || !IsInstanceValid(u) || !u.CanTransportUnit(rider)) continue;
+            if (u.team == rider.team) return u;
+            if (p1 == null && u.team == TeamHelper.Player) p1 = u;
         }
-
-        return true;
+        return p1;
     }
 
     /// <summary>
-    /// 卸下单位到指定格子
+    /// 搭载单位
     /// </summary>
-    public virtual bool UntransportUnit(Infantry unit, Grids targetGrid)
+    public virtual bool TransportUnit(Infantry unit) => LoadUnit(unit);   // ✅ 统一走 LoadUnit（原实现漏设 isTransported）
+
+    // ========== ✅ 舰载起飞：记录“本回合才进舱”的单位（它们本回合不能起飞） ==========
+    private readonly System.Collections.Generic.HashSet<Infantry> cargoBoardedThisTurn = new();
+    public void MarkCargoBoardedThisTurn(Infantry u) { if (u != null) cargoBoardedThisTurn.Add(u); }
+    public void ResetCargoBoardTracking() => cargoBoardedThisTurn.Clear();   // 回合开始时调用
+    /// <summary>此舱内单位当前能否起飞（载具开启舰载起飞、本回合未移动、单位不是本回合才进舱的）</summary>
+    public bool CanLaunchCargoUnit(Infantry u)
+        => canLaunchCargo && u != null && transportedUnits.Contains(u) && !isMoved && !cargoBoardedThisTurn.Contains(u);
+
+    /// <summary>✅ 起飞：卸到相邻格但保留完整行动（不受“卸下后本回合不能动”限制）</summary>
+    public bool LaunchCargoUnit(Infantry u, Grids targetGrid)
     {
-        if (!transportedUnits.Contains(unit)) return false;
-        if (targetGrid == null) return false;
-        if (targetGrid.gridType == GridType.METEORITE) return false;
-
-        // 检查目标格子是否有阻挡
-        var blockingUnit = targetGrid.infantries.FirstOrDefault(u => 
-            u != null && IsInstanceValid(u) && 
-            u.overlapType == UnitOverlapType.NonOverlapping);
-        if (blockingUnit != null) return false;
-
-        transportedUnits.Remove(unit);
-
-        unit.Show();
-        unit.ProcessMode = ProcessModeEnum.Inherit;
-
-        unit.Position = targetGrid.Position;
-        unit.grid = targetGrid;
-
-        if (!targetGrid.infantries.Contains(unit))
-            targetGrid.infantries.Add(unit);
-        if (targetGrid.infantry == null)
-            targetGrid.infantry = unit;
-
-        // 卸下后本回合不能移动
-        unit.isMoved = true;
-        unit.isAttacked = true;
-        unit.state = UnitState.Acted;
-        unit.SetWaitVisual(true);
-
-        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-        gm?.unitManager?.BindUnitToGrid(unit, true);
-
+        if (!CanLaunchCargoUnit(u)) return false;
+        if (!UnloadUnit(u, targetGrid)) return false;
+        u.isMoved = false;
+        u.isAttacked = false;
+        u.hasActed = false;
+        u.state = UnitState.Idle;
+        u.SetWaitVisual(false);
+        unitsCannotMove.Remove(u);
+        isMoved = true;   // 载具起飞后本回合不能再移动（可继续让其他舰载机起飞/攻击）
         return true;
     }
 
@@ -209,6 +193,7 @@ public virtual bool LoadUnit(Infantry unit)
     
     transportedUnits.Add(unit);
     unit.isTransported = true;
+    MarkCargoBoardedThisTurn(unit);
     
     unit.Hide();
     unit.ProcessMode = ProcessModeEnum.Disabled;
@@ -354,6 +339,15 @@ public virtual bool CanUnloadToGrid(Grids targetGrid)
         u.overlapType == UnitOverlapType.NonOverlapping);
     
     return blockingUnit == null;
+}
+
+/// <summary>✅ 按具体乘员判定能否卸到该格：除占用检查外，乘员必须能站上这个地形（不会把坦克卸进海里）</summary>
+public virtual bool CanUnloadUnitToGrid(Infantry unit, Grids targetGrid)
+{
+    if (!CanUnloadToGrid(targetGrid)) return false;
+    if (unit == null) return true;
+    int cost = unit.GetMoveCostOnGrid(targetGrid);
+    return cost < 999 && cost != int.MaxValue;
 }
 
 // ========== ✅ 究极自由：获取第一个已装载单位（从 APC 迁移） ==========

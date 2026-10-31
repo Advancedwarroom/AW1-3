@@ -46,8 +46,7 @@ baseAnimSprite = NodePath("Base2D")
 cost = 30000
 canTransportUnits = true
 maxTransportCapacity = 2
-canTransportUnitTypes = PackedStringArray("Fighter", "Bomber", "BCopter", "TCopter", "Stealth", "FlyBomb")
-transportExcludeAirUnits = true
+canTransportUnitTypes = Array[String](["Fighter", "Bomber", "BCopter", "TCopter", "Stealth", "FlyBomb", "Duster", "Seaplane"])
 internalSupplyEnabled = true
 
 [node name="Area2D" type="Area2D" parent="." unique_id=3005637990]

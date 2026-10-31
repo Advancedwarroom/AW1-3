@@ -82,6 +82,8 @@ public partial class Infantry
             state = UnitState.Acted;
             SetWaitVisual(true);
         }
+        // ✅ 总进度 N ≤ 0 = 即时建造（DoR Rig 搭临时机场/港口：当回合完成）
+        if (constructionTotalProgress <= 0) CompleteConstruction();
         return true;
     }
 
@@ -165,14 +167,14 @@ public partial class Infantry
     /// <summary>外部建造自动放置：在范围内随机挑一个可放格子</summary>
     public Grids FindValidExternalConstructionGrid(string facilityType)
     {
-        var candidates = GetValidExternalConstructionGrids();
+        var candidates = GetValidExternalConstructionGrids(facilityType);
         if (candidates.Count == 0) return null;
         var rng = new Random();
         return candidates[rng.Next(candidates.Count)];
     }
 
     /// <summary>外部建造有效目标格：范围内 + 空位 + 无既有建筑</summary>
-    public List<Grids> GetValidExternalConstructionGrids()
+    public List<Grids> GetValidExternalConstructionGrids(string facilityType = null)
     {
         var result = new List<Grids>();
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -197,6 +199,7 @@ public partial class Infantry
                 if (g == null) continue;
                 if (g.city != null && IsInstanceValid(g.city)) continue;   // 已有建筑
                 if (g.weapon != null) continue;                            // 兵器占位
+                if (!FacilityDatabase.IsTerrainAllowed(facilityType, g.gridType)) continue;   // ✅ 建筑地形要求（如临时港口只能建在海滩）
                 result.Add(g);
             }
         }
