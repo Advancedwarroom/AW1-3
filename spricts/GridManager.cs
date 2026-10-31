@@ -1364,7 +1364,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             // ✅ 非强制截断：新格重绑+剩余实际移动力+二次移动
             if (!infantry.truncForcedStop && infantry.movePoints > 0 && infantry.health > 0)
             {
-                infantry.state = Infantry.UnitState.Idle;
+                infantry.state = UnitState.Idle;
                 infantry.isMoved = false;
                 infantry.isAttacked = false;
                 infantry.hasActed = false;

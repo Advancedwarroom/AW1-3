@@ -9,7 +9,7 @@ public partial class LargeCannon : BlackCannon
 {
     [ExportGroup("大型多格配置")]
     [Export] public Vector2I multiTileSize = new Vector2I(3, 3);
-    [Export] public bool canRotate = true; // 旋转开关：默认开启（LargeCannon支持旋转）
+    [Export] public new bool canRotate = true; // 旋转开关：默认开启（LargeCannon支持旋转）
 
     // 炮口（发射台）偏移：炮弹发射的起点
     private Vector2I firePointOffset = new Vector2I(1, 0);

@@ -47,11 +47,6 @@ public partial class Laser : Weapon
 
     // ========== ✅ 弹药系统已在 Weapon 基类中定义（useAmmoSystem, currentAmmo, maxAmmo）
 
-    [ExportGroup("弹药系统")]
-    [Export] public bool useAmmoSystem = false;
-    [Export] public int maxAmmo = 3;
-    [Export] public int currentAmmo = 3;
-
     [ExportGroup("冷却系统")]
     [Export] public bool useCooldownSystem = false;
     [Export] public int cooldownTurns = 1;

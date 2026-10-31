@@ -3155,4 +3155,29 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         }
     }
 
+
+    // ✅ 回合中回合：人类伏击手的临场决策（确认=攻击 / 取消=放过）
+    public void RequestEncounterDecision(Infantry mover, Infantry blocker)
+    {
+        encounterPause = true;
+        var dlg = new ConfirmationDialog();
+        dlg.Title = "遭遇战！";
+        dlg.DialogText = $"{blocker.GetType().Name} 截断了 {mover.GetType().Name} 的移动\n是否发起攻击？";
+        dlg.OkButtonText = "攻击";
+        dlg.CancelButtonText = "放过";
+        AddChild(dlg);
+        dlg.PopupCentered();
+        dlg.Confirmed += () =>
+        {
+            encounterPause = false;
+            dlg.QueueFree();
+            Infantry.ExecuteTruncationStrikes(mover, blocker, mover.truncCounterEnabled, true);
+        };
+        dlg.Canceled += () =>
+        {
+            encounterPause = false;
+            dlg.QueueFree();
+            Infantry.ExecuteTruncationStrikes(mover, blocker, mover.truncCounterEnabled, false);
+        };
+    }
 }

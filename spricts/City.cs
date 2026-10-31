@@ -2,7 +2,6 @@ using Godot;
 
 public partial class City : Facility
 {
-    [Export] public int fundsPerTurn = 1000;
 
     public override void _Ready()
     {

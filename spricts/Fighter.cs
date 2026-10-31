@@ -13,7 +13,7 @@ public partial class Fighter : Infantry
         // FlyBomb 的特殊初始化已通过 UnitRegistry 完成
     }
 
-    public void OnMoveSelected()
+    public new void OnMoveSelected()
     {
         if (consumeFuel && fuel <= 0) return;
         ShowAnimState("move");
