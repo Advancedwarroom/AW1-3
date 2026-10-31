@@ -35,13 +35,11 @@ public partial class FogOfWarManager : Node
     // ✅ AI内战观战模式：无视隐身规则，全场可见（否则公共视角把双方隐身单位全灭）
     public bool spectatorViewing;
 
-    private double _sweepTimer;
-    // ✅ 可见性清扫器：0.25s 强制校正，任何野路径翻出来的隐身/迷雾单位都会被压回
+    // ✅ 可见性清扫器：每帧执行 + 处理优先级压到全场最后——
+    // 任何来源（含未定位的引擎层发射源）在本帧绘制前把隐身/迷雾单位翻出来，都会被同帧压回，闪光窗口=0帧
     public override void _Process(double delta)
     {
-        _sweepTimer += delta;
-        if (_sweepTimer < 0.25f) return;
-        _sweepTimer = 0;
+        ProcessPriority = 999999;   // 低优先级值先处理，最大值=最后处理（在绘制之前）
         if (spectatorViewing) return;
         if (unitManager?.AllUnits != null)
             foreach (var u in unitManager.AllUnits)
