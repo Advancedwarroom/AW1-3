@@ -1313,8 +1313,12 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             if (dist != 1) break;   // 断链（快速滑动跳格）
             int c = GetActualMoveCost(infantry, wp.gridType);
             // 路上有单位即截断（可见判定——隐形的存在不截断、不泄漏，雾战同标准）
-            if (wp.infantries.Any(u => u != null && u != infantry && Infantry.IsVisibleTo(u, infantry.team, grids)))
+            var blockerU = wp.infantries.FirstOrDefault(u => u != null && u != infantry && Infantry.IsVisibleTo(u, infantry.team, grids));
+            if (blockerU != null)
+            {
+                pendingEncounterBlocker = blockerU;   // ✅ 记录截断者，落定后结算遭遇战
                 break;
+            }
             if (spent + c > budget) break;
             spent += c;
             valid.Add(wp);
@@ -1324,8 +1328,16 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         var dest = valid[valid.Count - 1];
         if (dest == infantry.grid) return false;
         MoveTo(infantry, dest, showMenu: true, forcedPath: valid);
+        // ✅ 截断遭遇结算：落定后按双方Export仲裁（总开关=是否攻击）
+        var bk = pendingEncounterBlocker; pendingEncounterBlocker = null;
+        if (bk != null)
+            Infantry.ResolveTruncationEncounter(infantry, bk,
+                moverConsents: infantry.truncCounterEnabled,
+                blockerConsents: bk.truncAmbusherEnabled);
         return true;
     }
+
+    private Infantry pendingEncounterBlocker;   // ✅ 截断遭遇：路上第一个可见阻挡者
 
     public void MoveTo(Infantry infantry, Grids to, bool showMenu = true, System.Collections.Generic.List<Grids> forcedPath = null)
     {

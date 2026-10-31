@@ -90,7 +90,21 @@ public partial class Infantry : Node2D
     [Export] public bool canActAfterMerge = false;
 
     [ExportGroup("隐身模块")]
-    [Export] public bool terrainConcealment = true;              // ✅ 林地/礁岩隐蔽（AW规则）：无贴身敌人时藏于森林/礁岩不可见
+    [Export] public bool terrainConcealment = true;
+
+    [ExportGroup("截断遭遇")]
+    [Export] public bool overlongReflexArc = false;          // 反射弧过长：开=终点压隐形的冤枉费保留(不修)，关=正常退费
+    // —— 被截断方（移动方）——
+    [Export] public bool truncCounterEnabled = false;        // 被截断时自动反击（总开关=是否攻击；关=组一全失效）
+    [Export] public int truncCounterMode = 1;                // 1主动出击(我单向打对方不还手) 2两败俱伤(互吃反击) 3先发制人(对方伏击我,我只能反击)
+    [Export] public bool truncShowAttackButton = true;       // 是否显示攻击键（显示则点键发起/点边缘不攻击仅截断）
+    [Export] public bool truncForcedStop = true;             // 强制截断：开=截死原作式；关=新格重绑+显示剩余移动力+二次移动
+    [Export] public int truncStrikeWeight = 0;               // 截断执行权重 0~9999（矛盾仲裁）
+    // —— 截断方（阻挡方=伏击手）——
+    [Export] public bool truncAmbusherEnabled = false;       // 伏击手：截断他人时主动出击（本组是强制遭遇的唯一来源）
+    [Export] public int truncAmbusherMode = 1;               // 1主动出击 2两败俱伤 3反将被动(对方打我,我只能反击)
+    [Export] public int truncAmbusherWeight = 0;             // 伏击手权重（平权=被截断方先执行）
+    [Export] public bool truncAllowMultiStrike = false;      // 允许多次截断出击：开=双方各执行；关=只执行权重高者              // ✅ 林地/礁岩隐蔽（AW规则）：无贴身敌人时藏于森林/礁岩不可见
     [Export] public bool canStealth = false;
     [Export] public bool stealthToggleCostsAction = true;    // 隐身/显形是否算独立操作：true=切换后待机；false=切换后仍可攻击移动                            // 可否隐身
     [Export] public bool isStealthed = false;                           // 运行时：当前是否隐身
@@ -2734,6 +2748,44 @@ public virtual void SetWaitVisual(bool waiting)
         _stealthIcon.Visible = isStealthed;
     }
 
+    // ==================== 截断遭遇裁决引擎 ====================
+    // 双方在截断点接触后的伤害仲裁：模式=伤害形状，权重=执行顺序，多次开关=是否全执行
+    public static void ResolveTruncationEncounter(Infantry mover, Infantry blocker, bool moverConsents, bool blockerConsents)
+    {
+        if (mover == null || blocker == null) return;
+        bool mW = moverConsents && mover.truncCounterEnabled;
+        bool bW = blockerConsents && blocker.truncAmbusherEnabled;
+        if (!mW && !bW) return;
+
+        var strikes = new System.Collections.Generic.List<(Infantry atk, Infantry def, bool counter)>();
+        // 移动方模式：1=主动出击(我单向打) 2=两败俱伤(互吃反击) 3=先发制人(对方先动手,我反击)
+        if (mW)
+        {
+            if (mover.truncCounterMode == 1) strikes.Add((mover, blocker, false));
+            else if (mover.truncCounterMode == 2) strikes.Add((mover, blocker, true));
+            else if (mover.truncCounterMode == 3) strikes.Add((blocker, mover, true));
+        }
+        // 阻挡方（伏击手）模式：1=主动出击 2=两败俱伤 3=反将被动(对方打我,我只反击)
+        if (bW)
+        {
+            if (blocker.truncAmbusherMode == 1) strikes.Add((blocker, mover, false));
+            else if (blocker.truncAmbusherMode == 2) strikes.Add((blocker, mover, true));
+            else if (blocker.truncAmbusherMode == 3) strikes.Add((mover, blocker, true));
+        }
+        if (strikes.Count == 0) return;
+
+        var exec = strikes;
+        if (strikes.Count > 1 && !mover.truncAllowMultiStrike && !blocker.truncAllowMultiStrike)
+        {
+            var first = strikes[0];   // 默认移动方
+            if (blocker.truncAmbusherWeight >= mover.truncStrikeWeight) first = strikes[strikes.Count - 1];  // 平权或更高=被截断方(伏击手)优先
+            if (mover.truncStrikeWeight > blocker.truncAmbusherWeight) first = strikes[0];                      // 移动方权重更高
+            exec = new System.Collections.Generic.List<(Infantry, Infantry, bool)> { first };
+        }
+        foreach (var s in exec)
+            s.atk.Attack(s.def, allowCounter: s.counter);   // 唯一战斗结算点：隐身门/反击门/阈值矩阵全自动
+    }
+
     // ==================== 隐身模块 ====================
     public void ToggleStealth()
     {
@@ -3299,7 +3351,7 @@ public virtual (int damage, string info) CalculateCounterPreview(Infantry attack
     return (damage, $"反击({counterWeapon}):{damage}");
 }
 
-public virtual void Attack(Infantry target)
+public virtual void Attack(Infantry target, bool allowCounter = true)
 {
         // ✅ 隐身攻击门：白名单外的单位打不了隐身目标（所有攻击路径的唯一闸门）
         if (!CanTargetStealth(this, target)) return;
@@ -3358,7 +3410,7 @@ public virtual void Attack(Infantry target)
         counterDamage = target.CalculateFinalDamage(this, counterWeapon, isCounter: true);
     }
         if (stealthRevealOnAttack) RevealStealth();   // ✅ 攻击后现形（先于反击结算：现形即暴露给反击）
-        if (!CanTargetStealth(target, this)) counterDamage = 0;   // ✅ 隐身反击门：防守方打不了隐身攻击者则不能反击（AW3规则）
+        if (!allowCounter || !CanTargetStealth(target, this)) counterDamage = 0;   // ✅ 反击门：单向打击(allowCounter=false)或打不了隐身者→不还手
     this.health -= counterDamage;
         if (counterDamage > 0) ApplyStealthRevealOnDamage(this);   // ✅ 反击也是单位攻击：攻击方受伤同样走受伤现形
         CheckStealthThresholds();   // ✅ 反击掉血后阈值矩阵重判
