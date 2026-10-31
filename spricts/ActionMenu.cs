@@ -19,6 +19,7 @@ public partial class ActionMenu : Control
     [Export] public Button illuminateButton; // ✅ 照明按钮
     [Export] public Button repairButton; // ✅ 修复按钮
     [Export] public Button stealthButton; // ✅ 隐身按钮
+    [Export] public Button scentButton; // ✅ 嗅探按钮
 
     [Export] public Button healButton; // ✅ Crystal 黑水晶治疗按钮
 
@@ -254,6 +255,14 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
 
         return null;
     }
+    public void OnScentPressed()
+    {
+        GetViewport().SetInputAsHandled();
+        if (currentUnit == null || currentWeapon != null) return;
+        currentUnit.ToggleScent();
+        Hide();
+    }
+
     public void OnStealthPressed()
     {
         GetViewport().SetInputAsHandled();
@@ -461,7 +470,7 @@ private void ShowTransportSelectionMenu(List<Infantry> transports)
         // 显示运输单位信息和距离
         int dist = Mathf.Abs(currentUnit.grid.GridIndex.X - transport.grid.GridIndex.X)
                  + Mathf.Abs(currentUnit.grid.GridIndex.Y - transport.grid.GridIndex.Y);
-        string transportType = transport.GetType().Name;
+        string transportType = transport.DisplayLabel;
         btn.Text = $"{transportType} ({TranslateGroup.T("距离")}:{dist}) HP:{Mathf.CeilToInt(transport.health/10f)}";
 
         // 捕获变量避免闭包问题
@@ -689,6 +698,7 @@ private List<Grids> GetAdjacentGrids(Grids center)
         explodeButton?.Hide();
         illuminateButton?.Hide();
         stealthButton?.Hide();
+        scentButton?.Hide();
         loadButton?.Hide();
         supplyButton.Visible = false;
 
@@ -819,7 +829,9 @@ private List<Grids> GetAdjacentGrids(Grids center)
         bool allowCaptureAfterMove = unit?.allowCaptureAfterMove ?? true;
 
         moveButton.Visible = !afterMove && !unit.isMoved && unit.CanMove();
-        captureButton.Visible = (canCapture || isCapturing) && !unit.isAttacked && (!unit.isMoved || allowCaptureAfterMove);
+        bool canTear = unit.CanTearCurrentGrid();
+        bool isTearing = unit.currentTearProgress > 0 && unit.tearingGrid == unit.grid;
+        captureButton.Visible = (canCapture || isCapturing || canTear || isTearing) && !unit.isAttacked && (!unit.isMoved || allowCaptureAfterMove);
         rotateButton?.Hide();
 
         waitButton.Visible = true;
@@ -868,13 +880,21 @@ private List<Grids> GetAdjacentGrids(Grids center)
             stealthButton = new Button();
             stealthButton.Pressed += OnStealthPressed;
             illuminateButton.GetParent().AddChild(stealthButton);
+            scentButton = new Button();
+            scentButton.Pressed += OnScentPressed;
+            illuminateButton.GetParent().AddChild(scentButton);
         }
         if (stealthButton != null)
         {
-            bool canToggleStealth = unit.canStealth && !unit.stealthFormLocked
+            bool canToggleStealth = unit.canStealth && !unit.IsStealthFormLocked
                 && (!unit.stealthToggleCostsAction || (!unit.hasActed && unit.state != UnitState.Acted));
             stealthButton.Visible = canToggleStealth;
             TranslateGroup.SetText(stealthButton, unit.isStealthed ? "显形" : "隐身");
+        }
+        if (scentButton != null)
+        {
+            scentButton.Visible = unit.scentEnabled && !unit.hasActed && unit.state != UnitState.Acted;
+            TranslateGroup.SetText(scentButton, "嗅探");
         }
 
         if (isCapturing)
@@ -1236,7 +1256,11 @@ private void OnSupplyPressed()
 
         try 
         {
-            currentUnit.PerformCapture();
+            // 拆旗分流：可拆旗且本格不可占领且无占领进度时，执行拆旗
+            if (currentUnit.canTearFlag && !currentUnit.CanCaptureCurrentGrid() && currentUnit.currentCaptureProgress <= 0)
+                currentUnit.PerformTearFlag();
+            else
+                currentUnit.PerformCapture();
             Hide();
 
             var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -1383,8 +1407,7 @@ private void OnSupplyPressed()
         infoText += $"{TranslateGroup.T("移动力")}: {currentUnit.movePoints}\n";
 
         // ✅ 从 UnitRegistry 读取单位显示名，零硬编码适配新单位
-        string unitType = UnitRegistry.Get(currentUnit.GetType().Name)?.DisplayName
-            ?? currentUnit.GetType().Name;
+        string unitType = currentUnit.DisplayLabel;
 
         infoText += $"{TranslateGroup.T("单位类型")}: {unitType}\n";
 
@@ -1414,8 +1437,7 @@ if (currentUnit.canTransportUnits && currentUnit.maxTransportCapacity > 0)
             if (transportedUnit != null && IsInstanceValid(transportedUnit))
             {
                 // ✅ 从 UnitRegistry 读取装载单位显示名
-                string loadedType = UnitRegistry.Get(transportedUnit.GetType().Name)?.DisplayName
-                    ?? transportedUnit.GetType().Name;
+                string loadedType = transportedUnit.DisplayLabel;
                 int hpBars = Mathf.CeilToInt(transportedUnit.health / 10f);
                 infoText += $"  • {transportedUnit.Name} ({loadedType}) HP:{hpBars}\n";
             }
@@ -2218,6 +2240,7 @@ else if (weapon is Laser laser)
             foreach (var grid in gm.gridManager.repairRange)
             {
                 grid.OnClickGrid = to => OnRepairTargetSelected(to);
+                gm.gridManager.OverrideUnitInput(grid, true);   // ✅ 点到有单位（含敌军）的格子也落到格子回调
             }
             // 范围外点击取消
             foreach (var grid in gm.gridManager.grids)
@@ -2252,22 +2275,27 @@ else if (weapon is Laser laser)
     private void OnRepairTargetSelected(Grids target)
     {
         if (target == null || currentUnit == null) return;
-        var repairBoat = currentUnit as RepairBoat;
-        if (repairBoat == null) return;
+        // ✅ 通用：任何开启修理模块的单位（此前强转 RepairBoat，其他单位点了无反应）
+        if (!currentUnit.CanPerformRepair) return;
 
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         if (gm == null) return;
 
-        // 找到目标格子上的友方单位
-        var targetUnit = target.infantries.FirstOrDefault(u => u != null && IsInstanceValid(u) && u != currentUnit && u.team == currentUnit.team);
+        // ✅ 按 repairTargetMode 选目标：0=所有 1=友方 2=敌方（扣血） 3=自己；多个时优先最残血
+        var targetUnit = target.infantries
+            .Where(u => u != null && IsInstanceValid(u) && currentUnit.IsRepairTargetAllowed(u))
+            .Where(u => Infantry.IsVisibleTo(u, currentUnit.team, gm.gridManager.grids))   // 看不见的隐身敌人不能被点中
+            .OrderBy(u => u.health)
+            .FirstOrDefault();
         if (targetUnit == null) return;
 
         // 执行修复
-        bool repaired = repairBoat.PerformRepair(targetUnit);
+        bool repaired = currentUnit.PerformRepair(targetUnit);
         if (!repaired) return;
 
         // 清理状态
         isRepairPreview = false;
+        RestoreRepairRangeInput(gm);
         gm.gridManager?.HideAttackRange(); // 修复范围使用 attackRangeIcon
 
         // 标记单位已行动
@@ -2282,6 +2310,13 @@ else if (weapon is Laser laser)
         Hide();
     }
 
+    private void RestoreRepairRangeInput(GameManager gm)
+    {
+        if (gm?.gridManager == null) return;
+        foreach (var grid in gm.gridManager.repairRange)
+            gm.gridManager.OverrideUnitInput(grid, false);
+    }
+
     public void CancelRepairPreview()
     {
         if (isProcessingRepair) return;
@@ -2289,6 +2324,7 @@ else if (weapon is Laser laser)
         {
             isRepairPreview = false;
             var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+            RestoreRepairRangeInput(gm);
             gm?.gridManager?.HideAttackRange(); // 修复范围使用 attackRangeIcon
 
             // 恢复按钮状态
