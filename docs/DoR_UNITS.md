@@ -49,5 +49,5 @@ DoR 里 WarTank 是最强坦克，造价 16000；但和 DS 的巨型坦克（280
 
 | 设施 | 原作规则 | 本作 | 来源 |
 |---|---|---|---|
-| 临时机场 | 工程车搭建，只能建在平原；无收入、不能生产；只能维修补给停在里面的单位；防御 1 星 | 平原限定、收入 0、不生产；贴图沿用机场 | [Wars Wiki: Temporary Airport](https://warswiki.org/wiki/Temporary_Airport) |
-| 临时港口 | 工程车搭建；无收入、不能生产；防御 1 星 | 海滩限定、收入 0、不生产；贴图沿用港口 | [Wars Wiki: Temporary Port](https://warswiki.org/wiki/Temporary_Port) |
+| 临时机场 | 工程车搭建，只能建在平原；无收入、不能生产；只能维修补给停在里面的单位；防御 1 星 | 平原限定、收入 0、不生产；贴图为 DoR 原作临时机场（从 `docs/DS _ DSi - Advance Wars_ Days of Ruin - Map - Tileset (Normal).png` 截取，灯亮/灯灭两帧） | [Wars Wiki: Temporary Airport](https://warswiki.org/wiki/Temporary_Airport) |
+| 临时港口 | 工程车搭建；无收入、不能生产；防御 1 星 | 海滩限定、收入 0、不生产；贴图为 DoR 原作临时港口（红/蓝用 `docs/TemporaryPort*.png`，中立从同一张 Tileset 截取） | [Wars Wiki: Temporary Port](https://warswiki.org/wiki/Temporary_Port) |

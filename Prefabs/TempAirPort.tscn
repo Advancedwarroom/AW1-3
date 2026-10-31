@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://spricts/TempAirPort.cs" id="1_kxu4x"]
-[ext_resource type="SpriteFrames" uid="uid://nck2ejarqrer" path="res://asscets/AnimatedSprite/Airport.tres" id="2_kxu4x"]
+[ext_resource type="SpriteFrames" path="res://asscets/AnimatedSprite/TempAirport.tres" id="2_kxu4x"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_bx6pw"]
 size = Vector2(33, 33)
@@ -20,6 +20,6 @@ shape = SubResource("RectangleShape2D_bx6pw")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1513004313]
 position = Vector2(16, 16)
-scale = Vector2(0.99999994, 0.9166667)
+scale = Vector2(1.3333334, 1.3333334)
 sprite_frames = ExtResource("2_kxu4x")
-animation = &"airportteam2"
+animation = &"P0AirPort"
