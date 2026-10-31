@@ -40,6 +40,18 @@ public partial class Crystal : Weapon
     // --- Flare 弹补给 ---
     [Export] public int crystalSupplyFlareAmmo = 0;
     [Export] public Godot.Collections.Array<string> crystalSupplyFlareSupportedTypes = new();
+    [Export] public int crystalSupplyStealthBulletAmmo = 0;   // ✅ 8弹药：补给隐身弹
+    [Export] public bool crystalSupplyStealthBulletCanOverMax = false;
+    [Export] public int crystalSupplyStealthBulletMaxCap = 0;
+    [Export] public Godot.Collections.Array<string> crystalSupplyStealthBulletSupportedTypes = new();
+    [Export] public int crystalSupplyRevealBulletAmmo = 0;    // ✅ 补给显形弹
+    [Export] public bool crystalSupplyRevealBulletCanOverMax = false;
+    [Export] public int crystalSupplyRevealBulletMaxCap = 0;
+    [Export] public Godot.Collections.Array<string> crystalSupplyRevealBulletSupportedTypes = new();
+    [Export] public int crystalSupplyCamoBulletAmmo = 0;      // ✅ 补给迷彩弹
+    [Export] public bool crystalSupplyCamoBulletCanOverMax = false;
+    [Export] public int crystalSupplyCamoBulletMaxCap = 0;
+    [Export] public Godot.Collections.Array<string> crystalSupplyCamoBulletSupportedTypes = new();
     [Export] public bool crystalSupplyFlareCanOverMax = false;
     [Export] public int crystalSupplyFlareMaxCap = 999;
 
@@ -403,6 +415,39 @@ public partial class Crystal : Weapon
                 if (newVal != old) { unit.currentPrimaryAmmo = newVal; anySupplied = true; supplyParts.Add("Ammo+"); }
             }
         }
+        // ✅ 隐身弹
+        if (crystalSupplyStealthBulletAmmo != 0 && unit.canStealth)
+        {
+            if (crystalSupplyStealthBulletSupportedTypes.Count == 0 || crystalSupplyStealthBulletSupportedTypes.Contains(unit.UnitTypeId))
+            {
+                int old = unit.currentStealthBullets;
+                int newVal = ApplySupply(unit.currentStealthBullets, unit.maxStealthBullets, crystalSupplyStealthBulletAmmo,
+                    crystalSupplyStealthBulletCanOverMax, crystalSupplyStealthBulletMaxCap);
+                if (newVal != old) { unit.currentStealthBullets = newVal; anySupplied = true; supplyParts.Add("Stealth+"); }
+            }
+        }
+        // 显形弹
+        if (crystalSupplyRevealBulletAmmo != 0 && unit.canStealth)
+        {
+            if (crystalSupplyRevealBulletSupportedTypes.Count == 0 || crystalSupplyRevealBulletSupportedTypes.Contains(unit.UnitTypeId))
+            {
+                int old = unit.currentRevealBullets;
+                int newVal = ApplySupply(unit.currentRevealBullets, unit.maxRevealBullets, crystalSupplyRevealBulletAmmo,
+                    crystalSupplyRevealBulletCanOverMax, crystalSupplyRevealBulletMaxCap);
+                if (newVal != old) { unit.currentRevealBullets = newVal; anySupplied = true; supplyParts.Add("Reveal+"); }
+            }
+        }
+        // 迷彩弹
+        if (crystalSupplyCamoBulletAmmo != 0 && unit.canStealth)
+        {
+            if (crystalSupplyCamoBulletSupportedTypes.Count == 0 || crystalSupplyCamoBulletSupportedTypes.Contains(unit.UnitTypeId))
+            {
+                int old = unit.currentCamoBullets;
+                int newVal = ApplySupply(unit.currentCamoBullets, unit.maxCamoBullets, crystalSupplyCamoBulletAmmo,
+                    crystalSupplyCamoBulletCanOverMax, crystalSupplyCamoBulletMaxCap);
+                if (newVal != old) { unit.currentCamoBullets = newVal; anySupplied = true; supplyParts.Add("Camo+"); }
+            }
+        }
         // 燃料
         if (crystalSupplyFuel != 0 && unit.consumeFuel)
         {
@@ -430,13 +475,11 @@ public partial class Crystal : Weapon
         var supplyParts = new List<string>();
         Color supplyColor = new Color(0.2f, 0.9f, 0.9f);
 
-        // 兵器只有主弹药系统
-        if (crystalSupplyPrimaryAmmo != 0)
+        // ✅ 兵器全弹种补给（数量策略尊重兵器自身补给白/黑名单——"只给迷彩弹"在兵器侧配置）
+        if (crystalSupplyPrimaryAmmo != 0 && weapon.ResupplyAllAmmoTypes())
         {
-            int old = weapon.currentAmmo;
-            int newVal = ApplySupply(weapon.currentAmmo, weapon.maxAmmo, crystalSupplyPrimaryAmmo,
-                crystalSupplyPrimaryCanOverMax, crystalSupplyPrimaryMaxCap);
-            if (newVal != old) { weapon.currentAmmo = newVal; anySupplied = true; supplyParts.Add("Ammo+"); }
+            anySupplied = true;
+            supplyParts.Add("Ammo+");
         }
 
         if (anySupplied)

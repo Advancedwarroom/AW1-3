@@ -35,6 +35,18 @@ public partial class Weapon : Node2D
     [Export] public int currentAmmo = 0;
     [Export] public int maxAmmo = 0;
 
+    [ExportGroup("弹药系统")]
+    // ✅ 8弹药适配：旧池(useAmmoSystem/currentAmmo/maxAmmo)=普通弹；新增五弹仓(0=关闭)
+    [Export] public int fireConsumesAmmoType = 0;      // 0=自动(旧useAmmoSystem→普通弹1发/否则不耗) 1=普通 2=自爆 3=照明 4=隐身弹 5=显形弹 6=迷彩弹
+    [Export] public int fireConsumesAmmoAmount = 1;    // 每次开火消耗数量
+    [Export] public int wExplodeMax = 0, wExplodeCurrent = 0;
+    [Export] public int wFlareMax = 0, wFlareCurrent = 0;
+    [Export] public int wStealthBulletMax = 0, wStealthBulletCurrent = 0;
+    [Export] public int wRevealBulletMax = 0, wRevealBulletCurrent = 0;
+    [Export] public int wCamoBulletMax = 0, wCamoBulletCurrent = 0;
+    [Export] public string[] resupplyWhitelist = System.Array.Empty<string>();  // 允许补给的弹种: primary/explode/flare/stealth/reveal/camo（空=全允许）
+    [Export] public string[] resupplyBlacklist = System.Array.Empty<string>();
+
     // ========== ✅ 战争迷雾视野系统 ==========
     [ExportGroup("战争迷雾视野")]
     [Export] public int visionRange = -1;
@@ -276,9 +288,84 @@ public partial class Weapon : Node2D
     public virtual bool ResupplyAmmo()
     {
         if (!useAmmoSystem) return false;
+        if (!ResupplyAllowed("primary")) return false;
         if (currentAmmo >= maxAmmo) return false;
         currentAmmo = maxAmmo;
         return true;
+    }
+
+    // ===== ✅ 8弹药系统工具族 =====
+    public int GetAmmoByType(int type) => type switch
+    {
+        1 => currentAmmo,
+        2 => wExplodeCurrent,
+        3 => wFlareCurrent,
+        4 => wStealthBulletCurrent,
+        5 => wRevealBulletCurrent,
+        6 => wCamoBulletCurrent,
+        _ => 0,
+    };
+
+    public int GetAmmoMaxByType(int type) => type switch
+    {
+        1 => maxAmmo,
+        2 => wExplodeMax,
+        3 => wFlareMax,
+        4 => wStealthBulletMax,
+        5 => wRevealBulletMax,
+        6 => wCamoBulletMax,
+        _ => 0,
+    };
+
+    public void SetAmmoByType(int type, int value)
+    {
+        switch (type)
+        {
+            case 1: currentAmmo = value; break;
+            case 2: wExplodeCurrent = value; break;
+            case 3: wFlareCurrent = value; break;
+            case 4: wStealthBulletCurrent = value; break;
+            case 5: wRevealBulletCurrent = value; break;
+            case 6: wCamoBulletCurrent = value; break;
+        }
+    }
+
+    // 开火弹药许可（type=0 自动：旧useAmmoSystem→普通弹1发；否则不耗）
+    public bool HasFireAmmo()
+    {
+        int type = fireConsumesAmmoType, amount = Mathf.Max(1, fireConsumesAmmoAmount);
+        if (type == 0) { if (!useAmmoSystem) return true; type = 1; amount = 1; }
+        return GetAmmoByType(type) >= amount;
+    }
+
+    // 开火消耗弹药（false=弹尽，拒绝开火）
+    public bool ConsumeFireAmmo()
+    {
+        int type = fireConsumesAmmoType, amount = Mathf.Max(1, fireConsumesAmmoAmount);
+        if (type == 0) { if (!useAmmoSystem) return true; type = 1; amount = 1; }
+        if (GetAmmoByType(type) < amount) return false;
+        SetAmmoByType(type, GetAmmoByType(type) - amount);
+        return true;
+    }
+
+    // 补给白/黑名单：白名单空=全允许；否则须在名单内且不在黑名单
+    public bool ResupplyAllowed(string key)
+    {
+        if (resupplyBlacklist != null && System.Array.IndexOf(resupplyBlacklist, key) >= 0) return false;
+        return resupplyWhitelist == null || resupplyWhitelist.Length == 0 || System.Array.IndexOf(resupplyWhitelist, key) >= 0;
+    }
+
+    // 全弹种补给（尊重白/黑名单），返回是否有实际补给
+    public bool ResupplyAllAmmoTypes()
+    {
+        bool any = false;
+        if (useAmmoSystem && ResupplyAllowed("primary") && currentAmmo < maxAmmo) { currentAmmo = maxAmmo; any = true; }
+        if (ResupplyAllowed("explode") && wExplodeCurrent < wExplodeMax) { wExplodeCurrent = wExplodeMax; any = true; }
+        if (ResupplyAllowed("flare") && wFlareCurrent < wFlareMax) { wFlareCurrent = wFlareMax; any = true; }
+        if (ResupplyAllowed("stealth") && wStealthBulletCurrent < wStealthBulletMax) { wStealthBulletCurrent = wStealthBulletMax; any = true; }
+        if (ResupplyAllowed("reveal") && wRevealBulletCurrent < wRevealBulletMax) { wRevealBulletCurrent = wRevealBulletMax; any = true; }
+        if (ResupplyAllowed("camo") && wCamoBulletCurrent < wCamoBulletMax) { wCamoBulletCurrent = wCamoBulletMax; any = true; }
+        return any;
     }
 
     public virtual void TakeDamage(int damage)

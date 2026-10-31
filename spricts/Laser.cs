@@ -907,12 +907,8 @@ public partial class Laser : Weapon
     private void AIExecuteGlobalAttack(List<LaserTargetInfo> targets)
     {
         if (!IsInstanceValid(this)) return;
-        if (useAmmoSystem)
-        {
-            if (currentAmmo <= 0) return;
-            currentAmmo--;
-            UpdateAmmoVisual();
-        }
+        if (!ConsumeFireAmmo()) return;   // ✅ 8弹药：支持任意弹种消耗映射
+        if (useAmmoSystem) UpdateAmmoVisual();
         if (useCooldownSystem)
         {
             attacksRemainingInCycle--;
@@ -1082,7 +1078,7 @@ public partial class Laser : Weapon
 
     public bool HasAmmoAndCooldown()
     {
-        if (useAmmoSystem && currentAmmo <= 0) return false;
+        if (!HasFireAmmo()) return false;
         if (useCooldownSystem && !cooldownReady) return false;
         if (useCooldownSystem && attacksRemainingInCycle <= 0) return false;
         return true;
@@ -1090,18 +1086,14 @@ public partial class Laser : Weapon
 
     public bool ConsumeAmmo()
     {
-        if (!useAmmoSystem) return true;
-        if (currentAmmo <= 0) return false;
-        currentAmmo--;
+        if (!ConsumeFireAmmo()) return false;
         UpdateAmmoVisual();
         return true;
     }
 
     public override bool ResupplyAmmo()
     {
-        if (!useAmmoSystem) return false;
-        if (currentAmmo >= maxAmmo) return false;
-        currentAmmo = maxAmmo;
+        if (!base.ResupplyAmmo()) return false;   // ✅ 基类处理白名单+旧池
         UpdateAmmoVisual();
         return true;
     }
