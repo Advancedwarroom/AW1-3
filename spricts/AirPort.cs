@@ -40,32 +40,6 @@ public partial class AirPort : City
         UpdateCityVisual();
     }
 
-    public override void UpdateCityVisual()
-    {
-        if (animSprite == null) return;
-
-        string animName = facilityTeam switch
-        {
-            "Player1" => "airportteam1",
-            "Player2" => "airportteam2",
-            "Player0" => "P0AirPort",
-            "Player" => "airportteam1",
-            _ => "P0AirPort"
-        };
-
-        if (animSprite.SpriteFrames.HasAnimation(animName))
-        {
-            animSprite.Play(animName);
-        }
-        else if (animSprite.SpriteFrames.HasAnimation("P0AirPort"))
-        {
-            animSprite.Play("P0AirPort");
-        }
-
-        Color tint = (facilityTeam == TeamHelper.Player)
-            ? TeamHelper.GetTeamColor(facilityTeam)
-            : Colors.White;
-        animSprite.Modulate = tint;
-
-    }
+    protected override (string neutral, string red, string blue)? GetTeamAnimNames()
+        => ("P0AirPort", "airportteam1", "airportteam2");
 }

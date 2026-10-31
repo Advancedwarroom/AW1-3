@@ -33,23 +33,26 @@ public partial class TranslateGroup : Node
 
         InitializeLanguageMaps();
         InitializeTranslations();
+        InitEngine(); // 词条合并 + 索引 + 注册到 Godot TranslationServer
 
-        if (AutoDetectLanguage)
+        // 优先使用玩家上次手动选择的语言，其次自动检测
+        if (!LoadSavedLanguage() && AutoDetectLanguage)
         {
             DetectSystemLanguage();
         }
+        ApplyLocale();
 
         // AutoLoad 时创建 CanvasLayer 承载 UI，确保按钮能显示在最上层
         uiLayer = new CanvasLayer();
         uiLayer.Name = "TranslateGroupUI";
         uiLayer.Layer = 100; // 最上层
+        uiLayer.AutoTranslateMode = AutoTranslateModeEnum.Disabled; // 语言名称本身不参与翻译
         AddChild(uiLayer);
 
         CreateLanguageButton();
         CreateLanguagePanel();
 
         GD.Print($"[TranslateGroup] Language initialized: {GetLanguageDisplayName(CurrentLanguage)}");
-        RefreshAllUI(); // 初始扫描翻译场景树中所有中文文本
     }
 
     // ==================== 系统语言检测 ====================
@@ -76,33 +79,35 @@ public partial class TranslateGroup : Node
     public string Get(string key)
     {
         if (string.IsNullOrEmpty(key)) return "";
-        if (translations.TryGetValue(key, out var langDict))
-        {
-            if (langDict.TryGetValue(CurrentLanguage, out string translated))
-                return translated;
-            if (langDict.TryGetValue(GameLanguage.English, out string english))
-                return english;
-            if (langDict.TryGetValue(GameLanguage.SimplifiedChinese, out string chinese))
-                return chinese;
-        }
-        return key;
+        return Translate(key, CurrentLanguage);
     }
 
     public string GetF(string key, params object[] args)
     {
-        string format = Get(key);
-        try { return string.Format(format, args); }
-        catch { return format; }
+        // 精确键：先译格式串再代入；否则先代入再整体翻译（走模式/分词）
+        if (translations != null && translations.ContainsKey(key))
+        {
+            string format = Get(key);
+            try { return string.Format(format, args); }
+            catch { return format; }
+        }
+        string raw;
+        try { raw = string.Format(key, args); }
+        catch { raw = key; }
+        return Get(raw);
     }
 
-public void SetLanguage(GameLanguage lang)
-{
-    CurrentLanguage = lang;
-    UpdateLangButtonText();
-    GD.Print($"[TranslateGroup] Switched to: {GetLanguageDisplayName(lang)}");
-    EmitSignal(SignalName.LanguageChanged, (int)lang);
-    RefreshAllRegistered(); // ← 加这行！
-}
+    public void SetLanguage(GameLanguage lang)
+    {
+        CurrentLanguage = lang;
+        UpdateLangButtonText();
+        GD.Print($"[TranslateGroup] Switched to: {GetLanguageDisplayName(lang)}");
+        ApplyLocale();          // 引擎自动重译所有 auto_translate 控件（含代码后设的文本/提示/菜单项）
+        SaveLanguage();         // 记住选择
+        SaveMissingReport();
+        RefreshAllRegistered(); // SetText 注册的控件（含格式化参数）重新生成
+        EmitSignal(SignalName.LanguageChanged, (int)lang);
+    }
 
     public string GetLanguageDisplayName(GameLanguage lang)
     {

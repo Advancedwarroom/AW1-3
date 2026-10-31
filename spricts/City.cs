@@ -12,6 +12,9 @@ public partial class City : Facility
         "Neotank", "Megatank", "WarTank", "Rig"
     };
 
+    protected override (string neutral, string red, string blue)? GetTeamAnimNames()
+        => ("P0City", "cityteam1", "cityteam2");
+
     public override void _Ready()
     {
         base._Ready();

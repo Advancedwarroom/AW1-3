@@ -21,5 +21,5 @@ void fragment() {
     vec4 replaced = texture(palette, vec2(index, 0.0));
     
     // 应用色调乘数（待机变暗等）
-    COLOR = vec4(replaced.rgb * tone.rgb, tex.a);
+    COLOR = vec4(replaced.rgb * tone.rgb, tex.a * COLOR.a); // 继承 Modulate 透明度
 }

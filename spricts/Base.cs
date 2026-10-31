@@ -3,6 +3,9 @@ using System;
 
 public partial class Base : City
 {
+    protected override (string neutral, string red, string blue)? GetTeamAnimNames()
+        => ("P0Base", "baseteam1", "baseteam2");
+
     public override void _Ready()
     {
         base._Ready();

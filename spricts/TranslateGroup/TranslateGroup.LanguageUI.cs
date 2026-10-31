@@ -213,58 +213,13 @@ private void RefreshAllRegistered()
     }
 }
 
-// 遍历整个场景树，自动翻译所有包含中文的控件
+// 强制整棵场景树重新翻译（一般无需调用：SetLanguage 切换 locale 时引擎会自动通知）
+// 旧实现会把 tr_key 元数据写回文本，覆盖代码后来动态设置的内容，已废弃。
 public void RefreshAllUI()
 {
     var tree = GetTree();
     if (tree == null) return;
-    RefreshNode(tree.Root);
-}
-
-private void RefreshNode(Node node)
-{
-    // Label
-    if (node is Label lbl)
-    {
-        string key = lbl.HasMeta("tr_key") ? (string)lbl.GetMeta("tr_key") : lbl.Text;
-        if (!lbl.HasMeta("tr_key") && ContainsChinese(key))
-            lbl.SetMeta("tr_key", key);
-        
-        if (lbl.HasMeta("tr_key"))
-            lbl.Text = Get((string)lbl.GetMeta("tr_key"));
-    }
-    // Button
-    else if (node is Button btn)
-    {
-        string key = btn.HasMeta("tr_key") ? (string)btn.GetMeta("tr_key") : btn.Text;
-        if (!btn.HasMeta("tr_key") && ContainsChinese(key))
-            btn.SetMeta("tr_key", key);
-        
-        if (btn.HasMeta("tr_key"))
-            btn.Text = Get((string)btn.GetMeta("tr_key"));
-    }
-    // RichTextLabel
-    else if (node is RichTextLabel rtl)
-    {
-        string key = rtl.HasMeta("tr_key") ? (string)rtl.GetMeta("tr_key") : rtl.Text;
-        if (!rtl.HasMeta("tr_key") && ContainsChinese(key))
-            rtl.SetMeta("tr_key", key);
-        
-        if (rtl.HasMeta("tr_key"))
-            rtl.Text = Get((string)rtl.GetMeta("tr_key"));
-    }
-    
-    // 递归子节点
-    foreach (Node child in node.GetChildren())
-        RefreshNode(child);
-}
-
-private bool ContainsChinese(string text)
-{
-    if (string.IsNullOrEmpty(text)) return false;
-    foreach (char c in text)
-        if (c >= '\u4e00' && c <= '\u9fff') return true;
-    return false;
+    tree.Root.PropagateNotification((int)NotificationTranslationChanged);
 }
 
 // 静态快捷方法：带格式化参数

@@ -396,7 +396,27 @@ public partial class Facility : Node2D
 
     public virtual void UpdateCityVisual()
     {
+        PlayTeamAnimation();
         ApplyPaletteMaterial();
+    }
+
+    /// <summary>
+    /// 各设施的三套原版动画名：中立 / 红色模板(P1) / 蓝色模板(P2)。返回 null 表示单套贴图不切换。
+    /// 其它势力（P-1、P3…P100）一律使用红色模板动画，由调色板 Shader 按势力主色染色。
+    /// </summary>
+    protected virtual (string neutral, string red, string blue)? GetTeamAnimNames() => null;
+
+    protected void PlayTeamAnimation()
+    {
+        var names = GetTeamAnimNames();
+        if (names == null || animSprite == null || !IsInstanceValid(animSprite) || animSprite.SpriteFrames == null) return;
+        var (neutral, red, blue) = names.Value;
+        string anim = TeamHelper.PickTeamArt(facilityTeam, neutral, red, blue);
+        var frames = animSprite.SpriteFrames;
+        if (!frames.HasAnimation(anim)) anim = frames.HasAnimation(red) ? red : neutral;
+        if (!frames.HasAnimation(anim)) return;
+        if (animSprite.Animation != anim || !animSprite.IsPlaying()) animSprite.Play(anim);
+        animSprite.Modulate = Colors.White; // 旧版 P-1 用 Modulate 染色，现统一由 Shader 处理
     }
     
     /// <summary>

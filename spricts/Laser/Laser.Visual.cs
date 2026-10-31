@@ -14,10 +14,16 @@ public partial class Laser
 
     // ========== 视觉更新 ==========
 
+    public override void RefreshTeamVisual()
+    {
+        base.RefreshTeamVisual();
+        UpdateLaserVisual();
+    }
+
     public void UpdateLaserVisual()
     {
         if (_animSprite == null) return;
-        string animPrefix = team == "Player2" ? "Laser2" : "Laser1";
+        string animPrefix = "Laser" + TeamHelper.ArtSuffix(team);
         string animName = animPrefix;
         if (!HasAmmoAndCooldown())
             animName += "_disabled";

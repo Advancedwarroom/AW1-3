@@ -207,9 +207,15 @@ public override void _Ready()
         
     }
 
+    public override void RefreshTeamVisual()
+    {
+        base.RefreshTeamVisual();
+        UpdateDirectionVisual();
+    }
+
     protected virtual string GetAnimName()
     {
-        string teamPrefix = team == "Player2" ? "cannon2" : "cannon1";
+        string teamPrefix = "cannon" + TeamHelper.ArtSuffix(team);
         string dirSuffix = direction switch
         {
             CannonDirection.Up    => "up",

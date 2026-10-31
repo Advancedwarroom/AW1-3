@@ -154,8 +154,32 @@ public static class FactionPaletteManager
         return texture;
     }
 
+    // 原版贴图自带的势力色（与之相同则直接显示原图，像素级保真）
+    public static readonly Color NativeRedArtColor = new Color(1f, 0.2f, 0.2f);
+    public static readonly Color NativeBlueArtColor = new Color(0.2f, 0.4f, 1f);
+
+    /// <summary>该势力使用哪套原版贴图作为染色模板：P2 → 蓝色模板，其余 → 红色模板</summary>
+    public static bool UsesBlueTemplate(string factionId) => factionId == TeamHelper.Player2;
+
     /// <summary>
-    /// 获取势力的 ShaderMaterial（兼容模式：红→主色, 蓝→副色）
+    /// 该势力是否可直接显示原版贴图（P1/P2 主色未改动时）。
+    /// P0 不直出：中立设施贴图本身无红色模板像素（实测 0 像素被染），而借用红色贴图的中立单位/兵器会被染成中立灰。
+    /// </summary>
+    public static bool IsNativeArt(string factionId, FactionConfig faction)
+    {
+        if (faction == null) return false;
+        if (factionId == TeamHelper.Player1) return ColorClose(faction.PrimaryColor, NativeRedArtColor);
+        if (factionId == TeamHelper.Player2) return ColorClose(faction.PrimaryColor, NativeBlueArtColor);
+        return false;
+    }
+
+    private static bool ColorClose(Color a, Color b) =>
+        Mathf.Abs(a.R - b.R) < 0.02f && Mathf.Abs(a.G - b.G) < 0.02f && Mathf.Abs(a.B - b.B) < 0.02f;
+
+    /// <summary>
+    /// 获取势力的 ShaderMaterial（模板色表模式，参照 Commander Wars color table）
+    /// 以红/蓝原版贴图为模板，模板色相带内像素按亮度阶梯映射为「暗部→势力主色→高光」，
+    /// 肤色等红蓝贴图共享色不染。P1/P2 未改色时直出原图。
     /// </summary>
     public static ShaderMaterial GetMaterial(string factionId)
     {
@@ -167,10 +191,15 @@ public static class FactionPaletteManager
         mat = new ShaderMaterial();
         mat.Shader = PaletteShader;
         
-        // 兼容模式：mode=1（红蓝自动检测替换）
-        mat.SetShaderParameter("mode", 1);
-        mat.SetShaderParameter("enabled", true);
+        bool blue = UsesBlueTemplate(factionId);
+        mat.SetShaderParameter("mode", 2);
+        mat.SetShaderParameter("enabled", !IsNativeArt(factionId, faction));
         mat.SetShaderParameter("tone", new Color(1, 1, 1, 1));
+        mat.SetShaderParameter("template_side", blue ? 1 : 0);
+        // 亮度阶梯取自原版贴图统计：红 (128,0,16)/(240,0,8)/(248,184,120)，蓝 (0,24,168)/(0,104,232)/(184,240,248)
+        mat.SetShaderParameter("tpl_dark", blue ? 0.13f : 0.15f);
+        mat.SetShaderParameter("tpl_mid", blue ? 0.40f : 0.28f);
+        mat.SetShaderParameter("tpl_light", blue ? 0.90f : 0.80f);
         
         // 设置势力颜色
         mat.SetShaderParameter("primary_color", faction.PrimaryColor);
@@ -178,6 +207,27 @@ public static class FactionPaletteManager
         
         Materials[factionId] = mat;
         return mat;
+    }
+
+    /// <summary>
+    /// 势力配置修改后即时刷新场景中所有单位/设施/兵器的颜色（无需重启场景）
+    /// </summary>
+    public static void RefreshAllVisuals(Node root)
+    {
+        if (root == null || !GodotObject.IsInstanceValid(root)) return;
+        ClearCache();
+        RefreshRecursive(root);
+    }
+
+    private static void RefreshRecursive(Node node)
+    {
+        switch (node)
+        {
+            case Infantry inf: inf.UpdateTeamVisual(); break;
+            case Facility fac: fac.UpdateCityVisual(); break;
+            case Weapon w: w.RefreshTeamVisual(); break;
+        }
+        foreach (var child in node.GetChildren()) RefreshRecursive(child);
     }
     
     /// <summary>
@@ -441,6 +491,19 @@ public static class TeamHelper
     }
     
     // ========== 颜色（动态查询）==========
+    /// <summary>
+    /// 按势力选择原版贴图套：P0 → 中立，P2 → 蓝色，其余（P1、P-1、P3…P100）→ 红色模板（由 Shader 染成势力主色）
+    /// </summary>
+    public static string PickTeamArt(string team, string neutral, string red, string blue)
+    {
+        if (team == Player0) return neutral;
+        if (team == Player2) return blue;
+        return red;
+    }
+
+    /// <summary>原版贴图套编号：P2 → "2"，其余 → "1"</summary>
+    public static string ArtSuffix(string team) => team == Player2 ? "2" : "1";
+
     public static Color GetTeamColor(string team)
     {
         var f = GetFaction(team);

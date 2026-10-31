@@ -79,6 +79,13 @@ public partial class UnloadUnitButton : Control
         if (unitAnim != null)
         {
             unitAnim.SpriteFrames = sourceAnim.SpriteFrames;
+            // 复制单位的势力调色板材质，使卸载菜单图标与地图上的单位同色（含新增势力）
+            if (sourceAnim.Material is ShaderMaterial srcMat)
+            {
+                var um = (ShaderMaterial)srcMat.Duplicate();
+                um.SetShaderParameter("tone", new Color(1, 1, 1, 1));
+                unitAnim.Material = um;
+            }
             
             // 确定播放哪个动画
             string animToPlay = GetAnimationName(targetUnit);
@@ -159,7 +166,7 @@ public partial class UnloadUnitButton : Control
     // 根据单位类型获取默认动画名
     private string GetAnimationName(Infantry u)
     {
-        string teamSuffix = u.team == "Player2" ? "2" : "1";
+        string teamSuffix = TeamHelper.ArtSuffix(u.team);
         
         return u switch
         {
