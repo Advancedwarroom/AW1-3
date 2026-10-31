@@ -26,6 +26,7 @@ public partial class GridManager : Node
     // ========== ✅ 移动端触摸轨迹预览状态 ==========
     private bool isMobilePlatform = false;
     private bool touchPathActive = false;
+    private System.Collections.Generic.List<Grids> touchPathGrids;   // ✅ 手画路径航点
     private int activeTouchCount = 0;
     private Grids touchHoverGrid = null;
 
@@ -96,9 +97,13 @@ public partial class GridManager : Node
                 var target = touchHoverGrid;
                 touchHoverGrid = null;
                 ClearPathPreview();
-                // 松手确认：复用 SetupMoveRangeCallbacks 分配的现有点击回调（移动/截断/范围外回退）
+                // ✅ 手画路径优先：有航点按航点执行（路径路程计费/绕圈合法/截断于阻挡）
+                var drawn = touchPathGrids;
+                touchPathGrids = null;
                 if (moveRangeActive && target != null)
                 {
+                    if (drawn != null && drawn.Count > 0 && HandleDrawnPath(drawn))
+                        return;
                     if (target.OnClickGrid != null) target.OnClickGrid.Invoke(target);
                     else target.OnClickEmpty?.Invoke();
                 }
@@ -118,7 +123,13 @@ public partial class GridManager : Node
         var grid = ScreenPosToGrid(screenPos);
         touchHoverGrid = grid;
         if (grid != null && moveRange.Contains(grid))
+        {
             OnMouseEnteredGrid(grid);
+            // ✅ 记录手画航点（去重、断链容忍，校验在松手时）
+            if (touchPathGrids == null) touchPathGrids = new System.Collections.Generic.List<Grids>();
+            if (touchPathGrids.Count == 0 || touchPathGrids[touchPathGrids.Count - 1] != grid)
+                touchPathGrids.Add(grid);
+        }
         else
             ClearPathPreview();
     }
@@ -1284,9 +1295,42 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
     }
 
-    public void MoveTo(Infantry infantry, Grids to, bool showMenu = true)
+    // ✅ 手画路径执行：路径路程计费、绕圈合法、终点≠起点、截断于路上单位（可见判定，隐形标准直通雾战）
+    private bool HandleDrawnPath(System.Collections.Generic.List<Grids> waypoints)
+    {
+        if (selectedUnit == null || waypoints == null) return false;
+        var infantry = selectedUnit;
+        int budget = infantry.movePoints;
+        var valid = new System.Collections.Generic.List<Grids>();
+        int spent = 0;
+        Grids prev = infantry.grid;
+        foreach (var wp in waypoints)
+        {
+            if (wp == null || wp == prev) continue;
+            // 终点=起点：本回合拒绝绕回原格
+            if (wp == infantry.grid) break;
+            int dist = Mathf.Abs(wp.GridIndex.X - prev.GridIndex.X) + Mathf.Abs(wp.GridIndex.Y - prev.GridIndex.Y);
+            if (dist != 1) break;   // 断链（快速滑动跳格）
+            int c = GetActualMoveCost(infantry, wp.gridType);
+            // 路上有单位即截断（可见判定——隐形的存在不截断、不泄漏，雾战同标准）
+            if (wp.infantries.Any(u => u != null && u != infantry && Infantry.IsVisibleTo(u, infantry.team, grids)))
+                break;
+            if (spent + c > budget) break;
+            spent += c;
+            valid.Add(wp);
+            prev = wp;
+        }
+        if (valid.Count == 0) return false;
+        var dest = valid[valid.Count - 1];
+        if (dest == infantry.grid) return false;
+        MoveTo(infantry, dest, showMenu: true, forcedPath: valid);
+        return true;
+    }
+
+    public void MoveTo(Infantry infantry, Grids to, bool showMenu = true, System.Collections.Generic.List<Grids> forcedPath = null)
     {
         if (infantry == null || to == null) return;
+        // ✅ forcedPath：手画路径模式——路程/绕圈以画线为准，不再重算最短路径
 
         if (infantry.overlapType == UnitOverlapType.NonOverlapping)
         {
@@ -1316,8 +1360,9 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             to.infantry = null;
         }
 
-        var path = BuildPath(infantry.grid, to, infantry);
-        if (path.Count == 0) return;
+        var path = forcedPath ?? BuildPath(infantry.grid, to, infantry);
+        if (path == null || path.Count == 0) return;
+        if (forcedPath != null && path[path.Count - 1] != to) return;   // 手画路径必须终于目标格
 
         int totalMoveCost = 0;
         int totalFuelCost = 0;
