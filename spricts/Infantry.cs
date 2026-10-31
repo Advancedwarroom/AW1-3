@@ -128,6 +128,27 @@ public partial class Infantry : Node2D
     [Export] public bool scentIgnoresStealth = false;
     [Export] public bool scentKeepObserving = false;
     [Export] public int scentTrackTurns = 1;
+    [ExportGroup("逃跑模块")]
+    [Export] public bool canFleeOnDeath = false;   // 逃跑开关：致命伤触发
+    [Export] public int fleeRangeMin = 0;          // 逃跑目标格检查范围 x
+    [Export] public int fleeRangeMax = 2;          // 逃跑目标格检查范围 y
+    [ExportGroup("拆旗模块")]
+    [Export] public bool canTearFlag = false;    // 拆旗开关：与占领并行的第二条进度
+    [Export] public int tearFlagPower = 5;       // 拆旗力：建筑拆旗值=占领值(20) → 5=四回合；步兵10=两回合
+    [ExportGroup("设施压制")]
+    [Export] public bool canSuppressFacilities = false; // 压制开关：站敌楼干扰 x-y 环内设施
+    [Export] public int suppressRangeMin = 0;           // x（含自身格）
+    [Export] public int suppressRangeMax = 1;           // y
+    [Export] public int suppressIncomeMode = 0;         // 资金：0不干扰 1制止 2百分比
+    [Export] public int suppressIncomePercent = 0;      // 百分比（负=减弱 正=增强）
+    [Export] public int suppressDefenseMode = 0;        // 掩体：0不干扰 1制止 2百分比
+    [Export] public int suppressDefensePercent = 0;
+    [Export] public int suppressProductionMode = 0;     // 生产：0不干扰 1制止（百分比待接生产UI）
+    [Export] public int suppressProductionPercent = 0;  // 作用于生产资金消耗
+    [Export] public bool suppressSupplyStop = false;    // 补给：只制止/不制止
+
+
+
 
     [ExportGroup("感知强化")]
     [Export] public bool strongSight = false;
@@ -700,8 +721,9 @@ public int GetEffectiveDefense(Grids targetGrid)
 {
     float healthPercent = (float)health / GetEffectiveMaxHealth();
     int dynamicDefense = Mathf.RoundToInt(baseDefense * healthPercent);
-    float terrainBonus = (defenseBonusType == DefenseBonusType.CanDefenseBonus && targetGrid != null) 
-        ? targetGrid.TerrainDefenseBonus 
+    float terrainBonus = (defenseBonusType == DefenseBonusType.CanDefenseBonus && targetGrid != null
+            && (targetGrid.city == null || !targetGrid.city.HasStatus(FacilityStatusType.NoCover)))
+        ? targetGrid.TerrainDefenseBonus * Mathf.Max(0, 100 + (targetGrid.city?.defenseSuppressPercent ?? 0)) / 100f 
         : 0f;
     int result = Mathf.RoundToInt(dynamicDefense * (1.0f + terrainBonus));
     if (FogActive()) result = Mathf.Max(0, result + fogFlatDefenseBonus);   // ✅ 雾战固定防御（可负）
@@ -724,8 +746,9 @@ public virtual int CalculateFinalDamage(Infantry target, WeaponType weaponType, 
     float actualAttack = baseDamage * attackerHealthPercent;
     
     // 地形
-    float terrainDefense = (target.defenseBonusType == DefenseBonusType.CanDefenseBonus && target.grid != null)
-        ? target.grid.TerrainDefenseBonus
+    float terrainDefense = (target.defenseBonusType == DefenseBonusType.CanDefenseBonus && target.grid != null
+            && (target.grid.city == null || !target.grid.city.HasStatus(FacilityStatusType.NoCover)))
+        ? target.grid.TerrainDefenseBonus * Mathf.Max(0, 100 + (target.grid.city?.defenseSuppressPercent ?? 0)) / 100f
         : 0f;
     float terrainMultiplier = 1.0f - terrainDefense;
     float afterTerrain = actualAttack * terrainMultiplier;
@@ -1089,7 +1112,7 @@ public virtual bool ConsumePrimaryAmmo()
             target.health -= damage;
             target.UpdateHpLabel();
             ShowRepairEffect(target, -damage);
-            if (target.health <= 0)
+            if (target.health <= 0 && !target.TryFlee())
             {
                 target.OnDestroyed();
                 if (target.grid != null)   // 与 Attack 的死亡处理一致：从格子移除，避免残留引用
@@ -2623,6 +2646,9 @@ public virtual void SetWaitVisual(bool waiting)
 }
 
     private bool isCapturingInProgress = false;
+    public int currentTearProgress = 0;          // 拆旗进度（镜像 currentCaptureProgress）
+    public Grids tearingGrid = null;             // 正在拆的建筑格（镜像 capturingGrid）
+    private bool isTearingInProgress = false;    // 重入锁（镜像 isCapturingInProgress）
     public virtual void PerformCapture()
 {
     if (isStealthed && !canCaptureWhileStealthed) return;   // ✅ 隐身占点锁
@@ -2631,6 +2657,15 @@ public virtual void SetWaitVisual(bool waiting)
     
     if (!CanCaptureCurrentGrid())
         return;
+
+    // 拆旗冻结：敌方撕旗者在场时，本楼占领进度冻结（只冻结不清零；遭遇清零由 PerformTearFlag 负责）
+    if (grid != null && grid.city != null && grid.infantries != null &&
+        grid.infantries.Any(u => u != this && u != null && IsInstanceValid(u) && u.team != this.team
+            && u.tearingGrid == grid && u.currentTearProgress > 0))
+    {
+        ShowCaptureInterruptedEffect();
+        return;
+    }
 
     isCapturingInProgress = true;  // 设置标志
     
@@ -2725,7 +2760,157 @@ public virtual void SetWaitVisual(bool waiting)
     var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     gm?.CheckVictoryCondition();
 }
-        protected virtual void ShowCaptureInterruptedEffect()
+    
+    // ========== 逃跑模块（野化）==========
+    /// <summary>
+    /// 致命伤触发：向 x-y 环内随机空格逃跑并野化（满血中立）。
+    /// 成功返回 true（死亡被逃跑抵消）；无处可逃返回 false（照常死亡）。
+    /// 规格裁定：永久存续 / 原主人可攻击 / 落地满血（致命伤被逃跑抵消，代价是脱离编制而非血量）
+    /// </summary>
+    public virtual bool TryFlee()
+    {
+        if (!canFleeOnDeath || grid == null) return false;
+        var gm = gameManager;
+        if (gm?.unitManager == null || gm?.gridManager == null) return false;
+
+        var origin = grid.GridIndex;
+        var candidates = new List<Grids>();
+        for (int dx = -fleeRangeMax; dx <= fleeRangeMax; dx++)
+            for (int dy = -fleeRangeMax; dy <= fleeRangeMax; dy++)
+            {
+                int dist = Mathf.Abs(dx) + Mathf.Abs(dy);
+                if (dist < fleeRangeMin || dist > fleeRangeMax || (dx == 0 && dy == 0)) continue;
+                var pos = new Vector2I(origin.X + dx, origin.Y + dy);
+                if (!gm.unitManager.IsValidGrid(pos)) continue;
+                var g = gm.gridManager.map[pos.X, pos.Y];
+                if (g == null || g.infantries.Count > 0) continue;      // 有单位的不选
+                if (GetMoveCost(g.gridType) >= 999) continue;           // 本兵种不可通行的地形不选（水面/陨石）
+                candidates.Add(g);
+            }
+        if (candidates.Count == 0) return false;                        // 无处可逃：原地阵亡
+
+        var target = candidates[GD.RandRange(0, candidates.Count - 1)]; // 规格无顺序要求 → 随机
+
+        // 搬格子（照运输卸载的既有模式）
+        grid.infantries.Remove(this);
+        if (grid.infantry == this)
+            grid.infantry = grid.infantries.Count > 0 ? grid.infantries[0] : null;
+        Position = target.Position;
+        grid = target;
+        if (!target.infantries.Contains(this)) target.infantries.Add(this);
+        if (target.infantry == null) target.infantry = this;
+
+        health = maxHealth;                    // 野化=满血
+        team = TeamHelper.Player0;             // 中立（P0）：无相位、不动不操作、挨打照反击（反击链队伍无关）
+        UpdateHpLabel();
+        UpdateTeamVisual();                    // 换中立灰（含呼吸动画重启）
+        GD.Print($"[逃跑] {unitDisplayName} 野化：{origin} → {target.GridIndex}，满血中立在野");
+        return true;
+    }
+
+    // ========== 拆旗模块（占领的镜像：第二条进度）==========
+    /// <summary>拆旗合法性：开关 + 敌属建筑 + 非中立（中立旗已被撕过，无对象）。</summary>
+    public virtual bool CanTearCurrentGrid()
+    {
+        if (!canTearFlag) return false;
+        if (grid == null || grid.city == null) return false;
+        if (isStealthed && !canCaptureWhileStealthed) return false;   // 沿用占楼隐身锁
+        if (string.IsNullOrEmpty(grid.city.facilityTeam)) return false;
+        if (grid.city.facilityTeam == team) return false;             // 自己的旗不拆
+        if (grid.city.facilityTeam == TeamHelper.Player0) return false; // 中立旗：撕毁已完成
+        return true;
+    }
+
+    /// <summary>
+    /// 拆旗执行：进度 +tearFlagPower/回合；与占领互斥——
+    /// ①敌方撕旗者在场时本楼占领进度冻结（PerformCapture 钩子）
+    /// ②拆旗遭遇敌方占领时双方进度清零（"我得不到，你的旗也被撕毁"）
+    /// 进度满（拆旗值=占领值）→ 建筑转中立。
+    /// ⚠️ 美术急需：撕旗专属动画（当前复用占领表现）
+    /// </summary>
+    public virtual void PerformTearFlag()
+    {
+        if (isStealthed && !canCaptureWhileStealthed) return;   // 隐身拆旗锁（同占楼）
+        if (isTearingInProgress) return;
+        if (!CanTearCurrentGrid()) return;
+        isTearingInProgress = true;
+        try
+        {
+            int power = tearFlagPower;
+            if (tearingGrid != grid)
+            {
+                if (tearingGrid != null) tearingGrid.city?.OnCaptureInterrupted(this);
+                currentTearProgress = 0;
+                tearingGrid = grid;
+                grid.city?.OnCaptureStarted(this);   // 撕旗动画挂这里（复用开始钩子）
+            }
+
+            // 占拆遭遇：双方进度同归于尽
+            var contestUnits = grid.infantries
+                .Where(u => u != this && u != null && IsInstanceValid(u) && u.team != this.team
+                    && u.currentCaptureProgress > 0 && u.capturingGrid == grid).ToList();
+            if (contestUnits.Count > 0)
+            {
+                grid.city?.ShowCaptureContestVisual();
+                currentTearProgress = 0;
+                foreach (var enemy in contestUnits) enemy.currentCaptureProgress = 0;
+                MarkAsCapturing();
+                return;
+            }
+
+            currentTearProgress += power;
+            ShowCaptureEffect();   // 复用表现；⚠️ 撕旗专属动画待美术
+            if (currentTearProgress >= (grid.city?.capturePointsRequired ?? 20))
+                CompleteTearFlag();
+            else
+                MarkAsCapturing();
+        }
+        finally { isTearingInProgress = false; }
+    }
+
+    /// <summary>拆满 → 建筑转中立（P0）：谁都别想有。</summary>
+    protected virtual void CompleteTearFlag()
+    {
+        if (grid == null) return;
+        if (grid.city != null)
+            grid.city.facilityTeam = TeamHelper.Player0;   // 拆旗的终点不是易主，是剥夺
+        ShowCaptureCompleteEffect();
+        currentTearProgress = 0;
+        tearingGrid = null;
+        originalGrid = null;
+        SetWaitVisual(true);
+        grid.city?.UpdateCityVisual();
+        gameManager?.CheckVictoryCondition();
+        GD.Print($"[拆旗] {unitDisplayName} 撕毁旗帜：{grid.GridIndex} 现为中立");
+    }
+
+    // ========== 设施压制（Aura：每回合刷新施加，状态自带衰减）==========
+    public virtual void OnTurnStartFacilitySuppression()
+    {
+        if (!canSuppressFacilities || grid == null) return;
+        var gm = gameManager;
+        if (gm?.gridManager?.map == null || gm?.unitManager == null) return;
+        var origin = grid.GridIndex;
+        for (int dx = -suppressRangeMax; dx <= suppressRangeMax; dx++)
+            for (int dy = -suppressRangeMax; dy <= suppressRangeMax; dy++)
+            {
+                int dist = Mathf.Abs(dx) + Mathf.Abs(dy);
+                if (dist < suppressRangeMin || dist > suppressRangeMax) continue;
+                var pos = new Vector2I(origin.X + dx, origin.Y + dy);
+                if (!gm.unitManager.IsValidGrid(pos)) continue;
+                var f = gm.gridManager.map[pos.X, pos.Y]?.city;
+                if (f == null || f.facilityTeam == team) continue;   // 只压敌方建筑
+                if (suppressIncomeMode == 1) f.AddStatus(FacilityStatusType.NoIncome, 2, team);
+                else if (suppressIncomeMode == 2) f.SetIncomeSuppression(suppressIncomePercent);
+                if (suppressProductionMode == 1) f.AddStatus(FacilityStatusType.CannotProduce, 2, team);
+                // 生产百分比：TODO（生产资金消耗读取点在生产UI流程，待接）
+                if (suppressDefenseMode == 1) f.AddStatus(FacilityStatusType.NoCover, 2, team);
+                else if (suppressDefenseMode == 2) f.defenseSuppressPercent = suppressDefensePercent;
+                if (suppressSupplyStop) f.AddStatus(FacilityStatusType.NoSupply, 2, team);
+            }
+    }
+
+    protected virtual void ShowCaptureInterruptedEffect()
     {
         var effect = new CaptureInterruptedEffect
         {
@@ -3601,7 +3786,7 @@ public virtual void Attack(Infantry target, bool allowCounter = true)
     int baseVal = weapon == WeaponType.Primary ? GetPrimaryDamageFromMatrix(target) : GetSecondaryDamageFromMatrix(target);
 
     // ========== 死亡处理 ==========
-    if (target.health <= 0)
+    if (target.health <= 0 && !target.TryFlee())
     {
         target.OnDestroyed();
         if (target.grid != null)
@@ -3616,7 +3801,7 @@ public virtual void Attack(Infantry target, bool allowCounter = true)
         gm?.RemovePiece(target);
     }
     
-    if (this.health <= 0)
+    if (this.health <= 0 && !TryFlee())
     {
         this.OnDestroyed();
         if (this.grid != null)
