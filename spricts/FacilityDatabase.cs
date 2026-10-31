@@ -19,10 +19,10 @@ public static class FacilityDatabase
         ["TempPort"]    = "res://Prefabs/TempPort.tscn",
     };
 
-    // ✅ 建筑地形要求（未登记=任意地形）：DoR 原作——临时机场建在平原/道路，临时港口建在海滩
+    // ✅ 建筑地形要求（未登记=任意地形）：DoR 原作——临时机场只能建在平原，临时港口建在海滩
     private static readonly Dictionary<string, GridType[]> allowedTerrains = new()
     {
-        ["TempAirPort"] = new[] { GridType.GROUND, GridType.ROAD },
+        ["TempAirPort"] = new[] { GridType.GROUND },
         ["TempPort"]    = new[] { GridType.BEACH },
     };
 

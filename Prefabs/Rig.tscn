@@ -56,6 +56,7 @@ constructionMinRange = 0
 constructionMaxRange = 0
 constructionAutoPlace = false
 constructionWhitelist = Array[String](["TempAirPort", "TempPort"])
+constructionAllowedTerrains = Array[String](["TempAirPort:GROUND", "TempPort:BEACH"])
 maxConstructionAmmo = 1
 currentConstructionAmmo = 1
 constructionTotalProgress = 0

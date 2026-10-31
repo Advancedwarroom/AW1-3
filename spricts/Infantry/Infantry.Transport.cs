@@ -53,6 +53,8 @@ public List<Infantry> transportedUnits = new List<Infantry>();
     public UnitOverlapType overlapType = UnitOverlapType.NonOverlapping;   // ✅ 覆盖方式：NonOverlapping=不可重叠 / Overlapping=仅重叠 / Oozium=覆盖+吞噬(自动，无需canDevour)
     [Export]
     public MoveType moveType = MoveType.Infantry;  
+    // ✅ 单位级地形移动开销覆盖（优先于移动方式表与自定义移动方式）："地形=开销"，如 "BRIDGE=1"、"BEACH=1"；999=不可通行。留空=不覆盖
+    [Export] public Godot.Collections.Array<string> terrainMoveCostOverrides = new();
     [Export]
     public UnitState state = UnitState.Idle;
     [Export]

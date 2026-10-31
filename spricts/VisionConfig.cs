@@ -17,6 +17,11 @@ public static class VisionConfig
         ["Recon"] = 5, ["FlyBomb"] = 1, ["Fighter"] = 2, ["Bomber"] = 2, ["BCopter"] = 3, ["TCopter"] = 2, ["AntiAirMissile"] = 5, ["Stealth"] = 4, ["Dog"] = 5, ["AntiTank"] = 2,
         ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
         ["RepairBoat"] = 1,
+        // ✅ 海军线（AW3 原作；炮艇 DoR）——原先漏登记，导致开启配置视野时一律回落为 2
+        ["Battleship"] = 2, ["Cruiser"] = 3, ["Submarine"] = 5, ["Lander"] = 1, ["Carrier"] = 4, ["Gunboat"] = 5,
+        // ✅ 新增原版兵种（DS / DoR 原作视野）
+        ["Neotank"] = 1, ["Megatank"] = 1, ["WarTank"] = 2, ["Rig"] = 1,
+        ["Duster"] = 4, ["Seaplane"] = 4, ["ProducibleBoat"] = 4, ["KamikazeBoat"] = 3,
     };
 
     // ========== 单位类型额外视野加成（全局）==========
@@ -217,6 +222,13 @@ public static class VisionConfig
     };
 
     // ========== 公共API：基础视野 ==========
+    /// <summary>✅ 先查兵种自身 ID，查不到再查参照兵种（templateType），都没有回落 2</summary>
+    public static int GetUnitVisionRange(string unitTypeId, string templateId)
+    {
+        if (!string.IsNullOrEmpty(unitTypeId) && unitVisionRange.TryGetValue(unitTypeId, out int own)) return own;
+        return GetUnitVisionRange(templateId);
+    }
+
     public static int GetUnitVisionRange(string unitTypeName)
     {
         if (unitVisionRange.TryGetValue(unitTypeName, out int range))
@@ -373,6 +385,9 @@ public static class VisionConfig
             ["APC"] = 1, ["Oozium"] = 2, ["AntiAir"] = 2,
             ["Recon"] = 5,
             ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
+            ["Battleship"] = 2, ["Cruiser"] = 3, ["Submarine"] = 5, ["Lander"] = 1, ["Carrier"] = 4, ["Gunboat"] = 5,
+            ["Neotank"] = 1, ["Megatank"] = 1, ["WarTank"] = 2, ["Rig"] = 1,
+            ["Duster"] = 4, ["Seaplane"] = 4, ["ProducibleBoat"] = 4, ["KamikazeBoat"] = 3,
         };
 
         weaponVisionRange = new()

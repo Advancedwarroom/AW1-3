@@ -30,7 +30,7 @@ public int ActualVisionRange
     get 
     {
         if (!useConfigVision && visionRange >= 0) return visionRange;
-        return VisionConfig.GetUnitVisionRange(TemplateId);
+        return VisionConfig.GetUnitVisionRange(UnitTypeId, TemplateId);
     }
 }
 

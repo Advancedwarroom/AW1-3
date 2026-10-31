@@ -40,6 +40,22 @@ public static Dictionary<Infantry, int> unitsCannotMove = new Dictionary<Infantr
         return GetMoveCost(targetGrid != null ? targetGrid.gridType : GridType.GROUND);
     }
 
+    /// <summary>✅ 解析检查器里的 terrainMoveCostOverrides（"BRIDGE=1"）</summary>
+    public bool TryGetTerrainMoveCostOverride(GridType gridType, out int cost)
+    {
+        cost = 0;
+        if (terrainMoveCostOverrides == null || terrainMoveCostOverrides.Count == 0) return false;
+        foreach (var raw in terrainMoveCostOverrides)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            int sep = raw.IndexOf('=');
+            if (sep <= 0) continue;
+            if (!System.Enum.TryParse<GridType>(raw[..sep].Trim(), true, out var g) || g != gridType) continue;
+            if (int.TryParse(raw[(sep + 1)..].Trim(), out cost)) return true;
+        }
+        return false;
+    }
+
     public virtual void ConsumeFuel(int amount)
     {
         if (!consumeFuel) return;
@@ -71,6 +87,7 @@ public static Dictionary<Infantry, int> unitsCannotMove = new Dictionary<Infantr
 
 public virtual int GetMoveCost(GridType gridType)
 {
+    if (TryGetTerrainMoveCostOverride(gridType, out int overrideCost)) return overrideCost;   // ✅ 单位级地形覆盖（如突击舰过桥下/浅滩）
     MoveType moveType = (isStealthed && stealthMoveTypeOverride >= 0) ? (MoveType)stealthMoveTypeOverride : this.moveType;   // ✅ 隐身移动方式改写（局部遮蔽）
         var extraSave = ExtraSave.Instance;
     if (extraSave != null)

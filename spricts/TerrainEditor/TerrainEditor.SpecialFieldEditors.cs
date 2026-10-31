@@ -224,7 +224,7 @@ public partial class TerrainEditor
     }
 
     string attackerType = currentEditingTarget?.GetType().Name ?? "Unknown";
-    string[] defenderTypes = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth", "Dog" };
+    string[] defenderTypes = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth", "Dog", "Battleship", "Cruiser", "Submarine", "Lander", "Carrier", "Gunboat", "Neotank", "Megatank", "WarTank", "Rig", "Duster", "Seaplane", "ProducibleBoat", "KamikazeBoat" };
 
     foreach (var defenderType in defenderTypes)
     {
@@ -281,7 +281,7 @@ public partial class TerrainEditor
 
 private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string attackerType, string preset)
 {
-    string[] defenders = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth", "Dog" };
+    string[] defenders = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth", "Dog", "Battleship", "Cruiser", "Submarine", "Lander", "Carrier", "Gunboat", "Neotank", "Megatank", "WarTank", "Rig", "Duster", "Seaplane", "ProducibleBoat", "KamikazeBoat" };
 
     foreach (var d in defenders)
     {

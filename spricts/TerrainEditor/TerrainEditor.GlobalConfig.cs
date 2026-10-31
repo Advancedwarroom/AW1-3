@@ -192,6 +192,12 @@ private readonly List<UnitTemplate> facilityTemplates = new()
     new UnitTemplate { DisplayName = "⚓ Port", ScenePath = "res://Prefabs/Port.tscn", 
         Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.3f, 0.6f, 0.7f), 
         Description = TranslateGroup.T("港口设施，可占领、维修补给舰船并生产海军单位") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🛬 临时机场"), ScenePath = "res://Prefabs/TempAirPort.tscn", 
+        Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.4f, 0.6f, 0.8f), 
+        Description = TranslateGroup.T("DoR 工程车搭建：可占领、维修补给空军；不能生产、无收入") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("⚓ 临时港口"), ScenePath = "res://Prefabs/TempPort.tscn", 
+        Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.3f, 0.6f, 0.7f), 
+        Description = TranslateGroup.T("DoR 工程车搭建（海滩）：可占领、维修补给舰船；不能生产、无收入") },
 };
 
 // UI 引用
@@ -435,7 +441,7 @@ private void RefreshAllUnitVision()
             {
                 if (unit != null && IsInstanceValid(unit) && unit.useConfigVision)
                 {
-                    unit.visionRange = VisionConfig.GetUnitVisionRange(unit.GetType().Name);
+                    unit.visionRange = VisionConfig.GetUnitVisionRange(unit.UnitTypeId, unit.TemplateId);
                 }
             }
         }

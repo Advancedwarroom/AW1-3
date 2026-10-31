@@ -39,6 +39,7 @@ hasSecondaryWeapon = false
 primaryAntiArmor = true
 primaryAntiInfantry = true
 minAttackRange = 2
+useMinMaxAttackRange = true
 maxAttackRange = 6
 attackRange = 6
 animSprite = NodePath("Base2D")

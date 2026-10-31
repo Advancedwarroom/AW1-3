@@ -445,6 +445,7 @@ public partial class ActionMenu
                 if (g == null) continue;
                 if (g.city != null && IsInstanceValid(g.city)) continue;
                 if (g.weapon != null) continue;
+                if (!currentUnit.CanBuildFacilityOnTerrain(currentUnit.carriedFacilityTypes[0], g.gridType)) continue;   // ⑫ 可建造地形
                 productionTargetGrids.Add(g);
             }
 
