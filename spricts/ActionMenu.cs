@@ -829,7 +829,9 @@ private List<Grids> GetAdjacentGrids(Grids center)
         bool allowCaptureAfterMove = unit?.allowCaptureAfterMove ?? true;
 
         moveButton.Visible = !afterMove && !unit.isMoved && unit.CanMove();
-        captureButton.Visible = (canCapture || isCapturing) && !unit.isAttacked && (!unit.isMoved || allowCaptureAfterMove);
+        bool canTear = unit.CanTearCurrentGrid();
+        bool isTearing = unit.currentTearProgress > 0 && unit.tearingGrid == unit.grid;
+        captureButton.Visible = (canCapture || isCapturing || canTear || isTearing) && !unit.isAttacked && (!unit.isMoved || allowCaptureAfterMove);
         rotateButton?.Hide();
 
         waitButton.Visible = true;
@@ -1254,7 +1256,11 @@ private void OnSupplyPressed()
 
         try 
         {
-            currentUnit.PerformCapture();
+            // 拆旗分流：可拆旗且本格不可占领且无占领进度时，执行拆旗
+            if (currentUnit.canTearFlag && !currentUnit.CanCaptureCurrentGrid() && currentUnit.currentCaptureProgress <= 0)
+                currentUnit.PerformTearFlag();
+            else
+                currentUnit.PerformCapture();
             Hide();
 
             var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
