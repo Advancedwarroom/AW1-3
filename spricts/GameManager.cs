@@ -1955,6 +1955,12 @@ public void RestartGame()
             {
                 unit.OnTurnStartAutoRepair();
             }
+
+            // 设施压制：回合开始刷新施加（Aura）
+            if (unit.canSuppressFacilities)
+            {
+                unit.OnTurnStartFacilitySuppression();
+            }
         }
 
         // 重置所有单位状态
