@@ -502,55 +502,65 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     }
 
     // ✅ 空地点击回退（包括范围外的单位所在格子）
+    rangeOutsideGrids.Clear();
     foreach (var grid in grids)
     {
         if (!moveRange.Contains(grid))
         {
-            // ✅ 禁用范围外单位的选择，统一处理为回退
+            // ✅ 禁用范围外单位的选择，统一由格子回调处理（CloseRange 时恢复）
             OverrideUnitInput(grid, true);
-            
-            grid.OnClickEmpty = () => 
-            {
-                var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-                bool shouldRollback = gm?.selectedInfantry != null && 
-                                      gm.selectedInfantry.state == UnitState.Moved && 
-                                      gm.selectedInfantry.originalGrid != null;
-
-                if (shouldRollback)
-                    gm.RollbackMove();
-                else
-                {
-                    CloseRange();
-                    HideAttackRange();
-                    ClearWeaponRange();
-                    var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
-                    actionMenu?.Hide();
-                    gm?.ClearSelectedInfantry();
-                }
-            };
-            
-            // ✅ 范围外格子点击也触发回退
-            grid.OnClickGrid = to => {
-                var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-                bool shouldRollback = gm?.selectedInfantry != null && 
-                                      gm.selectedInfantry.state == UnitState.Moved && 
-                                      gm.selectedInfantry.originalGrid != null;
-
-                if (shouldRollback)
-                    gm.RollbackMove();
-                else
-                {
-                    CloseRange();
-                    HideAttackRange();
-                    ClearWeaponRange();
-                    var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
-                    actionMenu?.Hide();
-                    gm?.ClearSelectedInfantry();
-                }
-            };
+            var g0 = grid;
+            Action onEmpty = () => OnOutsideRangeClicked(infantry, g0);
+            Action<Grids> onGrid = _ => OnOutsideRangeClicked(infantry, g0);
+            grid.OnClickEmpty = onEmpty;
+            grid.OnClickGrid = onGrid;
+            rangeOutsideGrids[grid] = onGrid;
         }
     }
 }
+
+    // 范围外格子：记录本次挂上的回调，CloseRange 时只撤销仍是自己挂的（不误删攻击范围等后续回调）
+    private readonly Dictionary<Grids, Action<Grids>> rangeOutsideGrids = new();
+
+    /// <summary>
+    /// 移动范围外点击：
+    /// ① 已移动未确认 → 回退；
+    /// ② 点本单位脚下格 → 原地打开行动菜单（快速移动下的「不动直接行动」）；
+    /// ③ 点范围外的己方可行动单位 → 直接切换选中；
+    /// ④ 其余 → 取消选择。
+    /// </summary>
+    private void OnOutsideRangeClicked(Infantry owner, Grids grid)
+    {
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
+        bool shouldRollback = gm?.selectedInfantry != null &&
+                              gm.selectedInfantry.state == UnitState.Moved &&
+                              gm.selectedInfantry.originalGrid != null;
+        if (shouldRollback) { gm.RollbackMove(); return; }
+
+        CloseRange();
+        HideAttackRange();
+        ClearWeaponRange();
+
+        if (owner != null && IsInstanceValid(owner) && grid == owner.grid && !owner.isMoved && gm?.selectedInfantry == owner)
+        {
+            actionMenu?.ShowMenu(owner);
+            return;
+        }
+
+        actionMenu?.Hide();
+        gm?.ClearSelectedInfantry();
+
+        if (gm != null && grid?.infantries != null)
+        {
+            var next = grid.infantries
+                .Where(u => u != null && IsInstanceValid(u) && u.IsVisibleInTree() && gm.IsTurnPhaseValid(u.team)
+                            && !u.isMoved && u.state != UnitState.Acted)
+                .OrderByDescending(u => u.health)
+                .FirstOrDefault();
+            if (next != null) gm.OnSelectPiece(next);
+        }
+    }
 
     private void ShowOverlappingMoveChoiceDialog(Infantry movingUnit, Infantry targetUnit, Grids targetGrid, Infantry transport)
     {
@@ -698,6 +708,15 @@ public void CloseRange()
         OverrideUnitInput(selectedUnit.grid, false);
 
     moveRange.Clear();
+    // ✅ 恢复范围外格子：单位重新可点、撤销本次挂的范围外回调
+    foreach (var kv in rangeOutsideGrids)
+    {
+        var og = kv.Key;
+        if (og == null || !IsInstanceValid(og)) continue;
+        OverrideUnitInput(og, false);
+        if (og.OnClickGrid == kv.Value) og.OnClickGrid = null;
+    }
+    rangeOutsideGrids.Clear();
     HideExplosionRange(); // ✅ 关闭移动范围时也清除爆炸预览
 
     // ✅ 清理轨迹预览与触摸状态，恢复格子拾取

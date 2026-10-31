@@ -47,7 +47,11 @@ public virtual void InputClick(Node viewport, InputEvent inputs, int shape_index
                 gm.gridManager != null &&
                 gm.gridManager.moveRange.Count > 0)
             {
-                return;
+                // ✅ 范围外的己方可行动单位：直接切换选中（不必先点空地取消）
+                bool inRange = grid != null && gm.gridManager.moveRange.Contains(grid);
+                bool selMoved = gm.selectedInfantry.state == UnitState.Moved;
+                if (inRange || selMoved || isMoved || state == UnitState.Acted || !gm.IsTurnPhaseValid(team))
+                    return;
             }
 
 
