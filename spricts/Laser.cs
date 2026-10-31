@@ -47,11 +47,6 @@ public partial class Laser : Weapon
 
     // ========== ✅ 弹药系统已在 Weapon 基类中定义（useAmmoSystem, currentAmmo, maxAmmo）
 
-    [ExportGroup("弹药系统")]
-    [Export] public bool useAmmoSystem = false;
-    [Export] public int maxAmmo = 3;
-    [Export] public int currentAmmo = 3;
-
     [ExportGroup("冷却系统")]
     [Export] public bool useCooldownSystem = false;
     [Export] public int cooldownTurns = 1;
@@ -618,11 +613,11 @@ public partial class Laser : Weapon
         else
             target.health -= damage;
         target.UpdateHpLabel();
-        if (target.health <= 0)
+        if (target.health <= 0 && !target.TryFlee())
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
-            target.CallDeferred("QueueFree");
+            target.CallDeferred(Node.MethodName.QueueFree);
         }
     }
 
@@ -665,11 +660,11 @@ public partial class Laser : Weapon
         }
 
         target.UpdateHpLabel();
-        if (target.health <= 0 && CanDestroy)
+        if (target.health <= 0 && CanDestroy && !target.TryFlee())
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
-            target.CallDeferred("QueueFree");
+            target.CallDeferred(Node.MethodName.QueueFree);
         }
     }
 
@@ -683,8 +678,8 @@ public partial class Laser : Weapon
         else
             target.health -= damage;
         target.UpdateHpLabel();
-        if (target.health <= 0)
-            target.CallDeferred("QueueFree");
+        if (target.health <= 0 && !target.TryFlee())
+            target.CallDeferred(Node.MethodName.QueueFree);
     }
 
     // ========== 激光特效 ==========
@@ -907,12 +902,8 @@ public partial class Laser : Weapon
     private void AIExecuteGlobalAttack(List<LaserTargetInfo> targets)
     {
         if (!IsInstanceValid(this)) return;
-        if (useAmmoSystem)
-        {
-            if (currentAmmo <= 0) return;
-            currentAmmo--;
-            UpdateAmmoVisual();
-        }
+        if (!ConsumeFireAmmo()) return;   // ✅ 8弹药：支持任意弹种消耗映射
+        if (useAmmoSystem) UpdateAmmoVisual();
         if (useCooldownSystem)
         {
             attacksRemainingInCycle--;
@@ -1082,7 +1073,7 @@ public partial class Laser : Weapon
 
     public bool HasAmmoAndCooldown()
     {
-        if (useAmmoSystem && currentAmmo <= 0) return false;
+        if (!HasFireAmmo()) return false;
         if (useCooldownSystem && !cooldownReady) return false;
         if (useCooldownSystem && attacksRemainingInCycle <= 0) return false;
         return true;
@@ -1090,18 +1081,14 @@ public partial class Laser : Weapon
 
     public bool ConsumeAmmo()
     {
-        if (!useAmmoSystem) return true;
-        if (currentAmmo <= 0) return false;
-        currentAmmo--;
+        if (!ConsumeFireAmmo()) return false;
         UpdateAmmoVisual();
         return true;
     }
 
     public override bool ResupplyAmmo()
     {
-        if (!useAmmoSystem) return false;
-        if (currentAmmo >= maxAmmo) return false;
-        currentAmmo = maxAmmo;
+        if (!base.ResupplyAmmo()) return false;   // ✅ 基类处理白名单+旧池
         UpdateAmmoVisual();
         return true;
     }

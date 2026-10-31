@@ -26,6 +26,10 @@ public partial class GridManager : Node
     // ========== ✅ 移动端触摸轨迹预览状态 ==========
     private bool isMobilePlatform = false;
     private bool touchPathActive = false;
+    private System.Collections.Generic.List<Grids> touchPathGrids;   // ✅ 手画路径航点
+
+    // ✅ 单位交互激活态：移动范围显示/画轨迹期间，相机须让位
+    public bool IsMoveRangeActive => moveRange != null && moveRange.Count > 0 && selectedUnit != null;
     private int activeTouchCount = 0;
     private Grids touchHoverGrid = null;
 
@@ -96,9 +100,13 @@ public partial class GridManager : Node
                 var target = touchHoverGrid;
                 touchHoverGrid = null;
                 ClearPathPreview();
-                // 松手确认：复用 SetupMoveRangeCallbacks 分配的现有点击回调（移动/截断/范围外回退）
+                // ✅ 手画路径优先：有航点按航点执行（路径路程计费/绕圈合法/截断于阻挡）
+                var drawn = touchPathGrids;
+                touchPathGrids = null;
                 if (moveRangeActive && target != null)
                 {
+                    if (drawn != null && drawn.Count > 0 && HandleDrawnPath(drawn))
+                        return;
                     if (target.OnClickGrid != null) target.OnClickGrid.Invoke(target);
                     else target.OnClickEmpty?.Invoke();
                 }
@@ -118,7 +126,17 @@ public partial class GridManager : Node
         var grid = ScreenPosToGrid(screenPos);
         touchHoverGrid = grid;
         if (grid != null && moveRange.Contains(grid))
-            OnMouseEnteredGrid(grid);
+        {
+            // ✅ 记录手画航点（去重、断链容忍，校验在松手时）
+            if (touchPathGrids == null) touchPathGrids = new System.Collections.Generic.List<Grids>();
+            if (touchPathGrids.Count == 0 || touchPathGrids[touchPathGrids.Count - 1] != grid)
+                touchPathGrids.Add(grid);
+            // ✅ 手画预览：画线走你的手指路线（含截断红标），不再是优化最短路径
+            if (touchPathGrids.Count > 0)
+                DrawTouchPathPreview(touchPathGrids);
+            else
+                OnMouseEnteredGrid(grid);
+        }
         else
             ClearPathPreview();
     }
@@ -163,13 +181,7 @@ public partial class GridManager : Node
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         if (gm?.gridManager == null) return;
 
-        var allRange = FindRange(unit.grid, unit.maxRepairRange, false);
-        if (unit.minRepairRange > 1)
-        {
-            var blindZone = FindRange(unit.grid, unit.minRepairRange - 1, false);
-            allRange = allRange.Where(g => !blindZone.Contains(g)).ToList();
-        }
-        repairRange = allRange.Where(g => g != unit.grid).ToList();
+        repairRange = unit.CalculateRepairRange();   // ✅ 与执行同一范围（含 repairTargetMode=3 仅自身格）
 
         Grids.IsForceActionMode = true;
         foreach (var grid in repairRange)
@@ -200,7 +212,14 @@ public partial class GridManager : Node
         foreach (var grid in grids)
         {
             if (grid == null || !IsInstanceValid(grid)) continue;
-            
+
+            // ✅ 修复：兵器回调多为闭包（捕获 g/gm），Target 不是 Weapon，下方判定清不掉 → 取消后残留，
+            //    之后点到这些格子会意外触发兵器。凡兵器标记过的格子一律清回调并恢复单位可点击
+            if (grid.IsInWeaponRange)
+            {
+                grid.OnClickGrid = null;
+                OverrideUnitInput(grid, false);
+            }
             grid.IsInWeaponRange = false;
             
             if (!moveRange.Contains(grid))
@@ -492,8 +511,9 @@ public partial class GridManager : Node
                 bool blocked = false;
 
                 g.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team && u.team != TeamHelper.Player))
-                    blocked = true; // 敌方单位阻挡（迷雾中隐藏的也算）
+                if (g.infantries.Any(u => u != selectedUnit && u.team != selectedUnit.team && u.team != TeamHelper.Player
+                        && Infantry.IsVisibleTo(u, selectedUnit.team, grids)))
+                    blocked = true; // 敌方单位阻挡（✅ 隐身中看不见的不参与预览截断，防暴露；实际移动仍会被截断）
                 else if (selectedUnit is not Oozium && g.weapon != null)
                     blocked = true; // 兵器阻挡
                 else
@@ -550,6 +570,7 @@ public partial class GridManager : Node
             if (g?.pathIcon == null) continue;
             bool canStay = CanStayOnGrid(g, selectedUnit);
             bool gridVisible = !isFogEnabled || fog.IsGridVisible(g);
+            if (HasOnlyHiddenStealthBlockers(g, selectedUnit)) gridVisible = false;   // ✅ 只被看不见的隐身敌军占据：不标红（防暴露）
             if (!canStay && selectedUnit.overlapType == UnitOverlapType.NonOverlapping && gridVisible)
                 g.pathIcon.Modulate = new Color(1, 0.3f, 0.3f, 0.6f); // 红色不可停留
             else
@@ -719,7 +740,8 @@ public partial class GridManager : Node
                 if (curVisible)
                 {
                     cur.infantries.RemoveAll(u => u == null || !IsInstanceValid(u));
-                    var enemyOnCur = cur.infantries.FirstOrDefault(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player);
+                    var enemyOnCur = cur.infantries.FirstOrDefault(u => u != infantry && u.team != infantry.team && u.team != TeamHelper.Player
+                        && Infantry.IsVisibleTo(u, infantry.team, grids));   // ✅ 隐身敌军不阻挡范围计算（否则范围出现空洞=暴露位置），实际移动时由截断逻辑触发遭遇
                     if (enemyOnCur != null)
                         continue;
                 }
@@ -759,7 +781,8 @@ public partial class GridManager : Node
                         var enemyOnNeighbor = neighbor.infantries.FirstOrDefault(u =>
                             u != infantry
                             && u.team != infantry.team
-                            && u.team != TeamHelper.Player); // ✅ P-1 公共单位不算敌方
+                            && u.team != TeamHelper.Player // ✅ P-1 公共单位不算敌方
+                            && Infantry.IsVisibleTo(u, infantry.team, grids)); // ✅ 看不见的隐身敌军不剔除（防暴露位置）
                         if (enemyOnNeighbor != null)
                             continue;
                     }
@@ -788,6 +811,9 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
     var fog = gm?.fogOfWarManager;
     bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
+
+    // ✅ 本单位脚下格同样禁选（起点不在范围集内，循环盖不到它）
+    OverrideUnitInput(infantry.grid, true);
 
     foreach (var g in moveRange)
     {
@@ -837,6 +863,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             {
                 // ✅ 只有可见格子才显示红色（不可见格子不暴露敌方单位位置）
                 bool gridVisible = !isFogEnabled || fog.IsGridVisible(g);
+                if (HasOnlyHiddenStealthBlockers(g, infantry)) gridVisible = false;   // ✅ 只被看不见的隐身敌军占据：不标红（防暴露）
                 if (gridVisible)
                 {
                     g.pathIcon.Modulate = new Color(1, 0.3f, 0.3f, 0.6f);
@@ -1092,8 +1119,12 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
                     return;
 
                 case UnitOverlapType.Oozium:
+                    // ✅ 选Oozium=自动覆盖+吞噬（Overlapping值才是"只重叠不吞噬"）
                     foreach (var target in otherUnits)
+                    {
+                        if (!infantry.canDevourAllies && target.team == infantry.team) continue;
                         DevourUnit(target);
+                    }
                     to.infantries.Clear();
                     to.infantry = null;
                     
@@ -1228,6 +1259,15 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
     }
 
+    // ✅ 该格是否"只"被移动方看不见的隐身敌军挡住（用于显示层：不标红、不留空洞）
+    public bool HasOnlyHiddenStealthBlockers(Grids grid, Infantry mover)
+    {
+        if (grid == null || mover == null) return false;
+        var others = grid.infantries.Where(u => u != null && IsInstanceValid(u) && u != mover).ToList();
+        if (others.Count == 0) return false;
+        return others.All(u => u.team != mover.team && !Infantry.IsVisibleTo(u, mover.team, grids));
+    }
+
     private bool CanStayOnGrid(Grids grid, Infantry requestingUnit)
     {
         var otherUnits = grid.infantries.Where(i => i != requestingUnit && IsInstanceValid(i)).ToList();
@@ -1265,9 +1305,88 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
     }
 
-    public void MoveTo(Infantry infantry, Grids to, bool showMenu = true)
+    // ✅ 手画轨迹预览：沿手指路线画线，第一个可见阻挡格红标截断
+    private void DrawTouchPathPreview(System.Collections.Generic.List<Grids> path)
+    {
+        if (selectedUnit == null) return;
+        ResetMoveRangeIconColors();
+        previewPath = path;
+        pathLine?.ClearPoints();
+        if (pathLine != null)
+            foreach (var g in path)
+                if (g != null) pathLine.AddPoint(g.Position + new Vector2(20, 20));
+        for (int i = 0; i < path.Count; i++)
+        {
+            var g = path[i];
+            if (g?.infantries == null) continue;
+            if (g.infantries.Any(u => u != null && u != selectedUnit && Infantry.IsVisibleTo(u, selectedUnit.team, grids)))
+            {
+                g.pathIcon?.Show();
+                g.pathIcon?.SetDeferred("modulate", Colors.Red);
+                break;   // 截断点之后不再渲染
+            }
+        }
+    }
+
+    // ✅ 手画路径执行：路径路程计费、绕圈合法、终点≠起点、截断于路上单位（可见判定，隐形标准直通雾战）
+    private bool HandleDrawnPath(System.Collections.Generic.List<Grids> waypoints)
+    {
+        if (selectedUnit == null || waypoints == null) return false;
+        var infantry = selectedUnit;
+        int budget = infantry.movePoints;
+        var valid = new System.Collections.Generic.List<Grids>();
+        int spent = 0;
+        Grids prev = infantry.grid;
+        foreach (var wp in waypoints)
+        {
+            if (wp == null || wp == prev) continue;
+            // 终点=起点：本回合拒绝绕回原格
+            if (wp == infantry.grid) break;
+            int dist = Mathf.Abs(wp.GridIndex.X - prev.GridIndex.X) + Mathf.Abs(wp.GridIndex.Y - prev.GridIndex.Y);
+            if (dist != 1) break;   // 断链（快速滑动跳格）
+            int c = GetActualMoveCost(infantry, wp.gridType);
+            // 路上有单位即截断（可见判定——隐形的存在不截断、不泄漏，雾战同标准）
+            var blockerU = wp.infantries.FirstOrDefault(u => u != null && u != infantry && Infantry.IsVisibleTo(u, infantry.team, grids));
+            if (blockerU != null)
+            {
+                pendingEncounterBlocker = blockerU;   // ✅ 记录截断者，落定后结算遭遇战
+                break;
+            }
+            if (spent + c > budget) break;
+            spent += c;
+            valid.Add(wp);
+            prev = wp;
+        }
+        if (valid.Count == 0) return false;
+        var dest = valid[valid.Count - 1];
+        if (dest == infantry.grid) return false;
+        CloseRange();   // ✅ 手画路径直接执行，须自清范围（点按流由回调收拾；不清=全局输入卡死）
+        MoveTo(infantry, dest, showMenu: true, forcedPath: valid);
+        // ✅ 截断遭遇结算：落定后按双方Export仲裁（总开关=是否攻击）
+        var bk = pendingEncounterBlocker; pendingEncounterBlocker = null;
+        if (bk != null)
+        {
+            Infantry.ResolveTruncationEncounter(infantry, bk);   // ✅ 回合中回合由入口判定人类/AI
+            // ✅ 非强制截断：新格重绑+剩余实际移动力+二次移动
+            if (!infantry.truncForcedStop && infantry.movePoints > 0 && infantry.health > 0)
+            {
+                infantry.state = UnitState.Idle;
+                infantry.isMoved = false;
+                infantry.isAttacked = false;
+                infantry.hasActed = false;
+                infantry.SetWaitVisual(false);
+                ShowMoveRange(infantry);
+            }
+        }
+        return true;
+    }
+
+    private Infantry pendingEncounterBlocker;   // ✅ 截断遭遇：路上第一个可见阻挡者
+
+    public void MoveTo(Infantry infantry, Grids to, bool showMenu = true, System.Collections.Generic.List<Grids> forcedPath = null)
     {
         if (infantry == null || to == null) return;
+        // ✅ forcedPath：手画路径模式——路程/绕圈以画线为准，不再重算最短路径
 
         if (infantry.overlapType == UnitOverlapType.NonOverlapping)
         {
@@ -1288,17 +1407,18 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
             }
         }
 
-        if (infantry.overlapType == UnitOverlapType.Oozium)
+        if (infantry.overlapType == UnitOverlapType.Oozium)   // ✅ 选Oozium覆盖方式即自动覆盖+吞噬   // ✅ canDevour：可进入占用格之外，是否吞噬占用者
         {
-            var targetsToRemove = to.infantries.Where(i => i != infantry && IsInstanceValid(i)).ToList();
+            var targetsToRemove = to.infantries.Where(i => i != infantry && IsInstanceValid(i) && (infantry.canDevourAllies || i.team != infantry.team)).ToList();
             foreach (var target in targetsToRemove)
                 DevourUnit(target);
             to.infantries.Clear();
             to.infantry = null;
         }
 
-        var path = BuildPath(infantry.grid, to, infantry);
-        if (path.Count == 0) return;
+        var path = forcedPath ?? BuildPath(infantry.grid, to, infantry);
+        if (path == null || path.Count == 0) return;
+        if (forcedPath != null && path[path.Count - 1] != to) return;   // 手画路径必须终于目标格
 
         int totalMoveCost = 0;
         int totalFuelCost = 0;
@@ -1342,10 +1462,12 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
 
         infantry.state = UnitState.Moved;
         infantry.isMoved = true;
+        infantry.movedThisTurnForAutoRepair = true;   // ✅ autoRepairAfterMove：行动结束时触发
 
         // ✅ 移动完成后立即刷新战争迷雾
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.fogOfWarManager?.OnUnitMoved();
+        infantry.PerformScentScan();
 
         CloseRange();
         HideAttackRange();
@@ -1551,6 +1673,10 @@ public void CloseRange()
             OverrideUnitInput(grid, false);
         }
     }
+    // ✅ 恢复本单位脚下格的输入（显示范围时单独禁用过）
+    if (selectedUnit != null && IsInstanceValid(selectedUnit) && selectedUnit.grid != null)
+        OverrideUnitInput(selectedUnit.grid, false);
+
     moveRange.Clear();
     HideExplosionRange(); // ✅ 关闭移动范围时也清除爆炸预览
 

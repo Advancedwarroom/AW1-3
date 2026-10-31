@@ -8,7 +8,9 @@ public enum FacilityStatusType
 {
     None,           // 无状态
     CannotProduce,  // 不可生产
-    NoIncome        // 无收入
+    NoIncome        // 无收入,
+    NoCover,   // 无掩体（防御加成归零）
+    NoSupply   // 无物资（无法补给）
 }
 
 public partial class FacilityStatus
@@ -32,6 +34,8 @@ public partial class FacilityStatus
         {
             FacilityStatusType.CannotProduce => TranslateGroup.T("不可生产"),
             FacilityStatusType.NoIncome => TranslateGroup.T("无收入"),
+            FacilityStatusType.NoCover => TranslateGroup.T("无掩体"),
+            FacilityStatusType.NoSupply => TranslateGroup.T("无物资"),
             _ => TranslateGroup.T("未知")
         };
     }
@@ -498,7 +502,7 @@ public partial class Facility : Node2D
             bool canSupply = TeamHelper.CanFacilitySupply(facilityTeam, unit.team);
             if (!canSupply) continue;
 
-            string unitType = unit.GetType().Name;
+            string unitType = unit.UnitTypeId;
             bool supplied = false;
             string supplyText = "";
             Color supplyColor = Colors.Green;
@@ -538,12 +542,12 @@ public partial class Facility : Node2D
                     {
                         int oldAmmo = unit.currentPrimaryAmmo;
                         if (primaryAmmoSupply >= 999)
-                            unit.currentPrimaryAmmo = unit.maxPrimaryAmmo;
+                            unit.currentPrimaryAmmo = unit.GetEffectiveMaxPrimaryAmmo();
                         else
                             unit.currentPrimaryAmmo = Mathf.Clamp(unit.currentPrimaryAmmo + primaryAmmoSupply, 0, unit.maxPrimaryAmmo);
-                        unit.currentStealthBullets = unit.maxStealthBullets;   // ✅ 隐身弹补给
-                        unit.currentRevealBullets = unit.maxRevealBullets;     // ✅ 显形弹补给
-                        unit.currentCamoBullets = unit.maxCamoBullets;         // ✅ 迷彩弹补给
+                        unit.currentStealthBullets = unit.GetEffectiveMaxStealthBullets();   // ✅ 隐身弹补给
+                        unit.currentRevealBullets = unit.GetEffectiveMaxRevealBullets();     // ✅ 显形弹补给
+                        unit.currentCamoBullets = unit.GetEffectiveMaxCamoBullets();         // ✅ 迷彩弹补给
                         if (unit.currentPrimaryAmmo != oldAmmo)
                         {
                             supplied = true;
@@ -562,7 +566,7 @@ public partial class Facility : Node2D
                     {
                         int oldFuel = unit.fuel;
                         if (fuelSupply >= 999)
-                            unit.fuel = unit.maxFuel;
+                            unit.fuel = unit.GetEffectiveMaxFuel();
                         else
                             unit.fuel = Mathf.Clamp(unit.fuel + fuelSupply, 0, unit.maxFuel);
                         if (unit.fuel != oldFuel)
@@ -654,11 +658,20 @@ public partial class Facility : Node2D
         return visible;
     }
 
+    public int productionSuppressPercent = 0;   // 生产资金消耗压制百分比（负=降价 正=涨价）
+    /// <summary>设施压制：生产实际造价（百分比乘区，下限1G）。UI显示与扣款、AI扣款三处共用。</summary>
+    public int GetProductionCost(int baseCost) => Mathf.Max(1, baseCost * (100 + productionSuppressPercent) / 100);
+
+    public int incomeSuppressPercent = 0;    // 资金压制百分比（设施压制Export写入）
+    public int defenseSuppressPercent = 0;   // 掩体压制百分比
+    public void SetIncomeSuppression(int percent) { incomeSuppressPercent = percent; }
+
     public int GetCurrentIncome()
     {
         if (HasStatus(FacilityStatusType.NoIncome))
             return 0;
-        return fundsPerTurn;
+        // 设施压制百分比（负=减弱 正=增强）；制止走 NoIncome 状态
+        return Mathf.RoundToInt(fundsPerTurn * (100 + incomeSuppressPercent) / 100f);
     }
 
     public bool ProvidesIncomeTo(string team)

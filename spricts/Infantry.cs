@@ -69,6 +69,19 @@ public partial class Infantry : Node2D
 {
     // ========== ✅ 究极自由系统：所有单位类型特性都可通过Inspector控制 ==========
 
+    // ========== ✅ 兵种身份：不写代码造新兵种 ==========
+    // 新兵种 = 复制一个现有单位场景 → 填 unitTypeId（唯一）→ 在检查器里调参数 → 放进 res://Prefabs/CustomUnits/ 即自动进入生产名单
+    [ExportGroup("兵种身份（自定义兵种）")]
+    [Export] public string unitTypeId = "";          // 兵种ID：留空=脚本类名（原有兵种不用填）；攻防表/过滤名单/运输/补给/AI 全部按它识别
+    [Export] public string unitDisplayName = "";     // 生产菜单显示名（留空=兵种ID）
+    [Export] public string templateType = "";        // 参照兵种：攻防表查不到本ID条目、视野/默认配置时按此兵种（留空=脚本类名）
+    /// <summary>兵种身份ID（替代 GetType().Name 的所有身份判定）</summary>
+    public string UnitTypeId => string.IsNullOrEmpty(unitTypeId) ? GetType().Name : unitTypeId;
+    /// <summary>参照兵种ID（静态配置表/攻防表兜底）</summary>
+    public string TemplateId => string.IsNullOrEmpty(templateType) ? GetType().Name : templateType;
+    /// <summary>显示名：unitDisplayName → 兵种配置显示名 → 兵种ID</summary>
+    public string DisplayLabel => !string.IsNullOrEmpty(unitDisplayName) ? unitDisplayName : (UnitRegistry.Get(UnitTypeId)?.DisplayName ?? UnitTypeId);
+
     [ExportGroup("究极自由：单位类型特性")]
     [Export] public bool cannotCounterWhenAttacked = false; // 攻击时不被反击（如Artillery/Rocket/AntiTank等间接攻击单位）
     [Export] public bool canCounterWhenDefending = true;   // 被攻击时能否反击（Artillery/Rocket=false，默认true）
@@ -77,6 +90,91 @@ public partial class Infantry : Node2D
     [Export] public bool canActAfterMerge = false;
 
     [ExportGroup("隐身模块")]
+    [Export] public bool terrainConcealment = true;
+
+    [ExportGroup("截断遭遇")]
+
+    [Export] public bool overlongReflexArc = false;          // 反射弧过长：开=终点压隐形的冤枉费保留(不修)，关=正常退费
+    // —— 被截断方（移动方）——
+    [Export] public bool truncCounterEnabled = false;        // 被截断时自动反击（总开关=是否攻击；关=组一全失效）
+    [Export] public int truncCounterMode = 1;                // 1主动出击(我单向打对方不还手) 2两败俱伤(互吃反击) 3先发制人(对方伏击我,我只能反击)
+    [Export] public bool truncShowAttackButton = true;       // 是否显示攻击键（显示则点键发起/点边缘不攻击仅截断）
+    [Export] public bool truncForcedStop = true;             // 强制截断：开=截死原作式；关=新格重绑+显示剩余移动力+二次移动
+    [Export] public int truncStrikeWeight = 0;               // 截断执行权重 0~9999（矛盾仲裁）
+    // —— 截断方（阻挡方=伏击手）——
+    [Export] public bool truncAmbusherEnabled = false;       // 伏击手：截断他人时主动出击（本组是强制遭遇的唯一来源）
+    [Export] public int truncAmbusherMode = 1;               // 1主动出击 2两败俱伤 3反将被动(对方打我,我只能反击)
+    [Export] public int truncAmbusherWeight = 0;             // 伏击手权重（平权=被截断方先执行）
+    [Export] public bool truncAllowMultiStrike = false;      // 允许多次截断出击：开=双方各执行；关=只执行权重高者              // ✅ 林地/礁岩隐蔽（AW规则）：无贴身敌人时藏于森林/礁岩不可见
+
+    [ExportGroup("雾战模块")]
+    // ✅ 雾战加成（可为负=减成；不改实际数值，仅生效上限/判定）
+    [Export] public int fogMaxHpBonus = 0;
+    [Export] public int fogMaxFuelBonus = 0;
+    [Export] public int fogFlatDefenseBonus = 0;
+    [Export] public int fogPrimaryAmmoMaxBonus = 0;
+    [Export] public int fogExplodeAmmoMaxBonus = 0;
+    [Export] public int fogFlareAmmoMaxBonus = 0;
+    [Export] public int fogStealthBulletMaxBonus = 0;
+    [Export] public int fogRevealBulletMaxBonus = 0;
+    [Export] public int fogCamoBulletMaxBonus = 0;
+    [Export] public Godot.Collections.Dictionary<string, int> fogMatrixOverride = new();
+
+    [ExportGroup("嗅探")]
+    [Export] public bool scentEnabled = false;
+    [Export] public int scentRangeMin = 1;
+    [Export] public int scentRangeMax = 1;
+    [Export] public bool scentIgnoresConcealment = false;
+    [Export] public bool scentIgnoresStealth = false;
+    [Export] public bool scentKeepObserving = false;
+    [Export] public int scentTrackTurns = 1;
+    [ExportGroup("逃跑模块")]
+    [Export] public bool canFleeOnDeath = false;   // 逃跑开关：致命伤触发
+    [Export] public int fleeRangeMin = 0;          // 逃跑目标格检查范围 x
+    [Export] public int fleeRangeMax = 2;          // 逃跑目标格检查范围 y
+    [ExportGroup("拆旗模块")]
+    [Export] public bool canTearFlag = false;    // 拆旗开关：与占领并行的第二条进度
+    [Export] public int tearFlagPower = 5;       // 拆旗力：建筑拆旗值=占领值(20) → 5=四回合；步兵10=两回合
+    [ExportGroup("设施压制")]
+    [Export] public bool canSuppressFacilities = false; // 压制开关：站敌楼干扰 x-y 环内设施
+    [Export] public int suppressRangeMin = 0;           // x（含自身格）
+    [Export] public int suppressRangeMax = 1;           // y
+    [Export] public int suppressIncomeMode = 0;         // 资金：0不干扰 1制止 2百分比
+    [Export] public int suppressIncomePercent = 0;      // 百分比（负=减弱 正=增强）
+    [Export] public int suppressDefenseMode = 0;        // 掩体：0不干扰 1制止 2百分比
+    [Export] public int suppressDefensePercent = 0;
+    [Export] public int suppressProductionMode = 0;     // 生产：0不干扰 1制止（百分比待接生产UI）
+    [Export] public int suppressProductionPercent = 0;  // 作用于生产资金消耗
+    [Export] public bool suppressSupplyStop = false;    // 补给：只制止/不制止
+    [ExportGroup("群体狂热模块")]
+    [Export] public bool packFrenzyEnabled = false;  // 开关（机械狗非生物不开启）
+    [Export] public int packRangeMin = 0;            // 检查范围 x
+    [Export] public int packRangeMax = 1;            // 检查范围 y（临格=特殊值）
+    [Export] public bool packUseWhitelist = false;   // 是否启用检查单位白名单
+    [Export] public Godot.Collections.Array<string> packWhitelist = new(); // 仅注册表单位种类（不看自定义Export）
+    [Export] public bool packSameSpeciesOnly = false; // 特殊态：仅同种类（同类单位）
+    [Export] public int packFactionMode = 0;         // 0全部 1仅友军 2仅敌军
+    [Export] public int packMaxStacks = 3;           // 最大加成次数（看到7只也只享3次）
+    [Export] public int packBonusPercent = 25;       // 加/减成百分比（负=减成）
+    [Export] public bool packCanExceedCap = false;   // 是否超越上限
+    [Export] public int packNewCap = 0;              // 超越上限的新上限（0=无，即不生效）
+    [Export] public bool packBoostAmmoMax = false;   // 效果对象：主武器弹药最大值
+    [Export] public bool packBoostFuelMax = false;   // 效果对象：燃油最大值
+    [Export] public bool packBoostHpMax = false;     // 效果对象：血量最大值（不改变当前值）
+    [Export] public bool packBoostAttack = false;    // 效果对象：真实攻击力（攻防表额外加成）
+    [Export] public bool packBoostDefense = false;   // 效果对象：固定防御力
+    [Export] public int packLingerTurns = 0;         // 不符合标准后持续N回合（再符合=覆盖不叠加）
+
+
+
+
+
+    [ExportGroup("感知强化")]
+    [Export] public bool strongSight = false;
+    [Export] public bool strongDetect = false;
+
+    [ExportGroup("补给")]
+    [Export] public string[] supplyBlacklist = System.Array.Empty<string>();  // 雾战独立攻防表（固定数值，禁小数）
     [Export] public bool canStealth = false;
     [Export] public bool stealthToggleCostsAction = true;    // 隐身/显形是否算独立操作：true=切换后待机；false=切换后仍可攻击移动                            // 可否隐身
     [Export] public bool isStealthed = false;                           // 运行时：当前是否隐身
@@ -89,6 +187,9 @@ public partial class Infantry : Node2D
     [Export] public bool stealthForceOneShot = false;    // 阈值效果一次性：true=触发一次后永久锁存；false=持续模式(条件成立期间强制且玩家不可改)
     [Export] public bool stealthFormLocked = false;      // 形态锁定：true=玩家不可隐/现切换（阈值强制不受限，照常在条件满足时改写形态）
     bool stealthForceLatched = false;                    // 运行时：一次性锁存标记
+    public bool stealthThresholdLocked = false;          // 运行时：持续模式阈值锁（与手动锁分开存，修复阈值判定覆盖编辑器手动锁）
+    public bool IsStealthFormLocked => stealthFormLocked || stealthThresholdLocked;   // ✅ 有效锁定 = 手动锁 或 阈值锁
+    [Export] public bool stealthThresholdRevealWins = true;    // 强制隐/强制显同时命中：true=显形优先(原行为) false=隐身优先
     // —— 阈值矩阵：双方向(强制隐/强制显) × 双阈值(高/低) × 八资源 ——
     // 语义=手机电量：高于等于高阈值触发(≥80%性能模式)，低于等于低阈值触发(≤20%省电模式)，两侧持续判定
     [Export] public bool stealthForceHideOneShot = false;      // 强制隐阈值：true=只触发一次(终身)
@@ -118,6 +219,7 @@ public partial class Infantry : Node2D
     // —— 现形规则 ——
     [Export] public bool stealthRevealOnAttack = false;             // 攻击后现形
     [Export] public bool stealthRevealOnDamage = true;              // 受伤现形
+    [Export(PropertyHint.Enum, "仅单位攻击,任何掉血")] public int stealthRevealDamageScope = 1;   // 受伤现形的"受伤"范围：0=狭义(只有单位攻击/反击)，1=广义(自爆/兵器/地格/修理扣血等任何掉血)
     [Export] public bool stealthRevealOnFlare = true;               // 照明弹使其现形
     // —— 隐身中行为锁 ——
     [Export] public bool canAttackWhileStealthed = true;            // 隐身时可攻击（AW3=true）
@@ -148,7 +250,8 @@ public partial class Infantry : Node2D
     [Export] public Godot.Collections.Dictionary<string, int> stealthMatrixOverride = new();  // 隐身时替换的攻防表（键"攻击方_目标"，空=用默认表）                       // 0=不改 1=可重叠 2=不可重叠   // 🔁 合流后再行动：true=合流完成后可继续操作一次（默认关=AW原作）
     [Export] public string[] excludedWeaponTargets = System.Array.Empty<string>();  // ⚔ 兵器攻击准入(攻击方)：不能攻击的兵器类型，"Weapon"=全部兵器，留空=均可攻击              // ✅ 合流模块：是否允许参与 Join 合流（false=该单位不可合流）
     [Export] public bool useDefaultConfig = true;           // ✅ 是否使用代码默认值（false=完全由Inspector控制，不执行ApplyUnitSpecificDefaults）
-    [Export] public bool canDevour = false;                // 是否能吞噬敌人（Oozium特性）
+    [Export] public bool canDevour = false;
+    [Export] public bool canDevourAllies = true;   // 吞噬友军（AW原作史莱姆不分敌我；关掉则只吞噬敌军）                // 是否能吞噬敌人（Oozium特性）
     [Export] public bool canCapture = true;                // 是否能占领城市
     [Export] public UnitCategory unitCategory = UnitCategory.Other;  // 手动指定分类
 
@@ -177,7 +280,7 @@ public int ActualVisionRange
     get 
     {
         if (!useConfigVision && visionRange >= 0) return visionRange;
-        return VisionConfig.GetUnitVisionRange(this.GetType().Name);
+        return VisionConfig.GetUnitVisionRange(TemplateId);
     }
 }
 
@@ -191,10 +294,20 @@ public int GetTerrainVisionBonus(GridType gridType)
         return 0; // 单位矩阵中未定义的地形=0加成
     }
     // 使用全局配置
-    return VisionConfig.GetUnitTerrainVisionBonus(this.GetType().Name, gridType);
+    return VisionConfig.GetUnitTerrainVisionBonus(TemplateId, gridType);
 }
 
+// ✅ AI 档案（提案 docs/proposals/ai-brain.md）：全部默认=自动，AI 按单位实际能力字段推断行为；填写后覆盖推断
+[ExportGroup("AI 档案")]
+[Export(PropertyHint.Enum, "自动,突击,占点,守备,刺客")] public int aiRole = 0;   // 自动=按能力推断；突击=只找仗打；占点=优先占领；守备=守己方据点；刺客=打完就隐身/撤离
+[Export] public Godot.Collections.Dictionary<string, float> aiTargetWeights = new(); // 目标兵种名→价值倍率（"*"=其余全部）；空=纯伤害预估。例：战斗机 {"*":0}+空军各1
+[Export] public int aiRetreatHpThreshold = -1;     // 血≤N 撤退修整；-1=自动(最大血量30%)；0=死战不退
+[Export] public bool aiPreferKill = true;           // 能击杀的目标额外加分
+[Export] public bool aiFocusFire = true;           // 集火：残血目标额外加分
+[Export] public float aiRiskMultiplier = 1f;       // 威胁规避倍率：0=无畏，1=默认，>1=更怕死
+
 [ExportGroup("攻防表")]
+[Export] public bool counterUsePreDamageHp = false;   // 反击按挨打前血量计算（旧行为）；默认 false=AW 原作按挨打后血量
 [Export] public Godot.Collections.Dictionary<string, int> attackMatrix = new();      // 主武器
 [Export] public Godot.Collections.Dictionary<string, int> secondaryAttackMatrix = new(); // 副武器
 
@@ -356,7 +469,41 @@ public void InitializeDefaultMatrix()
             ["Recon_RepairBoat"] = 0,     ["Flare_RepairBoat"] = 0,
             ["Bike_RepairBoat"] = 0,      ["AntiTank_RepairBoat"] = 0,
             ["APC_RepairBoat"] = 0,       ["FlyBomb_RepairBoat"] = 0,
-        };
+        
+            // ✅ 矩阵空洞修复（2026-10-31审计：照明车机枪补全+互缺对补值）
+            ["Flare_Infantry"] = 65,
+            ["Flare_Mech"] = 50,
+            ["Flare_Bike"] = 60,
+            ["Flare_Recon"] = 65,
+            ["Flare_APC"] = 45,
+            ["Flare_LightTank"] = 35,
+            ["Flare_MdTank"] = 25,
+            ["Flare_Artillery"] = 45,
+            ["Flare_Rocket"] = 45,
+            ["Flare_AntiAir"] = 35,
+            ["Flare_AntiTank"] = 35,
+            ["Infantry_Flare"] = 55,
+            ["Bike_Flare"] = 50,
+            ["Recon_Flare"] = 70,
+            ["Infantry_Bike"] = 65,
+            ["Bike_Infantry"] = 70,
+            ["Recon_Bike"] = 60,
+            ["Bike_Recon"] = 35,
+            ["AntiTank_Oozium"] = 35,
+            ["PipeRunner_Oozium"] = 35,
+            ["BCopter_TCopter"] = 65,
+            
+            ["Dog_Infantry"] = 28, ["Dog_Mech"] = 22, ["Dog_Bike"] = 32, ["Dog_Recon"] = 6,
+            ["Dog_APC"] = 8, ["Dog_LightTank"] = 8, ["Dog_MdTank"] = 2, ["Dog_Artillery"] = 12,
+            ["Dog_Rocket"] = 12, ["Dog_AntiAir"] = 12, ["Dog_AntiTank"] = 1, ["Dog_Oozium"] = 18,
+            ["Dog_Flare"] = 28, ["Dog_AntiAirMissile"] = 12,
+            ["AntiAir_Dog"] = 74, ["Artillery_Dog"] = 63, ["AntiTank_Dog"] = 52, ["Bike_Dog"] = 49,
+            ["Bomber_Dog"] = 77, ["Flare_Dog"] = 46, ["Infantry_Dog"] = 38, ["LightTank_Dog"] = 52,
+            ["MdTank_Dog"] = 77, ["Mech_Dog"] = 46, ["Oozium_Dog"] = 699, ["PipeRunner_Dog"] = 66,
+            ["Recon_Dog"] = 49, ["Rocket_Dog"] = 66, ["Stealth_Dog"] = 66, ["Dog_Dog"] = 32,
+
+            ["BCopter_Dog"] = 53, ["TCopter_Dog"] = 53,
+};
     }
 
     if (defaultSecondaryMatrix == null)
@@ -503,6 +650,8 @@ public virtual void OnTurnEnd()
     state = UnitState.Idle;
     isMoved = false;
     isAttacked = false;
+    movedThisTurnForAutoRepair = false; autoRepairAfterMoveDone = false;
+    hasActed = false;   // ✅ 修复：此前从不重置，生产/合流/补给/修理过的单位永久失去补给/修理/自爆等按钮
     movePoints = defaultMovePoints;
     SetWaitVisual(false);
     // ✅ 恢复 idle 动画后再启动呼吸（animSprite 单位需要）
@@ -511,28 +660,58 @@ public virtual void OnTurnEnd()
     StartBreath();
 }
 // 查主武器表
-public virtual int GetPrimaryDamageFromMatrix(Infantry target)
+public virtual int GetPrimaryDamageFromMatrix(Infantry target) => GetMatrixDamage(target, false);
+
+/// <summary>
+/// ✅ 统一查表入口：隐身专属表（仅隐身中）→ 实例表 → 默认表。
+/// stealthMatrixOverride 此前只写在从未被调用的 GetBaseDamageFromMatrix 里，实际攻击/反击都不生效。
+/// assumeStealthed：AI 估算用，假设"此刻是否隐身"（null=按当前状态）。
+/// </summary>
+public int GetMatrixDamage(Infantry target, bool secondary, bool? assumeStealthed = null)
 {
-    string key = $"{this.GetType().Name}_{target.GetType().Name}";
-    
-    int baseValue = 0;
-    if (attackMatrix.TryGetValue(key, out int v)) baseValue = v;
-    else if (defaultMatrix?.TryGetValue(key, out v) == true) baseValue = v;
-    
-    return baseValue;
+    if (target == null) return 0;
+    // 键优先级：本ID_目标ID → 参照_目标ID → 本ID_目标参照 → 参照_目标参照（原有兵种四个键相同）
+    var keys = MatrixKeys(UnitTypeId, TemplateId, target.UnitTypeId, target.TemplateId);
+    // 隐身攻防表替换：隐身时同一张表同时替换主/副武器（填 0 = 隐身状态下打不了该目标）
+    if ((assumeStealthed ?? isStealthed) && stealthMatrixOverride != null && stealthMatrixOverride.Count > 0)
+        foreach (var k in keys) if (stealthMatrixOverride.TryGetValue(k, out int sval)) return sval;
+    // ✅ 雾战攻防表：优先级 隐身表 > 雾战表 > 默认/模板表（雾中隐身=上面已用隐身表返回）
+    if (FogActive() && fogMatrixOverride != null && fogMatrixOverride.Count > 0)
+        foreach (var k in keys) if (fogMatrixOverride.TryGetValue(k, out int fval)) return fval;
+    var inst = secondary ? secondaryAttackMatrix : attackMatrix;
+    var def = secondary ? defaultSecondaryMatrix : defaultMatrix;
+    if (inst != null) foreach (var k in keys) if (inst.TryGetValue(k, out int v)) return v;
+    if (def != null) foreach (var k in keys) if (def.TryGetValue(k, out int v)) return v;
+    return 0;
+}
+
+private static List<string> MatrixKeys(string att, string attTpl, string def, string defTpl)
+{
+    var r = new List<string>(4);
+    foreach (var k in new[] { $"{att}_{def}", $"{attTpl}_{def}", $"{att}_{defTpl}", $"{attTpl}_{defTpl}" })
+        if (!r.Contains(k)) r.Add(k);
+    return r;
+}
+
+/// <summary>AI 生产评估：按兵种ID+参照兵种查默认攻防表</summary>
+public static int LookupDefaultMatrix(string att, string attTpl, string def, string defTpl, bool secondary = false)
+{
+    var m = secondary ? defaultSecondaryMatrix : defaultMatrix;
+    if (m == null) return 0;
+    foreach (var k in MatrixKeys(att, attTpl ?? att, def, defTpl ?? def)) if (m.TryGetValue(k, out int v)) return v;
+    return 0;
+}
+
+// ✅ AI 生产评估用：按类型名查默认攻防表（无实例时使用）
+public static int LookupDefaultMatrix(string attackerType, string defenderType, bool secondary = false)
+{
+    var m = secondary ? defaultSecondaryMatrix : defaultMatrix;
+    if (m == null) return 0;
+    return m.TryGetValue($"{attackerType}_{defenderType}", out int v) ? v : 0;
 }
 
 // 查副武器表
-public virtual int GetSecondaryDamageFromMatrix(Infantry target)
-{
-    string key = $"{this.GetType().Name}_{target.GetType().Name}";
-    
-    int baseValue = 0;
-    if (secondaryAttackMatrix.TryGetValue(key, out int v)) baseValue = v;
-    else if (defaultSecondaryMatrix?.TryGetValue(key, out v) == true) baseValue = v;
-    
-    return baseValue;
-}
+public virtual int GetSecondaryDamageFromMatrix(Infantry target) => GetMatrixDamage(target, true);
 
 public virtual WeaponType SelectWeaponByMatrix(Infantry target)
 {
@@ -555,36 +734,22 @@ public virtual WeaponType SelectWeaponByMatrix(Infantry target)
 
 
 
-// 查表
-public virtual int GetBaseDamageFromMatrix(Infantry target, bool isCounter = false)
-{
-    string key = $"{this.GetType().Name}_{target.GetType().Name}";
-    
-    // ✅ 隐身攻防表替换（隐身时优先查专属表）
-    if (isStealthed && stealthMatrixOverride != null && stealthMatrixOverride.Count > 0)
-    {
-        string skey = $"{GetType().Name}_{target.GetType().Name}";
-        if (stealthMatrixOverride.TryGetValue(skey, out int sval)) return sval;
-    }
-    int baseValue = 0; // 默认0，不是50！
-    if (attackMatrix.TryGetValue(key, out int v)) baseValue = v;
-    else if (defaultMatrix?.TryGetValue(key, out v) == true) baseValue = v;
-    
-    if (isCounter)
-        return Mathf.RoundToInt(baseValue * counterMul);
-    
-    return baseValue;
-}
 
 // 防御力（动态衰减：baseDefense × 血量% + 地形加成）
 public int GetEffectiveDefense(Grids targetGrid)
 {
-    float healthPercent = (float)health / maxHealth;
+    float healthPercent = (float)health / GetEffectiveMaxHealth();
     int dynamicDefense = Mathf.RoundToInt(baseDefense * healthPercent);
-    float terrainBonus = (defenseBonusType == DefenseBonusType.CanDefenseBonus && targetGrid != null) 
-        ? targetGrid.TerrainDefenseBonus 
+    // 群体狂热：固定防御力加成（百分比乘区；负=减成，下限0）
+    if (packBoostDefense && PackFrenzyActive())
+        dynamicDefense = dynamicDefense * Mathf.Max(0, 100 + packBonusPercent) / 100;
+    float terrainBonus = (defenseBonusType == DefenseBonusType.CanDefenseBonus && targetGrid != null
+            && (targetGrid.city == null || !targetGrid.city.HasStatus(FacilityStatusType.NoCover)))
+        ? targetGrid.TerrainDefenseBonus * Mathf.Max(0, 100 + (targetGrid.city?.defenseSuppressPercent ?? 0)) / 100f 
         : 0f;
-    return Mathf.RoundToInt(dynamicDefense * (1.0f + terrainBonus));
+    int result = Mathf.RoundToInt(dynamicDefense * (1.0f + terrainBonus));
+    if (FogActive()) result = Mathf.Max(0, result + fogFlatDefenseBonus);   // ✅ 雾战固定防御（可负）
+    return result;
 }
 
 public virtual int CalculateFinalDamage(Infantry target, WeaponType weaponType, bool isCounter = false)
@@ -596,15 +761,20 @@ public virtual int CalculateFinalDamage(Infantry target, WeaponType weaponType, 
     else if (weaponType == WeaponType.Secondary)
         baseDamage = GetSecondaryDamageFromMatrix(target);
     
+    // 群体狂热：真实攻击力加成（攻防表额外加成；负=减成，下限0）
+    if (packBoostAttack && PackFrenzyActive())
+        baseDamage = baseDamage * Mathf.Max(0, 100 + packBonusPercent) / 100;
+
     if (baseDamage <= 0) return 0;
     
     // 攻击方血量系数
-    float attackerHealthPercent = (float)health / maxHealth;
+    float attackerHealthPercent = (float)health / GetEffectiveMaxHealth();
     float actualAttack = baseDamage * attackerHealthPercent;
     
     // 地形
-    float terrainDefense = (target.defenseBonusType == DefenseBonusType.CanDefenseBonus && target.grid != null)
-        ? target.grid.TerrainDefenseBonus
+    float terrainDefense = (target.defenseBonusType == DefenseBonusType.CanDefenseBonus && target.grid != null
+            && (target.grid.city == null || !target.grid.city.HasStatus(FacilityStatusType.NoCover)))
+        ? target.grid.TerrainDefenseBonus * Mathf.Max(0, 100 + (target.grid.city?.defenseSuppressPercent ?? 0)) / 100f
         : 0f;
     float terrainMultiplier = 1.0f - terrainDefense;
     float afterTerrain = actualAttack * terrainMultiplier;
@@ -675,23 +845,6 @@ public static Dictionary<Infantry, int> unitsCannotMove = new Dictionary<Infantr
 // 私有
 private Tween loadedIconTween;
 
-// ========== 新增：查攻防表获取基础伤害 ==========
-public virtual int GetBaseDamageFromMatrix(Infantry target)
-{
-    string attackerType = this.GetType().Name;
-    string defenderType = target.GetType().Name;
-    string key = $"{attackerType}_{defenderType}";
-    
-    // 先查实例的Export表，再查默认表
-    if (attackMatrix.TryGetValue(key, out int value))
-        return value;
-    
-    if (defaultMatrix?.TryGetValue(key, out value) == true)
-        return value;
-    
-    // 默认回退：50（避免崩溃）
-    return 50;
-}
 
 // ========== 新增：核心伤害公式 ==========
 
@@ -706,7 +859,7 @@ public List<Infantry> transportedUnits = new List<Infantry>();
     [Export]
     public AttackOverlapPolicy attackOverlap = AttackOverlapPolicy.AllowAttackEnemyOnSameTile;
     [Export]
-    public UnitOverlapType overlapType = UnitOverlapType.NonOverlapping;
+    public UnitOverlapType overlapType = UnitOverlapType.NonOverlapping;   // ✅ 覆盖方式：NonOverlapping=不可重叠 / Overlapping=仅重叠 / Oozium=覆盖+吞噬(自动，无需canDevour)
     [Export]
     public MoveType moveType = MoveType.Infantry;  
     [Export]
@@ -905,6 +1058,148 @@ public virtual bool ConsumePrimaryAmmo()
     public int currentCaptureProgress = 0;
     public Grids capturingGrid = null;  // 正在占领的格子
     private CaptureEffect currentCaptureEffect;
+    // ========== ✅ 通用修理模块（任何 canRepair 单位可用；原 RepairBoat 专属逻辑上移） ==========
+    /// <summary>修理范围：[min,max] 环；repairTargetMode=3（仅自己）时只含自身格</summary>
+    public virtual List<Grids> CalculateRepairRange()
+    {
+        var result = new List<Grids>();
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager == null || grid == null) return result;
+        if (repairTargetMode == 3) { result.Add(grid); return result; }
+        var allRange = gm.gridManager.FindRange(grid, maxRepairRange, false);
+        if (minRepairRange > 1)
+        {
+            var blindZone = gm.gridManager.FindRange(grid, minRepairRange - 1, false);
+            allRange = allRange.Where(g => !blindZone.Contains(g)).ToList();
+        }
+        return allRange.Where(g => g != grid).ToList();
+    }
+
+    /// <summary>目标是否符合修理模式：0=所有 1=仅友方 2=仅敌方 3=仅自己</summary>
+    public bool IsRepairTargetAllowed(Infantry unit)
+    {
+        if (unit == null || !IsInstanceValid(unit) || unit.isTransported) return false;
+        bool isAlly = unit.team == team;
+        switch (repairTargetMode)
+        {
+            case 1: if (!isAlly || unit == this) return false; break;
+            case 2: if (isAlly) return false; break;
+            case 3: if (unit != this) return false; break;
+            default: if (unit == this) return false; break;
+        }
+        // 加血模式：满血（且不能超上限）无意义
+        if (repairAmountPerAction > 0 && !canExceedMaxHealth && unit.health >= unit.maxHealth) return false;
+        if (repairAmountPerAction == 0) return false;
+        return true;
+    }
+
+    public virtual List<Infantry> GetRepairableTargets()
+    {
+        var result = new List<Infantry>();
+        foreach (var g in CalculateRepairRange())
+        {
+            if (g == null) continue;
+            foreach (var unit in g.infantries)
+                if (IsRepairTargetAllowed(unit)) result.Add(unit);
+        }
+        return result;
+    }
+
+    /// <summary>执行修理：正值加血（可耗资），负值扣血（受伤现形按广义规则处理）</summary>
+    public virtual bool PerformRepair(Infantry target)
+    {
+        if (target == null || !IsInstanceValid(target) || !CanPerformRepair) return false;
+        if (!CalculateRepairRange().Contains(target.grid)) return false;
+        if (!IsRepairTargetAllowed(target)) return false;
+
+        int actualRepair = repairAmountPerAction;
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (actualRepair > 0)
+        {
+            int oldHealth = target.health;
+            int healCap = canExceedMaxHealth ? exceededMaxHealth : target.maxHealth;
+            int newHealth = Mathf.Min(healCap, target.health + actualRepair);
+            int actualHealed = newHealth - oldHealth;
+            if (actualHealed <= 0) return false;
+            if (repairCostsFunds && gm != null)
+            {
+                int cost = actualHealed * repairCostPerHp;
+                int currentFunds = gm.GetTeamFunds(team);
+                if (currentFunds < cost) return false; // 资金不足
+                gm.SetTeamFunds(team, currentFunds - cost);
+            }
+            target.health = newHealth;
+            target.UpdateHpLabel();
+            ShowRepairEffect(target, actualHealed);
+        }
+        else
+        {
+            int damage = Mathf.Abs(actualRepair);
+            target.health -= damage;
+            target.UpdateHpLabel();
+            ShowRepairEffect(target, -damage);
+            if (target.health <= 0 && !target.TryFlee())
+            {
+                target.OnDestroyed();
+                if (target.grid != null)   // 与 Attack 的死亡处理一致：从格子移除，避免残留引用
+                {
+                    target.grid.infantries.Remove(target);
+                    if (target.grid.infantry == target)
+                        target.grid.infantry = target.grid.infantries.Count > 0 ? target.grid.infantries[0] : null;
+                    target.grid = null;
+                }
+                gm?.RemovePiece(target);
+                target.CallDeferred(Node.MethodName.QueueFree);
+            }
+        }
+        return true;
+    }
+
+    public virtual void PerformAreaRepair()
+    {
+        if (!isAreaRepair) return;
+        foreach (var target in GetRepairableTargets()) PerformRepair(target);
+    }
+
+    /// <summary>自动修理（回合开始 / 移动后），不占用操作</summary>
+    public virtual void PerformAutoRepair()
+    {
+        if (!CanPerformRepair) return;
+        if (isAreaRepair) PerformAreaRepair();
+        else
+        {
+            var targets = GetRepairableTargets();
+            if (targets.Count > 0) PerformRepair(targets.OrderBy(t => t.health).First());
+        }
+    }
+
+    public virtual void OnTurnStartAutoRepair()
+    {
+        if (!autoRepairOnTurnStart) return;
+        PerformAutoRepair();
+    }
+
+    // 移动后自动修理：移动标记 + 本回合行动结束（state=Acted）时触发一次，避免撤销移动刷血
+    public bool movedThisTurnForAutoRepair = false;
+    private bool autoRepairAfterMoveDone = false;
+
+    protected void ShowRepairEffect(Infantry target, int amount)
+    {
+        var label = new Label();
+        label.Text = amount > 0 ? $"+{amount}" : $"{amount}";
+        label.Modulate = amount > 0 ? new Color(1, 0.4f, 0.7f) : new Color(0.8f, 0.2f, 0.2f);
+        label.Position = target.GlobalPosition + new Godot.Vector2(0, -20);
+        label.ZIndex = 300;
+        label.AddThemeFontSizeOverride("font_size", 16);
+        label.AddThemeConstantOverride("outline_size", 3);
+        label.AddThemeColorOverride("font_outline_color", Colors.Black);
+        GetTree()?.CurrentScene?.AddChild(label);
+        var tween = CreateTween();
+        tween.TweenProperty(label, "position", label.Position + new Godot.Vector2(0, -40), 1.2f);
+        tween.TweenProperty(label, "modulate:a", 0.0f, 0.5f);
+        tween.TweenCallback(Callable.From(() => label.QueueFree()));
+    }
+
     public virtual bool CanMove()
     {
         if (!consumeFuel) return true;
@@ -924,17 +1219,25 @@ public virtual bool ConsumePrimaryAmmo()
         if ((!consumeFuel || dailyFuelConsumption <= 0) && !hasStealthCost) return;
         if (consumeFuel && dailyFuelConsumption > 0) fuel -= dailyFuelConsumption;
 
-        if (fuel <= 0 && destroyOnOutOfFuel)
+        stealthFlareRevealed = false;   // 照明临时显形每回合刷新
+        ApplyStealthDailyCost();   // ✅ 隐身日耗（独立于燃料开关）
+        MaintainScentTracking();
+        PerformScentScan();
+
+        // ✅ 燃料耗尽坠毁：统一在日耗全部结算后判定一次（修复：此前与 ApplyStealthDailyCost 各判一次，隐身时重复销毁）
+        if (fuel <= 0 && destroyOnOutOfFuel && !pendingFuelDestroy)
         {
+            pendingFuelDestroy = true;
             // 延迟一帧销毁，避免在迭代中修改集合
             CallDeferred(nameof(DestroySelf));
         }
-        stealthFlareRevealed = false;   // 照明临时显形每回合刷新
-        ApplyStealthDailyCost();   // ✅ 隐身日耗（独立于燃料开关）
     }
+    private bool pendingFuelDestroy = false;
+    private bool stealthVisualApplied = false;   // 运行时：当前已应用的隐身外观   // 运行时：已排队坠毁，防重复
 
     private void DestroySelf()
     {
+        if (!IsInstanceValid(this) || IsQueuedForDeletion()) return;
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.unitManager?.RemoveUnit(this);
     }
@@ -951,7 +1254,7 @@ public virtual bool ConsumePrimaryAmmo()
     {
         get 
         { 
-            float healthPercent = (float)health / maxHealth;
+            float healthPercent = (float)health / GetEffectiveMaxHealth();
             return Mathf.Max(0, Mathf.RoundToInt(baseAttack * healthPercent));
         }
     }
@@ -960,7 +1263,7 @@ public virtual bool ConsumePrimaryAmmo()
     {
         get 
         { 
-            float healthPercent = (float)health / maxHealth;
+            float healthPercent = (float)health / GetEffectiveMaxHealth();
             return Mathf.Max(0, Mathf.RoundToInt(baseDefense * healthPercent));
         }
     }
@@ -973,7 +1276,7 @@ public virtual bool ConsumePrimaryAmmo()
     {
         get 
         { 
-            float healthPercent = (float)health / maxHealth;
+            float healthPercent = (float)health / GetEffectiveMaxHealth();
             return Mathf.Max(0, Mathf.RoundToInt(secondaryAttack * healthPercent));
         }
     }
@@ -1154,7 +1457,7 @@ public override void _Ready()
         // ========== ✅ 战争迷雾视野初始化 ==========
         if (visionRange < 0 && useConfigVision)
         {
-            visionRange = VisionConfig.GetUnitVisionRange(this.GetType().Name);
+            visionRange = VisionConfig.GetUnitVisionRange(TemplateId);
         }
         else if (visionRange >= 0)
         {
@@ -1163,7 +1466,7 @@ public override void _Ready()
         // ✅ 初始化单位专属地形加成矩阵（如果为空则填充默认值）
         if (overrideGlobalTerrainBonus && (unitTerrainVisionBonus == null || unitTerrainVisionBonus.Count == 0))
         {
-            var defaultTable = VisionConfig.GetUnitTerrainBonusTable(this.GetType().Name);
+            var defaultTable = VisionConfig.GetUnitTerrainBonusTable(TemplateId);
             unitTerrainVisionBonus = new Godot.Collections.Dictionary<GridType, int>();
             foreach (var kvp in defaultTable)
                 unitTerrainVisionBonus[kvp.Key] = kvp.Value;
@@ -1183,8 +1486,8 @@ public virtual void ApplyUnitSpecificDefaults() { }
 // ✅ 从 UnitRegistry 读取兵种配置
 protected virtual void ApplyUnitRegistryConfig()
 {
-    string unitId = this.GetType().Name;
-    var config = UnitRegistry.Get(unitId);
+    string unitId = UnitTypeId;
+    var config = UnitRegistry.Get(unitId) ?? UnitRegistry.Get(TemplateId);   // 自定义兵种无专属配置时用参照兵种
     if (config == null) return;
 
     // 基础属性
@@ -1405,6 +1708,32 @@ public virtual void UpdateTeamVisual()
 
 public override void _Process(double delta)
 {
+    // ✅ 广义受伤现形
+    if (damageRevealLastHp < 0) damageRevealLastHp = health;
+    else if (health < damageRevealLastHp)
+    {
+        if (stealthRevealDamageScope == 1 && isStealthed && health > 0)
+        {
+            ApplyStealthRevealOnDamage(this);
+            CheckStealthThresholds();
+        }
+        damageRevealLastHp = health;
+    }
+    else if (health > damageRevealLastHp) damageRevealLastHp = health;
+
+    // ✅ 移动后自动修理：移动过且本回合行动已结束时触发一次（不占操作；撤销移动不会刷血）
+    if (autoRepairAfterMove && movedThisTurnForAutoRepair && !autoRepairAfterMoveDone && state == UnitState.Acted && CanPerformRepair)
+    {
+        autoRepairAfterMoveDone = true;
+        PerformAutoRepair();
+    }
+
+    // ✅ 隐身半透明与状态同步（修复：读档/编辑器载入 isStealthed=true 时不会重设半透明）
+    if (isStealthed != stealthVisualApplied)
+    {
+        stealthVisualApplied = isStealthed;
+        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1,1);   // ✅ 我方视角=半透明幽灵；敌方视角=完全不渲染（ShouldShowUnit）
+    }
     // ✅ noFuelIcon 闪烁（从子类抽到基类统一处理）
     if (noFuelIcon != null)
     {
@@ -2343,6 +2672,9 @@ public virtual void SetWaitVisual(bool waiting)
 }
 
     private bool isCapturingInProgress = false;
+    public int currentTearProgress = 0;          // 拆旗进度（镜像 currentCaptureProgress）
+    public Grids tearingGrid = null;             // 正在拆的建筑格（镜像 capturingGrid）
+    private bool isTearingInProgress = false;    // 重入锁（镜像 isCapturingInProgress）
     public virtual void PerformCapture()
 {
     if (isStealthed && !canCaptureWhileStealthed) return;   // ✅ 隐身占点锁
@@ -2351,6 +2683,15 @@ public virtual void SetWaitVisual(bool waiting)
     
     if (!CanCaptureCurrentGrid())
         return;
+
+    // 拆旗冻结：敌方撕旗者在场时，本楼占领进度冻结（只冻结不清零；遭遇清零由 PerformTearFlag 负责）
+    if (grid != null && grid.city != null && grid.infantries != null &&
+        grid.infantries.Any(u => u != this && u != null && IsInstanceValid(u) && u.team != this.team
+            && u.tearingGrid == grid && u.currentTearProgress > 0))
+    {
+        ShowCaptureInterruptedEffect();
+        return;
+    }
 
     isCapturingInProgress = true;  // 设置标志
     
@@ -2445,7 +2786,271 @@ public virtual void SetWaitVisual(bool waiting)
     var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
     gm?.CheckVictoryCondition();
 }
-        protected virtual void ShowCaptureInterruptedEffect()
+    
+    // ========== 逃跑模块（野化）==========
+    /// <summary>
+    /// 致命伤触发：向 x-y 环内随机空格逃跑并野化（满血中立）。
+    /// 成功返回 true（死亡被逃跑抵消）；无处可逃返回 false（照常死亡）。
+    /// 规格裁定：永久存续 / 原主人可攻击 / 落地满血（致命伤被逃跑抵消，代价是脱离编制而非血量）
+    /// </summary>
+    public virtual bool TryFlee()
+    {
+        if (!canFleeOnDeath || grid == null) return false;
+        var gm = gameManager;
+        if (gm?.unitManager == null || gm?.gridManager == null) return false;
+
+        var origin = grid.GridIndex;
+        var candidates = new List<Grids>();
+        for (int dx = -fleeRangeMax; dx <= fleeRangeMax; dx++)
+            for (int dy = -fleeRangeMax; dy <= fleeRangeMax; dy++)
+            {
+                int dist = Mathf.Abs(dx) + Mathf.Abs(dy);
+                if (dist < fleeRangeMin || dist > fleeRangeMax || (dx == 0 && dy == 0)) continue;
+                var pos = new Vector2I(origin.X + dx, origin.Y + dy);
+                if (!gm.unitManager.IsValidGrid(pos)) continue;
+                var g = gm.gridManager.map[pos.X, pos.Y];
+                if (g == null || g.infantries.Count > 0) continue;      // 有单位的不选
+                if (GetMoveCost(g.gridType) >= 999) continue;           // 本兵种不可通行的地形不选（水面/陨石）
+                candidates.Add(g);
+            }
+        if (candidates.Count == 0) return false;                        // 无处可逃：原地阵亡
+
+        var target = candidates[GD.RandRange(0, candidates.Count - 1)]; // 规格无顺序要求 → 随机
+
+        // 搬格子（照运输卸载的既有模式）
+        grid.infantries.Remove(this);
+        if (grid.infantry == this)
+            grid.infantry = grid.infantries.Count > 0 ? grid.infantries[0] : null;
+        Position = target.Position;
+        grid = target;
+        if (!target.infantries.Contains(this)) target.infantries.Add(this);
+        if (target.infantry == null) target.infantry = this;
+
+        health = maxHealth;                    // 野化=满血
+        team = TeamHelper.Player0;             // 中立（P0）：无相位、不动不操作、挨打照反击（反击链队伍无关）
+        UpdateHpLabel();
+        UpdateTeamVisual();                    // 换中立灰（含呼吸动画重启）
+        GD.Print($"[逃跑] {unitDisplayName} 野化：{origin} → {target.GridIndex}，满血中立在野");
+        return true;
+    }
+
+    // ========== 拆旗模块（占领的镜像：第二条进度）==========
+    /// <summary>拆旗合法性：开关 + 敌属建筑 + 非中立（中立旗已被撕过，无对象）。</summary>
+    public virtual bool CanTearCurrentGrid()
+    {
+        if (!canTearFlag) return false;
+        if (grid == null || grid.city == null) return false;
+        if (isStealthed && !canCaptureWhileStealthed) return false;   // 沿用占楼隐身锁
+        if (string.IsNullOrEmpty(grid.city.facilityTeam)) return false;
+        if (grid.city.facilityTeam == team) return false;             // 自己的旗不拆
+        if (grid.city.facilityTeam == TeamHelper.Player0) return false; // 中立旗：撕毁已完成
+        return true;
+    }
+
+    /// <summary>
+    /// 拆旗执行：进度 +tearFlagPower/回合；与占领互斥——
+    /// ①敌方撕旗者在场时本楼占领进度冻结（PerformCapture 钩子）
+    /// ②拆旗遭遇敌方占领时双方进度清零（"我得不到，你的旗也被撕毁"）
+    /// 进度满（拆旗值=占领值）→ 建筑转中立。
+    /// ⚠️ 美术急需：撕旗专属动画（当前复用占领表现）
+    /// </summary>
+    public virtual void PerformTearFlag()
+    {
+        if (isStealthed && !canCaptureWhileStealthed) return;   // 隐身拆旗锁（同占楼）
+        if (isTearingInProgress) return;
+        if (!CanTearCurrentGrid()) return;
+        isTearingInProgress = true;
+        try
+        {
+            int power = tearFlagPower;
+            if (tearingGrid != grid)
+            {
+                if (tearingGrid != null) tearingGrid.city?.OnCaptureInterrupted(this);
+                currentTearProgress = 0;
+                tearingGrid = grid;
+                grid.city?.OnCaptureStarted(this);   // 撕旗动画挂这里（复用开始钩子）
+            }
+
+            // 占拆遭遇：双方进度同归于尽
+            var contestUnits = grid.infantries
+                .Where(u => u != this && u != null && IsInstanceValid(u) && u.team != this.team
+                    && u.currentCaptureProgress > 0 && u.capturingGrid == grid).ToList();
+            if (contestUnits.Count > 0)
+            {
+                grid.city?.ShowCaptureContestVisual();
+                currentTearProgress = 0;
+                foreach (var enemy in contestUnits) enemy.currentCaptureProgress = 0;
+                MarkAsCapturing();
+                return;
+            }
+
+            currentTearProgress += power;
+            ShowCaptureEffect();   // 复用表现；⚠️ 撕旗专属动画待美术
+            if (currentTearProgress >= (grid.city?.capturePointsRequired ?? 20))
+                CompleteTearFlag();
+            else
+                MarkAsCapturing();
+        }
+        finally { isTearingInProgress = false; }
+    }
+
+    /// <summary>拆满 → 建筑转中立（P0）：谁都别想有。</summary>
+    protected virtual void CompleteTearFlag()
+    {
+        if (grid == null) return;
+        if (grid.city != null)
+            grid.city.facilityTeam = TeamHelper.Player0;   // 拆旗的终点不是易主，是剥夺
+        ShowTearFlagEffect();   // 纯代码美术：程序化撕旗
+        currentTearProgress = 0;
+        tearingGrid = null;
+        originalGrid = null;
+        SetWaitVisual(true);
+        grid.city?.UpdateCityVisual();
+        gameManager?.CheckVictoryCondition();
+        GD.Print($"[拆旗] {unitDisplayName} 撕毁旗帜：{grid.GridIndex} 现为中立");
+    }
+
+    // ========== 设施压制（Aura：每回合刷新施加，状态自带衰减）==========
+    public virtual void OnTurnStartFacilitySuppression()
+    {
+        if (!canSuppressFacilities || grid == null) return;
+        var gm = gameManager;
+        if (gm?.gridManager?.map == null || gm?.unitManager == null) return;
+        var origin = grid.GridIndex;
+        for (int dx = -suppressRangeMax; dx <= suppressRangeMax; dx++)
+            for (int dy = -suppressRangeMax; dy <= suppressRangeMax; dy++)
+            {
+                int dist = Mathf.Abs(dx) + Mathf.Abs(dy);
+                if (dist < suppressRangeMin || dist > suppressRangeMax) continue;
+                var pos = new Vector2I(origin.X + dx, origin.Y + dy);
+                if (!gm.unitManager.IsValidGrid(pos)) continue;
+                var f = gm.gridManager.map[pos.X, pos.Y]?.city;
+                if (f == null || f.facilityTeam == team) continue;   // 只压敌方建筑
+                if (suppressIncomeMode == 1) f.AddStatus(FacilityStatusType.NoIncome, 2, team);
+                else if (suppressIncomeMode == 2) f.SetIncomeSuppression(suppressIncomePercent);
+                if (suppressProductionMode == 1) f.AddStatus(FacilityStatusType.CannotProduce, 2, team);
+                else if (suppressProductionMode == 2) f.productionSuppressPercent = suppressProductionPercent;
+                if (suppressDefenseMode == 1) f.AddStatus(FacilityStatusType.NoCover, 2, team);
+                else if (suppressDefenseMode == 2) f.defenseSuppressPercent = suppressDefensePercent;
+                if (suppressSupplyStop) f.AddStatus(FacilityStatusType.NoSupply, 2, team);
+            }
+    }
+
+    // ========== 群体狂热模块 ==========
+    private int packFrenzyStacks = 0;        // 当前生效加成次数（已按MaxStacks封顶）
+    private int packLingerRemaining = 0;     // 脱离标准后的剩余持续回合
+    private int packBakAmmo = -1, packBakFuel = -1, packBakHp = -1;   // 原始上限备份（直写字段法，零新读取点）
+
+    public virtual bool PackFrenzyActive() => packFrenzyEnabled && (packFrenzyStacks > 0 || packLingerRemaining > 0);
+
+    /// <summary>统计 x-y 环内合标单位数（早停于 MaxStacks）。白名单只看注册表单位种类；同类模式不看任何自定义Export。</summary>
+    public virtual int CountPackFrenzyQualifiers()
+    {
+        if (!packFrenzyEnabled || grid == null) return 0;
+        var gm = gameManager;
+        if (gm?.gridManager?.map == null || gm?.unitManager == null) return 0;
+        var origin = grid.GridIndex;
+        int count = 0;
+        for (int dx = -packRangeMax; dx <= packRangeMax; dx++)
+            for (int dy = -packRangeMax; dy <= packRangeMax; dy++)
+            {
+                int dist = Mathf.Abs(dx) + Mathf.Abs(dy);
+                if (dist < packRangeMin || dist > packRangeMax) continue;
+                var pos = new Vector2I(origin.X + dx, origin.Y + dy);
+                if (!gm.unitManager.IsValidGrid(pos)) continue;
+                foreach (var u in gm.gridManager.map[pos.X, pos.Y].infantries)
+                {
+                    if (u == null || !IsInstanceValid(u) || u == this) continue;
+                    if (packFactionMode == 1 && u.team != team) continue;   // 仅友军
+                    if (packFactionMode == 2 && u.team == team) continue;   // 仅敌军
+                    if (packSameSpeciesOnly)
+                    { if (u.unitTypeId != unitTypeId) continue; }           // 同类特殊态
+                    else if (packUseWhitelist && !packWhitelist.Contains(u.unitTypeId)) continue;
+                    count++;
+                    if (count >= packMaxStacks) return count;               // 早停：只看前MaxStacks个
+                }
+            }
+        return count;
+    }
+
+    /// <summary>回合开始刷新：符合→覆盖式生效；不符合→消耗持续回合，耗尽即还原。</summary>
+    public virtual void OnTurnStartPackFrenzy()
+    {
+        if (!packFrenzyEnabled) return;
+        int q = CountPackFrenzyQualifiers();
+        if (q > 0)
+        {
+            packFrenzyStacks = Mathf.Min(q, packMaxStacks);
+            packLingerRemaining = packLingerTurns;      // 规格：再次符合直接覆盖，不叠加
+            ApplyPackFrenzyBoosts(true);
+        }
+        else if (packLingerRemaining > 0)
+        {
+            packLingerRemaining--;
+            if (packLingerRemaining <= 0) { packFrenzyStacks = 0; ApplyPackFrenzyBoosts(false); }
+        }
+        else if (packFrenzyStacks > 0)
+        {
+            packFrenzyStacks = 0;
+            ApplyPackFrenzyBoosts(false);
+        }
+    }
+
+    /// <summary>直写上限字段（备份-恢复法）：不新增任何读取点，弹药/油/血上限全部现成消费。</summary>
+    private void ApplyPackFrenzyBoosts(bool on)
+    {
+        int pct = on ? Mathf.Max(-99, packBonusPercent) : 0;
+        int Boost(int baseVal) => baseVal * (100 + pct) / 100;
+        if (packBoostAmmoMax)
+        {
+            if (on) { if (packBakAmmo < 0) packBakAmmo = maxPrimaryAmmo;
+                int v = Boost(packBakAmmo);
+                maxPrimaryAmmo = (packCanExceedCap && packNewCap > 0) ? Mathf.Min(v, packNewCap) : v; }
+            else if (packBakAmmo >= 0) { maxPrimaryAmmo = packBakAmmo; packBakAmmo = -1; }
+        }
+        if (packBoostFuelMax)
+        {
+            if (on) { if (packBakFuel < 0) packBakFuel = maxFuel;
+                int v = Boost(packBakFuel);
+                maxFuel = (packCanExceedCap && packNewCap > 0) ? Mathf.Min(v, packNewCap) : v; }
+            else if (packBakFuel >= 0) { maxFuel = packBakFuel; packBakFuel = -1; }
+        }
+        if (packBoostHpMax)
+        {
+            if (on) { if (packBakHp < 0) packBakHp = maxHealth;
+                int v = Boost(packBakHp);
+                maxHealth = (packCanExceedCap && packNewCap > 0) ? Mathf.Min(v, packNewCap) : v; }
+            else if (packBakHp >= 0)
+            {
+                maxHealth = packBakHp; packBakHp = -1;
+                if (health > maxHealth) { health = maxHealth; UpdateHpLabel(); }   // 上限回收时钳制当前值
+            }
+        }
+    }
+
+    /// <summary>
+    /// 纯代码美术·撕旗：程序化旗面动画（零手绘资产）。
+    /// 倒三角旗面 = 被撕裂的旗：蜷曲坠落 → 压扁 → 消散。打底沿用占领光效。
+    /// </summary>
+    protected virtual void ShowTearFlagEffect()
+    {
+        ShowCaptureCompleteEffect();   // 打底光效沿用占领同款
+        if (grid?.city == null) return;
+        var flag = new Polygon2D();
+        flag.Polygon = new Vector2[] { new Vector2(-14, -26), new Vector2(14, -26), new Vector2(0, 4) };   // 倒三角=撕裂旗面
+        flag.Color = new Color(0.9f, 0.15f, 0.1f, 0.95f);
+        flag.Position = new Vector2(0, -30);
+        grid.city.AddChild(flag);
+        var tw = flag.CreateTween().SetParallel();
+        tw.TweenProperty(flag, "rotation", Mathf.DegToRad(160), 1.1f).SetEase(Tween.EaseType.In);
+        tw.TweenProperty(flag, "scale", new Vector2(0.15f, 0.05f), 1.1f).SetEase(Tween.EaseType.In);
+        tw.TweenProperty(flag, "modulate:a", 0.0f, 1.2f);
+        var tw2 = flag.CreateTween();
+        tw2.TweenInterval(1.25f);
+        tw2.TweenCallback(Callable.From(() => flag.QueueFree()));
+    }
+
+    protected virtual void ShowCaptureInterruptedEffect()
     {
         var effect = new CaptureInterruptedEffect
         {
@@ -2522,11 +3127,167 @@ public virtual void SetWaitVisual(bool waiting)
         return gmx?.fogOfWarManager?.IsGridIlluminated(grid) == true;
     }
 
+    // ✅ 隐身视觉中枢：Modulate + 头顶"隐"指示器（所有隐/现/强制改写的唯一出口）
+    private Label _stealthIcon;
+    public void UpdateStealthVisual()
+    {
+        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1, 1);
+        if (_stealthIcon == null)
+        {
+            _stealthIcon = new Label();
+            _stealthIcon.Text = "隐";
+            _stealthIcon.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f));
+            _stealthIcon.AddThemeFontSizeOverride("font_size", 12);
+            _stealthIcon.Position = new Vector2(-6, -34);
+            AddChild(_stealthIcon);
+        }
+        _stealthIcon.Visible = isStealthed;
+    }
+
+    // ==================== 截断遭遇裁决引擎 ====================
+    // 双方在截断点接触后的伤害仲裁：模式=伤害形状，权重=执行顺序，多次开关=是否全执行
+    // ✅ AI 遭遇直觉：现场算账——打不动不打；能秒必打；换血不亏才打
+    public static bool AIDecideEncounterStrike(Infantry self, Infantry foe)
+    {
+        if (self == null || foe == null) return false;
+        int myDmg = self.GetMatrixDamage(foe, false);
+        int foeDmg = foe.GetMatrixDamage(self, false);
+        if (myDmg <= 0) return false;                    // 白挨打
+        if (foe.health - myDmg <= 0) return true;          // 能击杀
+        return myDmg >= foeDmg;                            // 换血不亏
+    }
+
+    // 入口：判定由谁决策（人类伏击手→回合中回合弹菜单冻结全局；AI→自动按条令）
+    public static void ResolveTruncationEncounter(Infantry mover, Infantry blocker)
+    {
+        if (mover == null || blocker == null) return;
+        if (!mover.truncCounterEnabled && !blocker.truncAmbusherEnabled) return;
+        var gm = mover.GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        var aiMgr = mover.GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+        bool blockerIsAI = aiMgr != null && aiMgr.IsAITeam(blocker.team);
+        if (!blockerIsAI && blocker.truncAmbusherEnabled)
+        {
+            gm?.RequestEncounterDecision(mover, blocker);   // ✅ 回合中回合：冻结+人类确认菜单
+            return;
+        }
+        // ✅ AI 遭遇策略：任一方为AI时，该方的"是否攻击"由现场算账决定（而非静态条令）
+        bool moverIsAI = aiMgr != null && aiMgr.IsAITeam(mover.team);
+        bool mConsent = mover.truncCounterEnabled && (!moverIsAI || AIDecideEncounterStrike(mover, blocker));
+        bool bConsent = blocker.truncAmbusherEnabled && (!blockerIsAI || AIDecideEncounterStrike(blocker, mover));
+        ExecuteTruncationStrikes(mover, blocker, mConsent, bConsent);
+    }
+
+    public static void ExecuteTruncationStrikes(Infantry mover, Infantry blocker, bool moverConsents, bool blockerConsents)
+    {
+        if (mover == null || blocker == null) return;
+        bool mW = moverConsents && mover.truncCounterEnabled;
+        bool bW = blockerConsents && blocker.truncAmbusherEnabled;
+        if (!mW && !bW) return;
+
+        var strikes = new System.Collections.Generic.List<(Infantry atk, Infantry def, bool counter)>();
+        // 移动方模式：1=主动出击(我单向打) 2=两败俱伤(互吃反击) 3=先发制人(对方先动手,我反击)
+        if (mW)
+        {
+            if (mover.truncCounterMode == 1) strikes.Add((mover, blocker, false));
+            else if (mover.truncCounterMode == 2) strikes.Add((mover, blocker, true));
+            else if (mover.truncCounterMode == 3) strikes.Add((blocker, mover, true));
+        }
+        // 阻挡方（伏击手）模式：1=主动出击 2=两败俱伤 3=反将被动(对方打我,我只反击)
+        if (bW)
+        {
+            if (blocker.truncAmbusherMode == 1) strikes.Add((blocker, mover, false));
+            else if (blocker.truncAmbusherMode == 2) strikes.Add((blocker, mover, true));
+            else if (blocker.truncAmbusherMode == 3) strikes.Add((mover, blocker, true));
+        }
+        if (strikes.Count == 0) return;
+
+        var exec = strikes;
+        if (strikes.Count > 1 && !mover.truncAllowMultiStrike && !blocker.truncAllowMultiStrike)
+        {
+            var first = strikes[0];   // 默认移动方
+            if (blocker.truncAmbusherWeight >= mover.truncStrikeWeight) first = strikes[strikes.Count - 1];  // 平权或更高=被截断方(伏击手)优先
+            if (mover.truncStrikeWeight > blocker.truncAmbusherWeight) first = strikes[0];                      // 移动方权重更高
+            exec = new System.Collections.Generic.List<(Infantry, Infantry, bool)> { first };
+        }
+        foreach (var s in exec)
+        {
+            // ✅ 死亡消除（跨发）：已死者取消其未执行的后续拳（同发内的反击由Attack内生存门统一裁决）
+            if (s.atk == null || s.def == null || s.atk.health <= 0 || s.def.health <= 0) continue;
+            s.atk.Attack(s.def, allowCounter: s.counter);   // 唯一战斗结算点：隐身门/反击门/阈值矩阵全自动
+        }
+    }
+
+    // ==================== 嗅探引擎 ====================
+    private readonly System.Collections.Generic.Dictionary<Infantry, int> scentTracked = new();
+
+    public void ToggleScent()
+    {
+        if (!scentEnabled) return;
+        SetWaitVisual(true);
+        state = UnitState.Acted;
+        PerformScentScan();
+    }
+
+    public void PerformScentScan()
+    {
+        if (!scentEnabled || grid == null || gridManager == null) return;
+        scentTracked.Clear();
+        foreach (var g in gridManager.grids)
+        {
+            if (g == null || g == grid) continue;
+            int dist = Math.Abs(g.GridIndex.X - grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - grid.GridIndex.Y);
+            if (dist < scentRangeMin || dist > scentRangeMax) continue;
+            foreach (var u in g.infantries)
+            {
+                if (u == null || u.team == team || !GodotObject.IsInstanceValid(u)) continue;
+                if (u.isStealthed && !scentIgnoresStealth) continue;
+                if (!u.isStealthed && u.terrainConcealment && !scentIgnoresConcealment
+                    && (g.gridType == GridType.FOREST || g.gridType == GridType.REEF)) continue;
+                if (scentKeepObserving)
+                {
+                    scentTracked[u] = scentTrackTurns;
+                    u.stealthFlareRevealed = true;
+                    u.UpdateStealthVisual();
+                }
+            }
+        }
+    }
+
+    public void MaintainScentTracking()
+    {
+        if (scentTracked.Count == 0) return;
+        var expired = new System.Collections.Generic.List<Infantry>();
+        foreach (var kv in scentTracked)
+        {
+            int left = kv.Value - 1;
+            if (left <= 0 || !GodotObject.IsInstanceValid(kv.Key)) expired.Add(kv.Key);
+            else { scentTracked[kv.Key] = left; kv.Key.stealthFlareRevealed = true; }
+        }
+        foreach (var u in expired) scentTracked.Remove(u);
+    }
+
+    // ==================== 雾战模块助手 ====================
+    private GameManager _fogGmCache;
+    public bool FogActive()   // 雾战生效=全局迷雾开关
+    {
+        if (_fogGmCache == null || !GodotObject.IsInstanceValid(_fogGmCache))
+            _fogGmCache = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        return _fogGmCache?.fogOfWarManager?.isFogOfWarEnabled == true;
+    }
+    public int GetEffectiveMaxHealth() => FogActive() ? maxHealth + fogMaxHpBonus : maxHealth;
+    public int GetEffectiveMaxFuel() => FogActive() ? maxFuel + fogMaxFuelBonus : maxFuel;
+    public int GetEffectiveMaxPrimaryAmmo() => FogActive() ? maxPrimaryAmmo + fogPrimaryAmmoMaxBonus : maxPrimaryAmmo;
+    public int GetEffectiveMaxExplodeAmmo() => FogActive() ? maxExplodeAmmo + fogExplodeAmmoMaxBonus : maxExplodeAmmo;
+    public int GetEffectiveMaxFlareAmmo() => FogActive() ? maxFlareAmmo + fogFlareAmmoMaxBonus : maxFlareAmmo;
+    public int GetEffectiveMaxStealthBullets() => FogActive() ? maxStealthBullets + fogStealthBulletMaxBonus : maxStealthBullets;
+    public int GetEffectiveMaxRevealBullets() => FogActive() ? maxRevealBullets + fogRevealBulletMaxBonus : maxRevealBullets;
+    public int GetEffectiveMaxCamoBullets() => FogActive() ? maxCamoBullets + fogCamoBulletMaxBonus : maxCamoBullets;
+
     // ==================== 隐身模块 ====================
     public void ToggleStealth()
     {
         if (!canStealth) return;
-        if (stealthFormLocked) return;   // ✅ 形态锁定：玩家不可操作（阈值强制改写不受此限）
+        if (IsStealthFormLocked) return;   // ✅ 形态锁定（手动锁/阈值锁）：玩家不可操作（阈值强制改写不受此限）
         // ✅ 弹系统（三选一模式，不能通吃）：切换扣弹，无弹拒绝
         if (stealthAmmoMode == 1)
         {
@@ -2545,7 +3306,7 @@ public virtual void SetWaitVisual(bool waiting)
             state = UnitState.Acted;   // 算独立操作：切换即待机
         }
         // 不算独立操作：state 保持，切换后仍可攻击/移动
-        Modulate = isStealthed ? new Color(1, 1, 1, 0.45f) : new Color(1, 1, 1, 1);
+        UpdateStealthVisual();   // ✅ 中枢：半透明+指示器
         CheckStealthThresholds();
     }
 
@@ -2554,7 +3315,7 @@ public virtual void SetWaitVisual(bool waiting)
         if (!isStealthed && !stealthFlareRevealed) return;
         isStealthed = false;
         stealthFlareRevealed = false;
-        Modulate = new Color(1, 1, 1, 1);
+        UpdateStealthVisual();
     }
 
     public bool HasAnyStealthCost()
@@ -2577,7 +3338,7 @@ public virtual void SetWaitVisual(bool waiting)
         if (revealBulletCostPerDay > 0) currentRevealBullets = Math.Max(0, currentRevealBullets - revealBulletCostPerDay);
         if (camoBulletCostPerDay > 0) currentCamoBullets = Math.Max(0, currentCamoBullets - camoBulletCostPerDay);
         CheckStealthThresholds();
-        if (fuel <= 0 && destroyOnOutOfFuel) CallDeferred(nameof(DestroySelf));   // 沿用坠毁链
+        // 坠毁判定统一在 ConsumeDailyFuel 末尾（防重复销毁）
     }
 
     private bool forceHideTriggered = false;    // 运行时：强制隐已触发(OneShot用)
@@ -2588,7 +3349,7 @@ public virtual void SetWaitVisual(bool waiting)
     {
         if (isStealthed || !canStealth) return;
         isStealthed = true;
-        Modulate = new Color(1, 1, 1, 0.45f);
+        UpdateStealthVisual();
     }
 
     private static bool ThresholdHit(int value, int high, int low)
@@ -2599,48 +3360,61 @@ public virtual void SetWaitVisual(bool waiting)
         // 一次性模式：已锁存则永不重判
         if (stealthForceOneShot && stealthForceLatched) return;
 
-        bool anyActive = false;
+        bool hideHit = false, revealHit = false;
 
         // —— Hp：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideHpHigh > 0 && health >= stealthForceHideHpHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideHpLow > 0 && health <= stealthForceHideHpLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealHpHigh > 0 && health >= stealthForceRevealHpHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealHpLow > 0 && health <= stealthForceRevealHpLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideHpHigh > 0 && health >= stealthForceHideHpHigh) hideHit = true;
+        if (stealthForceHideHpLow > 0 && health <= stealthForceHideHpLow) hideHit = true;
+        if (stealthForceRevealHpHigh > 0 && health >= stealthForceRevealHpHigh) revealHit = true;
+        if (stealthForceRevealHpLow > 0 && health <= stealthForceRevealHpLow) revealHit = true;
         // —— Fuel：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideFuelHigh > 0 && fuel >= stealthForceHideFuelHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideFuelLow > 0 && fuel <= stealthForceHideFuelLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealFuelHigh > 0 && fuel >= stealthForceRevealFuelHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealFuelLow > 0 && fuel <= stealthForceRevealFuelLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideFuelHigh > 0 && fuel >= stealthForceHideFuelHigh) hideHit = true;
+        if (stealthForceHideFuelLow > 0 && fuel <= stealthForceHideFuelLow) hideHit = true;
+        if (stealthForceRevealFuelHigh > 0 && fuel >= stealthForceRevealFuelHigh) revealHit = true;
+        if (stealthForceRevealFuelLow > 0 && fuel <= stealthForceRevealFuelLow) revealHit = true;
         // —— Primary：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHidePrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceHidePrimaryHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHidePrimaryLow > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealPrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceRevealPrimaryHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealPrimaryLow > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHidePrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceHidePrimaryHigh) hideHit = true;
+        if (stealthForceHidePrimaryLow > 0 && currentPrimaryAmmo <= stealthForceHidePrimaryLow) hideHit = true;
+        if (stealthForceRevealPrimaryHigh > 0 && currentPrimaryAmmo >= stealthForceRevealPrimaryHigh) revealHit = true;
+        if (stealthForceRevealPrimaryLow > 0 && currentPrimaryAmmo <= stealthForceRevealPrimaryLow) revealHit = true;
         // —— Explode：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideExplodeHigh > 0 && currentExplodeAmmo >= stealthForceHideExplodeHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideExplodeLow > 0 && currentExplodeAmmo <= stealthForceHideExplodeLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealExplodeHigh > 0 && currentExplodeAmmo >= stealthForceRevealExplodeHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealExplodeLow > 0 && currentExplodeAmmo <= stealthForceRevealExplodeLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideExplodeHigh > 0 && currentExplodeAmmo >= stealthForceHideExplodeHigh) hideHit = true;
+        if (stealthForceHideExplodeLow > 0 && currentExplodeAmmo <= stealthForceHideExplodeLow) hideHit = true;
+        if (stealthForceRevealExplodeHigh > 0 && currentExplodeAmmo >= stealthForceRevealExplodeHigh) revealHit = true;
+        if (stealthForceRevealExplodeLow > 0 && currentExplodeAmmo <= stealthForceRevealExplodeLow) revealHit = true;
         // —— Flare：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideFlareHigh > 0 && currentFlareAmmo >= stealthForceHideFlareHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideFlareLow > 0 && currentFlareAmmo <= stealthForceHideFlareLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealFlareHigh > 0 && currentFlareAmmo >= stealthForceRevealFlareHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealFlareLow > 0 && currentFlareAmmo <= stealthForceRevealFlareLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideFlareHigh > 0 && currentFlareAmmo >= stealthForceHideFlareHigh) hideHit = true;
+        if (stealthForceHideFlareLow > 0 && currentFlareAmmo <= stealthForceHideFlareLow) hideHit = true;
+        if (stealthForceRevealFlareHigh > 0 && currentFlareAmmo >= stealthForceRevealFlareHigh) revealHit = true;
+        if (stealthForceRevealFlareLow > 0 && currentFlareAmmo <= stealthForceRevealFlareLow) revealHit = true;
         // —— StealthBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideStealthBulletHigh > 0 && currentStealthBullets >= stealthForceHideStealthBulletHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideStealthBulletLow > 0 && currentStealthBullets <= stealthForceHideStealthBulletLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealStealthBulletHigh > 0 && currentStealthBullets >= stealthForceRevealStealthBulletHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealStealthBulletLow > 0 && currentStealthBullets <= stealthForceRevealStealthBulletLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideStealthBulletHigh > 0 && currentStealthBullets >= stealthForceHideStealthBulletHigh) hideHit = true;
+        if (stealthForceHideStealthBulletLow > 0 && currentStealthBullets <= stealthForceHideStealthBulletLow) hideHit = true;
+        if (stealthForceRevealStealthBulletHigh > 0 && currentStealthBullets >= stealthForceRevealStealthBulletHigh) revealHit = true;
+        if (stealthForceRevealStealthBulletLow > 0 && currentStealthBullets <= stealthForceRevealStealthBulletLow) revealHit = true;
         // —— RevealBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideRevealBulletHigh > 0 && currentRevealBullets >= stealthForceHideRevealBulletHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideRevealBulletLow > 0 && currentRevealBullets <= stealthForceHideRevealBulletLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealRevealBulletHigh > 0 && currentRevealBullets >= stealthForceRevealRevealBulletHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealRevealBulletLow > 0 && currentRevealBullets <= stealthForceRevealRevealBulletLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideRevealBulletHigh > 0 && currentRevealBullets >= stealthForceHideRevealBulletHigh) hideHit = true;
+        if (stealthForceHideRevealBulletLow > 0 && currentRevealBullets <= stealthForceHideRevealBulletLow) hideHit = true;
+        if (stealthForceRevealRevealBulletHigh > 0 && currentRevealBullets >= stealthForceRevealRevealBulletHigh) revealHit = true;
+        if (stealthForceRevealRevealBulletLow > 0 && currentRevealBullets <= stealthForceRevealRevealBulletLow) revealHit = true;
         // —— CamoBullet：高阈≥触发 / 低阈≤触发，中间不触发 ——
-        if (stealthForceHideCamoBulletHigh > 0 && currentCamoBullets >= stealthForceHideCamoBulletHigh) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceHideCamoBulletLow > 0 && currentCamoBullets <= stealthForceHideCamoBulletLow) { ForceStealthNow(); anyActive = true; }
-        if (stealthForceRevealCamoBulletHigh > 0 && currentCamoBullets >= stealthForceRevealCamoBulletHigh) { RevealStealth(); anyActive = true; }
-        if (stealthForceRevealCamoBulletLow > 0 && currentCamoBullets <= stealthForceRevealCamoBulletLow) { RevealStealth(); anyActive = true; }
+        if (stealthForceHideCamoBulletHigh > 0 && currentCamoBullets >= stealthForceHideCamoBulletHigh) hideHit = true;
+        if (stealthForceHideCamoBulletLow > 0 && currentCamoBullets <= stealthForceHideCamoBulletLow) hideHit = true;
+        if (stealthForceRevealCamoBulletHigh > 0 && currentCamoBullets >= stealthForceRevealCamoBulletHigh) revealHit = true;
+        if (stealthForceRevealCamoBulletLow > 0 && currentCamoBullets <= stealthForceRevealCamoBulletLow) revealHit = true;
+
+        // ✅ 分方向一次性：该方向已触发过则不再生效（此前这两个开关未接线）
+        if (stealthForceHideOneShot && forceHideTriggered) hideHit = false;
+        if (stealthForceRevealOneShot && forceRevealTriggered) revealHit = false;
+
+        // ✅ 冲突裁决：同时命中只执行一个（此前两者都执行，后执行的显形静默覆盖）
+        if (hideHit && revealHit)
+        {
+            if (stealthThresholdRevealWins) hideHit = false; else revealHit = false;
+        }
+        if (hideHit) { ForceStealthNow(); forceHideTriggered = true; }
+        if (revealHit) { RevealStealth(); forceRevealTriggered = true; }
+        bool anyActive = hideHit || revealHit;
 
         // ✅ 模式结算
         if (stealthForceOneShot)
@@ -2649,7 +3423,7 @@ public virtual void SetWaitVisual(bool waiting)
         }
         else
         {
-            stealthFormLocked = anyActive;   // 持续模式：条件成立期间形态锁定，解除即还玩家自由
+            stealthThresholdLocked = anyActive;   // 持续模式：写运行时阈值锁，不再覆盖编辑器手动锁
         }
     }
 
@@ -2658,22 +3432,43 @@ public virtual void SetWaitVisual(bool waiting)
     {
         if (unit == null) return false;
         if (unit.team == viewerTeam) return true;
-        if (!unit.isStealthed || unit.stealthFlareRevealed) return true;   // 没隐身/被照明弹照出的照常
+        if (unit.stealthFlareRevealed) return true;   // 被照明弹照出的照常
+        if (!unit.isStealthed)
+        {
+            // ✅ 林地/礁岩隐蔽（AW规则）：蹲在森林/礁岩的单位，对无贴身敌人的观察者隐身
+            if (unit.terrainConcealment && unit.grid != null
+                && (unit.grid.gridType == GridType.FOREST || unit.grid.gridType == GridType.REEF))
+            {
+                bool adjEnemy = false;
+                if (allGrids != null)
+                    foreach (var g in allGrids)
+                    {
+                        if (g == null || g == unit.grid) continue;
+                        int dist = Math.Abs(g.GridIndex.X - unit.grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - unit.grid.GridIndex.Y);
+                        if (dist != 1) continue;
+                        foreach (var u in g.infantries)
+                            if (u != null && u.team == viewerTeam && (u.strongSight || u.strongDetect)) { adjEnemy = true; break; }
+                        if (adjEnemy) break;
+                    }
+                if (!adjEnemy) return false;
+            }
+            return true;
+        }
         if (unit.stealthVisibleOnTile && unit.grid != null)
         {
             foreach (var u in unit.grid.infantries)
-                if (u.team == viewerTeam) return true;   // 同格单位看得见
+                if (u != null && u != unit && u.team == viewerTeam) return true;   // 同格单位看得见
             var fac = unit.grid.city;   // ✅ 脚下建筑：所属方看得见（AW3规则，接线完成）
             if (fac != null && fac.facilityTeam == viewerTeam) return true;
         }
-        if (unit.stealthVisibleWhenAdjacent && allGrids != null)
+        if (unit.stealthVisibleWhenAdjacent && allGrids != null && unit.grid != null)
             foreach (var g in allGrids)
             {
                 if (g == null || g == unit.grid) continue;
                 int dist = Math.Abs(g.GridIndex.X - unit.grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - unit.grid.GridIndex.Y);
                 if (dist < unit.stealthVisibleMinRange || dist > unit.stealthVisibleMaxRange) continue;
                 foreach (var u in g.infantries)
-                    if (u.team == viewerTeam) return true;
+                    if (u != null && u.team == viewerTeam && (u.strongDetect || u.strongSight)) return true;
             }
         if (unit.stealthRevealOnFlare && unit.IsFlareLit()) return true;   // ✅ 照明弹照出（实时查询，离开亮格自动恢复）
         return false;
@@ -2685,10 +3480,14 @@ public virtual void SetWaitVisual(bool waiting)
         if (target == null || !target.isStealthed) return true;
         if (target.stealthRevealOnFlare && target.IsFlareLit()) return true;   // ✅ 照明弹照出：可攻击
         if (target.stealthAttackableBy == null || target.stealthAttackableBy.Length == 0) return false;
-        return System.Array.IndexOf(target.stealthAttackableBy, attacker.GetType().Name) >= 0;
+        return System.Array.IndexOf(target.stealthAttackableBy, attacker.UnitTypeId) >= 0;
     }
 
     // 现形三触发器之"受伤"（在战斗伤害点调用）
+    // ✅ 广义受伤现形：监听血量下降（覆盖自爆/兵器/激光/死光/地格伤害/修理扣血等所有来源）
+    private int damageRevealLastHp = -1;
+    public void SyncDamageRevealTracker() => damageRevealLastHp = health;
+
     public static void ApplyStealthRevealOnDamage(Infantry damaged)
     {
         if (damaged == null || !damaged.stealthRevealOnDamage) return;
@@ -2701,7 +3500,7 @@ public virtual void SetWaitVisual(bool waiting)
     public bool CanTargetWeapon(Weapon w)
     {
         if (w == null || w.isDestroyed) return false;
-        string myName = GetType().Name;
+        string myName = UnitTypeId;
         if (w.excludedAttackerTypes != null && w.excludedAttackerTypes.Length > 0
             && System.Array.IndexOf(w.excludedAttackerTypes, myName) >= 0)
             return false;
@@ -2721,7 +3520,7 @@ public virtual void SetWaitVisual(bool waiting)
 {
     if (!CanTargetWeapon(target)) return 0;   // ✅ 兵器攻击准入闸门
     // 兵器没有类型名在攻防表中，使用基础攻击力的百分比
-    float healthPercent = (float)health / maxHealth;
+    float healthPercent = (float)health / GetEffectiveMaxHealth();
     
     int baseDamage = 0;
     if (weaponType == WeaponType.Primary && hasPrimaryWeapon)
@@ -2850,6 +3649,13 @@ public virtual void SetWaitVisual(bool waiting)
 // Infantry.cs - 修改 InputClick 方法
 public virtual void InputClick(Node viewport, InputEvent inputs, int shape_index)
 {
+    // ✅ 回合中回合冻结：遭遇战决策期间全操作禁入
+    {
+        var gm0 = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm0 != null && gm0.encounterPause) return;
+    }
+    // ✅ 被迷雾/隐身隐藏的单位不响应点击（Area2D 拾取不受 Visible 影响，否则会暴露位置/信息）
+    if (!IsVisibleInTree()) return;
 
 
     if (inputs is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
@@ -3047,7 +3853,7 @@ public virtual (int damage, string info) CalculateCounterPreview(Infantry attack
     return (damage, $"反击({counterWeapon}):{damage}");
 }
 
-public virtual void Attack(Infantry target)
+public virtual void Attack(Infantry target, bool allowCounter = true)
 {
         // ✅ 隐身攻击门：白名单外的单位打不了隐身目标（所有攻击路径的唯一闸门）
         if (!CanTargetStealth(this, target)) return;
@@ -3083,9 +3889,11 @@ public virtual void Attack(Infantry target)
     bool targetWillDie = (target.health - attackDamage) <= 0;
     bool canTargetCounter = !targetWillDie 
         && target.attackType != AttackType.NoAttack
-        && target.IsTargetInCounterRange(this);
+        && target.IsTargetInCounterRange(this)
+        && TeamHelper.CanCounterAttack(target.team);
     
-    if (canTargetCounter && TeamHelper.CanCounterAttack(target.team))
+    // 旧行为（可选）：按挨打前血量算反击
+    if (canTargetCounter && target.counterUsePreDamageHp)
     {
         WeaponType counterWeapon = target.SelectWeaponByMatrix(this);
         counterDamage = target.CalculateFinalDamage(this, counterWeapon, isCounter: true);
@@ -3095,10 +3903,20 @@ public virtual void Attack(Infantry target)
     target.health -= attackDamage;
         ApplyStealthRevealOnDamage(target);   // ✅ 受伤现形（含阈值模式）
         target.CheckStealthThresholds();   // ✅ 受伤后阈值矩阵重判
+        target.SyncDamageRevealTracker();     // ✅ 已按"单位攻击"处理过，广义监听不重复触发
+
+    // ✅ AW 原作：反击按挨打后的血量计算（先手优势）
+    if (canTargetCounter && !target.counterUsePreDamageHp)
+    {
+        WeaponType counterWeapon = target.SelectWeaponByMatrix(this);
+        counterDamage = target.CalculateFinalDamage(this, counterWeapon, isCounter: true);
+    }
         if (stealthRevealOnAttack) RevealStealth();   // ✅ 攻击后现形（先于反击结算：现形即暴露给反击）
-        if (!CanTargetStealth(target, this)) counterDamage = 0;   // ✅ 隐身反击门：防守方打不了隐身攻击者则不能反击（AW3规则）
+        if (!allowCounter || !CanTargetStealth(target, this) || target.health <= 0) counterDamage = 0;   // ✅ 反击门+死亡消除(AW原教旨)：单向打击/打不了隐身者/被秒者→不还手
     this.health -= counterDamage;
+        if (counterDamage > 0) ApplyStealthRevealOnDamage(this);   // ✅ 反击也是单位攻击：攻击方受伤同样走受伤现形
         CheckStealthThresholds();   // ✅ 反击掉血后阈值矩阵重判
+        SyncDamageRevealTracker();
     
     target.UpdateHpLabel();
     this.UpdateHpLabel();
@@ -3108,7 +3926,7 @@ public virtual void Attack(Infantry target)
     int baseVal = weapon == WeaponType.Primary ? GetPrimaryDamageFromMatrix(target) : GetSecondaryDamageFromMatrix(target);
 
     // ========== 死亡处理 ==========
-    if (target.health <= 0)
+    if (target.health <= 0 && !target.TryFlee())
     {
         target.OnDestroyed();
         if (target.grid != null)
@@ -3123,7 +3941,7 @@ public virtual void Attack(Infantry target)
         gm?.RemovePiece(target);
     }
     
-    if (this.health <= 0)
+    if (this.health <= 0 && !TryFlee())
     {
         this.OnDestroyed();
         if (this.grid != null)
@@ -3214,7 +4032,7 @@ public virtual void ReloadAmmo()
         if (unit.team != this.team) return false;
 
         // 1. 按类型名过滤（精确匹配类名，如 "Infantry", "Mech"）
-        string unitType = unit.GetType().Name;
+        string unitType = unit.UnitTypeId;
         if (canTransportUnitTypes != null && canTransportUnitTypes.Count > 0)
         {
             if (!canTransportUnitTypes.Contains(unitType)) return false;
@@ -3533,6 +4351,8 @@ public virtual void PerformSupply()
     var targetUnits = GetSupplyRangeUnits();
     foreach (var unit in targetUnits)
     {
+        if (supplyBlacklist != null && supplyBlacklist.Length > 0
+            && System.Array.IndexOf(supplyBlacklist, unit.UnitTypeId) >= 0) continue;
         bool supplied = false;
         string supplyText = "";
         Color supplyColor = new Color(0.2f, 0.9f, 0.3f);

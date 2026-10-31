@@ -205,6 +205,9 @@ private readonly List<UnitTemplate> unitTemplates = new()
     new UnitTemplate { DisplayName = TranslateGroup.T("✈ 隐身战机"), ScenePath = "res://Prefabs/Stealth.tscn",
         Category = TranslateGroup.T("空军"), Team = "Player1", DisplayColor = new Color(0.35f, 0.35f, 0.5f),
         Description = TranslateGroup.T("全能猎手，仅战斗机可见可打，隐身日耗油8，弹药6") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("机械狗"), ScenePath = "res://Prefabs/Dog.tscn",
+        Category = TranslateGroup.T("陆军"), Team = "Player1", DisplayColor = new Color(0.55f, 0.55f, 0.6f),
+        Description = TranslateGroup.T("电子嗅探者：1-6格闻出隐形与隐蔽，咬人仅步兵一半，跑得快烧油") },
 
     // 海军
     new UnitTemplate { DisplayName = TranslateGroup.T("🔧 修理船"), ScenePath = "res://Prefabs/RepairBoat.tscn", 
@@ -258,6 +261,16 @@ private HBoxContainer directionSelector; // ✅ 黑炮/大型黑炮 方向选择
 public override void _Ready()
 {
     AddToGroup("terrain_editor");
+
+    // ✅ 自定义兵种（res://Prefabs/CustomUnits/）自动加入编辑器单位面板
+    foreach (var kv in UnitProductionDatabase.Units)
+    {
+        if (!kv.Value.ScenePath.StartsWith(UnitProductionDatabase.CustomUnitDir)) continue;
+        if (unitTemplates.Any(t => t.ScenePath == kv.Value.ScenePath)) continue;
+        unitTemplates.Add(new UnitTemplate { DisplayName = kv.Value.DisplayName, ScenePath = kv.Value.ScenePath,
+            Category = TranslateGroup.T("自定义"), Team = "Player1", DisplayColor = new Color(0.7f, 0.6f, 0.4f),
+            Description = $"{TranslateGroup.T("自定义兵种")} {kv.Key}  {TranslateGroup.T("造价")}{kv.Value.Cost}" });
+    }
 
     if (gameManager == null)
         gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -617,6 +630,7 @@ private string GetFriendlyTypeName(Infantry unit)
             TCopter => TranslateGroup.T("运输直升机"),
             AntiAirMissile => TranslateGroup.T("防空导弹"),
             Stealth => TranslateGroup.T("隐身战机"),
+            Dog => TranslateGroup.T("机械狗"),
         RepairBoat => TranslateGroup.T("修理船"),
         Infantry => TranslateGroup.T("步兵"),
         _ => unit.GetType().Name
@@ -1434,6 +1448,7 @@ private UnitCategory GetUnitCategory(Infantry unit)
                 TCopter _ => UnitCategory.TCopter,
                 AntiAirMissile _ => UnitCategory.AntiAirMissile,
                 Stealth _ => UnitCategory.Stealth,
+                Dog _ => UnitCategory.Dog,
                 MdTank _ => UnitCategory.MdTank,
         AntiAir _ => UnitCategory.AntiAir,
         AntiTank _ => UnitCategory.AntiTank,
@@ -2238,7 +2253,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
     }
 
     string attackerType = currentEditingTarget?.GetType().Name ?? "Unknown";
-    string[] defenderTypes = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth" };
+    string[] defenderTypes = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth", "Dog" };
 
     foreach (var defenderType in defenderTypes)
     {
@@ -2295,7 +2310,7 @@ private Control CreateEditorForType(Type propType, object value, Func<object> ge
 
 private void ApplyPreset(Godot.Collections.Dictionary<string, int> dict, string attackerType, string preset)
 {
-    string[] defenders = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth" };
+    string[] defenders = { "Infantry", "Mech", "Bike", "Oozium", "Recon", "APC", "LightTank", "MdTank", "Artillery", "Rocket", "AntiAir", "AntiTank", "PipeRunner", "Flare", "RepairBoat", "FlyBomb", "Fighter", "Bomber", "BCopter", "TCopter", "AntiAirMissile", "Stealth", "Dog" };
 
     foreach (var d in defenders)
     {
@@ -6219,7 +6234,7 @@ private void OpenWeaponTerrainMatrixEditor()
         { "LightTank", "LTk" }, { "MdTank", "MTk" }, { "Rocket", "Rck" },
         { "Artillery", "Art" }, { "APC", "APC" }, { "Recon", "Rec" },
         { "AntiAir", "AA" }, { "AntiTank", "AT" }, { "Flare", "Flr" },
-        { "Bike", "Bke" }, { "FlyBomb", "FBo" }, { "Fighter", "Ftr" }, { "Bomber", "Bom" }, { "BCopter", "BH" }, { "TCopter", "TH" }, { "AntiAirMissile", "SAM" }, { "Stealth", "Stl" },
+        { "Bike", "Bke" }, { "FlyBomb", "FBo" }, { "Fighter", "Ftr" }, { "Bomber", "Bom" }, { "BCopter", "BH" }, { "TCopter", "TH" }, { "AntiAirMissile", "SAM" }, { "Stealth", "Stl" }, { "Dog", "Dog" },
         { "PipeRunner", "PRun" }
     };
     private readonly Dictionary<string, string> compactWeaponAbbr = new()

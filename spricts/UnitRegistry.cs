@@ -543,6 +543,24 @@ public static class UnitRegistry
             DailyFuelConsumption = 5,
             DestroyOnOutOfFuel = true,
         },
+        // ==================== 机械狗（电子嗅探者）====================
+        ["Dog"] = new UnitConfig
+        {
+            UnitId = "Dog",
+            DisplayName = TranslateGroup.T("机械狗"),
+            MoveType = MoveType.Mech,
+            MovePoints = 6,
+            Cost = 1500,
+            AnimPrefix = "dog",
+            HasPrimaryWeapon = true,
+            PrimaryHasLimitedAmmo = false,
+            IsAirUnit = false,
+            VisionRange = 5,
+            MaxFuel = 60,
+            ConsumeFuel = true,
+            DailyFuelConsumption = 2,
+            DestroyOnOutOfFuel = true,
+        },
 
     };
 

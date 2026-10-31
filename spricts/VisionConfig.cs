@@ -14,7 +14,7 @@ public static class VisionConfig
         ["Infantry"] = 2, ["Mech"] = 2, ["LightTank"] = 3,
         ["MdTank"] = 3, ["Artillery"] = 2, ["Rocket"] = 2,
         ["APC"] = 3, ["Oozium"] = 2, ["AntiAir"] = 5,
-        ["Recon"] = 5, ["FlyBomb"] = 1, ["Fighter"] = 2, ["Bomber"] = 2, ["BCopter"] = 3, ["TCopter"] = 2, ["AntiAirMissile"] = 5, ["Stealth"] = 4, ["AntiTank"] = 2,
+        ["Recon"] = 5, ["FlyBomb"] = 1, ["Fighter"] = 2, ["Bomber"] = 2, ["BCopter"] = 3, ["TCopter"] = 2, ["AntiAirMissile"] = 5, ["Stealth"] = 4, ["Dog"] = 5, ["AntiTank"] = 2,
         ["Flare"] = 2, ["Bike"] = 2,["PipeRunner"] = 4,
         ["RepairBoat"] = 1,
     };
@@ -89,6 +89,11 @@ public static class VisionConfig
         ["Stealth"] = new()
         {
 
+        },
+        // 机械狗：山地传感器阵列，站山视野+3（5→8）
+        ["Dog"] = new()
+        {
+            [GridType.HILL] = 3,
         },
         // 运输车：普通
         ["APC"] = new()

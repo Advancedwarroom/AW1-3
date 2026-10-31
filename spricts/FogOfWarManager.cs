@@ -30,6 +30,86 @@ public partial class FogOfWarManager : Node
     [Export] public Color revealedColor = new Color(1, 1, 1, 0);
 
     private Dictionary<Grids, Sprite2D> fogSprites = new();
+    private readonly System.Collections.Generic.Dictionary<string, HashSet<Grids>> exploredByTeam = new();
+
+    // ✅ AI内战观战模式：无视隐身规则，全场可见（否则公共视角把双方隐身单位全灭）
+    public bool spectatorViewing;
+
+    // ✅ 可见性清扫器：每帧执行 + 处理优先级压到全场最后——
+    // 任何来源（含未定位的引擎层发射源）在本帧绘制前把隐身/迷雾单位翻出来，都会被同帧压回，闪光窗口=0帧
+    public override void _Process(double delta)
+    {
+        ProcessPriority = 999999;   // 低优先级值先处理，最大值=最后处理（在绘制之前）
+        if (spectatorViewing) return;
+        if (unitManager?.AllUnits != null)
+            foreach (var u in unitManager.AllUnits)
+                if (u != null && IsInstanceValid(u) && u.Visible && !ShouldShowUnit(u))
+                    u.Visible = false;
+        if (weaponManager?.AllWeapons != null)
+            foreach (var w in weaponManager.AllWeapons)
+                if (w != null && IsInstanceValid(w) && w.Visible && !ShouldShowWeapon(w))
+                    w.Visible = false;
+    }   // ✅ 已探索记忆层（按阵营持久保留）
+
+    // ✅ 敌方单位最后已知残影（AW规则）：消失的单位在最后一眼的位置留下暗色记号，不再"闹鬼"
+    private sealed class UnitGhost { public Node Target; public Grids LastGrid; public Label Marker; public bool Dead; }
+    private readonly System.Collections.Generic.Dictionary<string, List<UnitGhost>> unitGhostsByTeam = new();
+
+    private List<UnitGhost> GetGhostList(string team)
+    {
+        if (!unitGhostsByTeam.TryGetValue(team, out var list)) { list = new List<UnitGhost>(); unitGhostsByTeam[team] = list; }
+        return list;
+    }
+
+    private void MaintainGhosts()
+    {
+        if (currentTeam == null || !isFogOfWarEnabled) return;
+        var ghosts = GetGhostList(currentTeam);
+
+        // 遍历所有非本队单位与兵器
+        var seen = new HashSet<Node>();
+        if (unitManager?.AllUnits != null)
+            foreach (var u in unitManager.AllUnits)
+                if (u != null && IsInstanceValid(u) && u.team != currentTeam) { seen.Add(u); UpdateGhostFor(ghosts, u, u.Visible, u.grid, u.health <= 0); }
+        if (weaponManager?.AllWeapons != null)
+            foreach (var w in weaponManager.AllWeapons)
+                if (w != null && IsInstanceValid(w) && w.team != currentTeam) { seen.Add(w); UpdateGhostFor(ghosts, w, w.Visible, w.grid, w.isDestroyed); }
+
+        // 清理：已消失/死亡的残影
+        for (int i = ghosts.Count - 1; i >= 0; i--)
+        {
+            var g = ghosts[i];
+            if (!seen.Contains(g.Target) || g.Dead)
+            {
+                if (IsInstanceValid(g.Marker)) g.Marker.QueueFree();
+                ghosts.RemoveAt(i);
+            }
+        }
+    }
+
+    private void UpdateGhostFor(List<UnitGhost> ghosts, Node target, bool visibleNow, Grids currentGrid, bool dead)
+    {
+        var existing = ghosts.Find(g => g.Target == target);
+        if (visibleNow || dead)
+        {
+            if (existing != null)
+            {
+                if (dead) { if (IsInstanceValid(existing.Marker)) existing.Marker.QueueFree(); ghosts.Remove(existing); }
+                else existing.Dead = false;   // 重新可见：下次循环若又消失，会用新位置重建（先移除再立）
+                if (!dead && existing != null && visibleNow) { if (IsInstanceValid(existing.Marker)) existing.Marker.QueueFree(); ghosts.Remove(existing); }
+            }
+            return;
+        }
+        if (existing != null) return;   // 已有残影：保留在最后一眼的位置（LAST KNOWN）
+        if (currentGrid == null) return;
+        var marker = new Label();
+        marker.Text = "?";
+        marker.AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.72f, 0.75f));
+        marker.AddThemeFontSizeOverride("font_size", 18);
+        marker.Position = currentGrid.GlobalPosition + new Vector2(6, -8);
+        AddChild(marker);
+        ghosts.Add(new UnitGhost { Target = target, LastGrid = currentGrid, Marker = marker });
+    }
     private HashSet<Grids> visibleGridsThisTurn = new();
     public List<IlluminationEffect> activeIlluminations = new(); // ✅ 活跃照明弹效果
 
@@ -87,9 +167,14 @@ public partial class FogOfWarManager : Node
     // ========== ✅ 核心：刷新迷雾（全局视野池模式）==========
     public void RefreshFog()
     {
-        if (!isFogOfWarEnabled || gridManager == null) { ClearAllFog(); return; }
+        // ✅ 先同步视角阵营——雾关时也必需：隐身/林地判定依赖 currentTeam，不同步则敌方回合泄隐
+        currentTeam = gameManager != null ? TeamHelper.GetPhaseTeamName(gameManager.turnPhase) : "Player1";
+        var aiMgr0 = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+        // ✅ 观战判定：双方皆AI → 观战者看全场
+        spectatorViewing = aiMgr0 != null && aiMgr0.IsAITeam(TeamHelper.Player1) && aiMgr0.IsAITeam(TeamHelper.Player2);
+        if (aiMgr0 != null && aiMgr0.IsAITeam(currentTeam)) currentTeam = TeamHelper.Player;
 
-        currentTeam = gameManager?.turnPhase == 1 ? "Player1" : "Player2";
+        if (!isFogOfWarEnabled || gridManager == null) { UpdateUnitVisibility(); ClearAllFog(); return; }   // ✅ 雾关也重估单位可见性
 
         // ✅ AI 操控时，切换为 P-1 视角（玩家只能看到公开领域）
         var aiManager = GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
@@ -119,6 +204,12 @@ public partial class FogOfWarManager : Node
         }
 
         ApplyFogToGrids();
+        // ✅ 探索记忆：本回合可见格并入当前阵营的已探索集合（跨回合保留）
+        if (currentTeam != null && visibleGridsThisTurn != null)
+        {
+            if (!exploredByTeam.TryGetValue(currentTeam, out var exploredSet)) { exploredSet = new HashSet<Grids>(); exploredByTeam[currentTeam] = exploredSet; }
+            exploredSet.UnionWith(visibleGridsThisTurn);
+        }
         UpdateUnitVisibility();
 
     }
@@ -397,7 +488,11 @@ public partial class FogOfWarManager : Node
             var grid = kvp.Key; var sprite = kvp.Value;
             if (grid == null || !IsInstanceValid(grid) || sprite == null || !IsInstanceValid(sprite)) continue;
             bool isVisible = visibleGridsThisTurn.Contains(grid);
+            bool isExplored = !isVisible && currentTeam != null
+                && exploredByTeam.TryGetValue(currentTeam, out var exSet) && exSet.Contains(grid);
             sprite.Visible = isFogOfWarEnabled && !isVisible;
+            // ✅ 三态：可见=无雾块 / 已探索=暗色半透明 / 未知=纯黑默认
+            sprite.Modulate = isExplored ? new Color(0.45f, 0.45f, 0.58f, 0.55f) : new Color(1, 1, 1, 1);
         }
     }
 
@@ -409,6 +504,7 @@ public partial class FogOfWarManager : Node
         if (weaponManager?.AllWeapons != null)
             foreach (var weapon in weaponManager.AllWeapons)
                 if (weapon != null && IsInstanceValid(weapon)) weapon.Visible = ShouldShowWeapon(weapon);
+        MaintainGhosts();   // ✅ 残影维护
     }
 
     private bool ShouldShowUnit(Infantry unit)
@@ -417,7 +513,7 @@ public partial class FogOfWarManager : Node
         if (unit.team == currentTeam) return true;
         if (unit.grid == null) return false;
         // ✅ 隐身：按感知规则决定渲染（贴身/同格可见，否则隐藏——AW3规则）。与迷雾开关无关，始终生效
-        if (!Infantry.IsVisibleTo(unit, currentTeam, gridManager?.grids)) return false;
+        if (!spectatorViewing && !Infantry.IsVisibleTo(unit, currentTeam, gridManager?.grids)) return false;   // ✅ 隐身门（观战模式豁免）
         if (!isFogOfWarEnabled) return true;   // ✅ 雾关时：隐身门照跑，其余单位照常全显
         return visibleGridsThisTurn.Contains(unit.grid);
     }
@@ -425,6 +521,8 @@ public partial class FogOfWarManager : Node
     private bool ShouldShowWeapon(Weapon weapon)
     {
         if (weapon.team == currentTeam) return true;
+        if (spectatorViewing) return true;   // ✅ 观战模式：兵器全场可见
+        if (!isFogOfWarEnabled) return true;   // ✅ 雾关：兵器可见（兵器无隐身概念，AW也如此）
         if (weapon.grid == null) return false;
         return visibleGridsThisTurn.Contains(weapon.grid);
     }
@@ -511,8 +609,8 @@ public partial class FogOfWarManager : Node
         return vision.Contains(grid);
     }
 
-    public void OnTurnChanged() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }   // ✅ 雾关也重估（隐身规则与迷雾无关）
-    public void OnUnitMoved() { if (isFogOfWarEnabled) RefreshFog(); else UpdateUnitVisibility(); }
+    public void OnTurnChanged() { RefreshFog(); }   // ✅ 统一入口：阵营同步+可见性重估，与雾开关无关
+    public void OnUnitMoved() { RefreshFog(); }
 
     public string GetGridVisionStatus(Grids grid, string team)
     {
@@ -529,7 +627,14 @@ public partial class FogOfWarManager : Node
     public bool IsGridIlluminated(Grids g)
     {
         if (g == null || activeIlluminations == null || activeIlluminations.Count == 0) return false;
-        return CalculateIlluminatedGrids().Contains(g);
+        // ✅ 性能：直接按曼哈顿距离判定，不再每次重建全图照亮集合（结果与 CalculateIlluminatedGrids 一致）
+        foreach (var effect in activeIlluminations)
+        {
+            if (effect?.centerGrid == null) continue;
+            int dist = Mathf.Abs(g.GridIndex.X - effect.centerGrid.GridIndex.X) + Mathf.Abs(g.GridIndex.Y - effect.centerGrid.GridIndex.Y);
+            if (dist <= effect.maxRange && dist >= effect.minRange) return true;
+        }
+        return false;
     }
 
     private HashSet<Grids> CalculateIlluminatedGrids()
@@ -630,7 +735,7 @@ public class UnitVisionProvider : IVisionProvider
         int bonus = 0;
         bonus += unit.GetTerrainVisionBonus(unit.grid.gridType);  // 单位×地形加成
         bonus += unit.grid.visionBonus;                           // 格子额外加成
-        bonus += VisionConfig.GetUnitTypeVisionBonus(unit.GetType().Name); // 单位类型加成
+        bonus += VisionConfig.GetUnitTypeVisionBonus(unit.TemplateId); // 单位类型加成
         return bonus;
     }
 }

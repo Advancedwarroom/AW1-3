@@ -13,16 +13,9 @@ public partial class DeathRay : BlackCannon
 {
     [ExportGroup("死光炮配置")]
     [Export] public Vector2I multiTileSize = new Vector2I(3, 3);
-    [Export] public bool canRotate = true;
-    [Export] public int maxLaserLength = 99;
+        [Export] public int maxLaserLength = 99;
     [Export] public bool useInfiniteRange = true;
-    [Export] public float fixedDamagePercent = 0.8f;  // 默认30%伤害（原版约8HP/10HP ≈ 80%，但这里用百分比）
-    [Export] public bool CanDestroy = false;            // 原版不会杀死单位（至少留1HP）
-    [Export] public bool useCooldownSystem = true;     // 原版每7天发射，可用冷却系统模拟
-    [Export] public int cooldownTurns = 7; // 原版DeathRay每7天发射一次
-    [Export] public int attacksPerCooldown = 1;
-    [Export] public bool storeAttacks = true;
-    [Export] public int laserBeamWidth = 3;             // 激光束宽度：3格
+                            [Export] public int laserBeamWidth = 3;             // 激光束宽度：3格
 
     // 炮口（发射台）偏移：激光发射的起点
     private Vector2I firePointOffset = new Vector2I(1, 0);
@@ -247,7 +240,7 @@ public partial class DeathRay : BlackCannon
             {
                 var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
                 gm?.RemovePiece(t);
-                t.CallDeferred("QueueFree");
+                t.CallDeferred(Node.MethodName.QueueFree);
             }
         }
 

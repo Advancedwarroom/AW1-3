@@ -539,6 +539,7 @@ public static string T(string key)
         Add("运输直升机", "TCopter", "輸送ヘリ", "수송헬기", "Transporthubschrauber", "Трансп. вертолёт", "运输直升机", "運輸直升機");
         Add("防空导弹", "Anti-air Missile", "対空ミサイル", "대공미사일", "Flugabwehrrakete", "Зенитная ракета", "防空导弹", "防空飛彈");
         Add("隐身战机", "Stealth", "ステルス", "스텔스", "Tarnkappenflugzeug", "Стелс-истребитель", "隐身战机", "隱身戰機");
+        Add("机械狗", "Dog", "メカ犬", "로봇 개", "Mechahund", "Мехасобака", "机械狗", "機械狗");
         Add("史莱姆", "Oozium", "ウージウム", "우지움", "Oozium", "Узиум", "史莱姆", "史萊姆");
         Add("运输车", "PipeRunner", "パイプ", "파이프", "Rohr", "Трубовоз", "运输车", "運輸車");
         Add("黑水晶", "Crystal", "黒水晶", "흑수정", "Kristall", "Кристалл", "黑水晶", "黑水晶");

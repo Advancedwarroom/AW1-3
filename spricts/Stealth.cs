@@ -1,4 +1,4 @@
-// FlyBomb.cs
+// Stealth.cs
 using Godot;
 using System;
 using System.Linq;
@@ -10,15 +10,7 @@ public partial class Stealth : Infantry
     public override void _Ready()
     {
         base._Ready();
-        // FlyBomb 的特殊初始化已通过 UnitRegistry 完成
-    }
-
-    public void OnMoveSelected()
-    {
-        if (consumeFuel && fuel <= 0) return;
-        ShowAnimState("move");
-        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-        gm?.gridManager.ShowMoveRange(this);
+        // Stealth 的特殊初始化已通过 UnitRegistry 完成
     }
 
     public override void OnWaitSelected()
@@ -34,6 +26,7 @@ public partial class Stealth : Infantry
 
     public override void InputClick(Node viewport, InputEvent inputs, int shape_index)
     {
+        if (!IsVisibleInTree()) return;   // ✅ 隐藏中不响应点击（防暴露）
         if (inputs is InputEventMouseButton mouseEvent && mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
         {
             EnsureGridBound();

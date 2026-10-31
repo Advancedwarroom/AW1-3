@@ -40,6 +40,18 @@ public partial class Crystal : Weapon
     // --- Flare 弹补给 ---
     [Export] public int crystalSupplyFlareAmmo = 0;
     [Export] public Godot.Collections.Array<string> crystalSupplyFlareSupportedTypes = new();
+    [Export] public int crystalSupplyStealthBulletAmmo = 0;   // ✅ 8弹药：补给隐身弹
+    [Export] public bool crystalSupplyStealthBulletCanOverMax = false;
+    [Export] public int crystalSupplyStealthBulletMaxCap = 0;
+    [Export] public Godot.Collections.Array<string> crystalSupplyStealthBulletSupportedTypes = new();
+    [Export] public int crystalSupplyRevealBulletAmmo = 0;    // ✅ 补给显形弹
+    [Export] public bool crystalSupplyRevealBulletCanOverMax = false;
+    [Export] public int crystalSupplyRevealBulletMaxCap = 0;
+    [Export] public Godot.Collections.Array<string> crystalSupplyRevealBulletSupportedTypes = new();
+    [Export] public int crystalSupplyCamoBulletAmmo = 0;      // ✅ 补给迷彩弹
+    [Export] public bool crystalSupplyCamoBulletCanOverMax = false;
+    [Export] public int crystalSupplyCamoBulletMaxCap = 0;
+    [Export] public Godot.Collections.Array<string> crystalSupplyCamoBulletSupportedTypes = new();
     [Export] public bool crystalSupplyFlareCanOverMax = false;
     [Export] public int crystalSupplyFlareMaxCap = 999;
 
@@ -145,7 +157,9 @@ public partial class Crystal : Weapon
         gm.gridManager.ClearWeaponRange();
         Grids.IsForceActionMode = true;
 
-        var rangeGrids = CalculateRingRange(crystalHealMinRange, crystalHealMaxRange);
+        // ✅ 显示治疗圈 ∪ 补给圈（两者半径可不同，此前只显示治疗圈）
+        var rangeGrids = CalculateRingRange(crystalHealMinRange, crystalHealMaxRange)
+            .Union(CalculateRingRange(crystalSupplyMinRange, crystalSupplyMaxRange)).ToList();
         var fog = gm.fogOfWarManager;
         bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
 
@@ -159,6 +173,8 @@ public partial class Crystal : Weapon
                 g.attackRangeIcon.Modulate = new Color(0.2f, 0.9f, 0.3f, 0.85f);
             }
             g.OnClickGrid = (to) => OnRangeGridClicked(to, gm);
+            g.IsInWeaponRange = true;                       // ✅ 让 ClearWeaponRange 能清掉回调（闭包 Target 不是 Weapon）
+            gm.gridManager.OverrideUnitInput(g, true);      // ✅ 范围内有单位时点击也落到格子上，与黑炮一致
         }
     }
 
@@ -247,19 +263,19 @@ public partial class Crystal : Weapon
     private bool WouldSupplyUnit(Infantry unit)
     {
         if (!CheckTeamFilter(unit.team, crystalSupplyTeamMode)) return false;
-        if (!CheckTypeFilter(unit.GetType().Name, crystalSupplyUnitTypes)) return false;
+        if (!CheckTypeFilter(unit.UnitTypeId, crystalSupplyUnitTypes)) return false;
         // 检查是否有任何一种补给会实际改变数值
         if (crystalSupplyFlareAmmo != 0 && unit.canIlluminate)
-            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.currentFlareAmmo, unit.maxFlareAmmo, crystalSupplyFlareAmmo, crystalSupplyFlareCanOverMax, crystalSupplyFlareMaxCap) != unit.currentFlareAmmo) return true;
         if (crystalSupplyExplodeAmmo != 0 && unit.canExplode && !unit.explosionDestroysSelf)
-            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.currentExplodeAmmo, unit.maxExplodeAmmo, crystalSupplyExplodeAmmo, crystalSupplyExplodeCanOverMax, crystalSupplyExplodeMaxCap) != unit.currentExplodeAmmo) return true;
         if (crystalSupplyPrimaryAmmo != 0 && unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && unit.maxPrimaryAmmo < 99)
-            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.currentPrimaryAmmo, unit.maxPrimaryAmmo, crystalSupplyPrimaryAmmo, crystalSupplyPrimaryCanOverMax, crystalSupplyPrimaryMaxCap) != unit.currentPrimaryAmmo) return true;
         if (crystalSupplyFuel != 0 && unit.consumeFuel)
-            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.UnitTypeId))
                 if (ApplySupplyPreview(unit.fuel, unit.maxFuel, crystalSupplyFuel, crystalSupplyFuelCanOverMax, crystalSupplyFuelMaxCap) != unit.fuel) return true;
         return false;
     }
@@ -290,7 +306,7 @@ public partial class Crystal : Weapon
         // 队伍判定
         if (!CheckTeamFilter(unit.team, crystalHealTeamMode)) return;
         // 类型判定
-        if (!CheckTypeFilter(unit.GetType().Name, crystalHealUnitTypes)) return;
+        if (!CheckTypeFilter(unit.UnitTypeId, crystalHealUnitTypes)) return;
         // 治疗量
         if (Mathf.Abs(crystalHealPercent) < 0.001f) return; // 0没反应
 
@@ -369,7 +385,7 @@ public partial class Crystal : Weapon
         // Flare 弹
         if (crystalSupplyFlareAmmo != 0 && unit.canIlluminate)
         {
-            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFlareSupportedTypes.Count == 0 || crystalSupplyFlareSupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.currentFlareAmmo;
                 int newVal = ApplySupply(unit.currentFlareAmmo, unit.maxFlareAmmo, crystalSupplyFlareAmmo,
@@ -380,7 +396,7 @@ public partial class Crystal : Weapon
         // 自爆弹
         if (crystalSupplyExplodeAmmo != 0 && unit.canExplode && !unit.explosionDestroysSelf)
         {
-            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyExplodeSupportedTypes.Count == 0 || crystalSupplyExplodeSupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.currentExplodeAmmo;
                 int newVal = ApplySupply(unit.currentExplodeAmmo, unit.maxExplodeAmmo, crystalSupplyExplodeAmmo,
@@ -391,7 +407,7 @@ public partial class Crystal : Weapon
         // 主武器弹药
         if (crystalSupplyPrimaryAmmo != 0 && unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && unit.maxPrimaryAmmo < 99)
         {
-            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyPrimarySupportedTypes.Count == 0 || crystalSupplyPrimarySupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.currentPrimaryAmmo;
                 int newVal = ApplySupply(unit.currentPrimaryAmmo, unit.maxPrimaryAmmo, crystalSupplyPrimaryAmmo,
@@ -399,10 +415,43 @@ public partial class Crystal : Weapon
                 if (newVal != old) { unit.currentPrimaryAmmo = newVal; anySupplied = true; supplyParts.Add("Ammo+"); }
             }
         }
+        // ✅ 隐身弹
+        if (crystalSupplyStealthBulletAmmo != 0 && unit.canStealth)
+        {
+            if (crystalSupplyStealthBulletSupportedTypes.Count == 0 || crystalSupplyStealthBulletSupportedTypes.Contains(unit.UnitTypeId))
+            {
+                int old = unit.currentStealthBullets;
+                int newVal = ApplySupply(unit.currentStealthBullets, unit.maxStealthBullets, crystalSupplyStealthBulletAmmo,
+                    crystalSupplyStealthBulletCanOverMax, crystalSupplyStealthBulletMaxCap);
+                if (newVal != old) { unit.currentStealthBullets = newVal; anySupplied = true; supplyParts.Add("Stealth+"); }
+            }
+        }
+        // 显形弹
+        if (crystalSupplyRevealBulletAmmo != 0 && unit.canStealth)
+        {
+            if (crystalSupplyRevealBulletSupportedTypes.Count == 0 || crystalSupplyRevealBulletSupportedTypes.Contains(unit.UnitTypeId))
+            {
+                int old = unit.currentRevealBullets;
+                int newVal = ApplySupply(unit.currentRevealBullets, unit.maxRevealBullets, crystalSupplyRevealBulletAmmo,
+                    crystalSupplyRevealBulletCanOverMax, crystalSupplyRevealBulletMaxCap);
+                if (newVal != old) { unit.currentRevealBullets = newVal; anySupplied = true; supplyParts.Add("Reveal+"); }
+            }
+        }
+        // 迷彩弹
+        if (crystalSupplyCamoBulletAmmo != 0 && unit.canStealth)
+        {
+            if (crystalSupplyCamoBulletSupportedTypes.Count == 0 || crystalSupplyCamoBulletSupportedTypes.Contains(unit.UnitTypeId))
+            {
+                int old = unit.currentCamoBullets;
+                int newVal = ApplySupply(unit.currentCamoBullets, unit.maxCamoBullets, crystalSupplyCamoBulletAmmo,
+                    crystalSupplyCamoBulletCanOverMax, crystalSupplyCamoBulletMaxCap);
+                if (newVal != old) { unit.currentCamoBullets = newVal; anySupplied = true; supplyParts.Add("Camo+"); }
+            }
+        }
         // 燃料
         if (crystalSupplyFuel != 0 && unit.consumeFuel)
         {
-            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.GetType().Name))
+            if (crystalSupplyFuelSupportedTypes.Count == 0 || crystalSupplyFuelSupportedTypes.Contains(unit.UnitTypeId))
             {
                 int old = unit.fuel;
                 int newVal = ApplySupply(unit.fuel, unit.maxFuel, crystalSupplyFuel,
@@ -426,13 +475,11 @@ public partial class Crystal : Weapon
         var supplyParts = new List<string>();
         Color supplyColor = new Color(0.2f, 0.9f, 0.9f);
 
-        // 兵器只有主弹药系统
-        if (crystalSupplyPrimaryAmmo != 0)
+        // ✅ 兵器全弹种补给（数量策略尊重兵器自身补给白/黑名单——"只给迷彩弹"在兵器侧配置）
+        if (crystalSupplyPrimaryAmmo != 0 && weapon.ResupplyAllAmmoTypes())
         {
-            int old = weapon.currentAmmo;
-            int newVal = ApplySupply(weapon.currentAmmo, weapon.maxAmmo, crystalSupplyPrimaryAmmo,
-                crystalSupplyPrimaryCanOverMax, crystalSupplyPrimaryMaxCap);
-            if (newVal != old) { weapon.currentAmmo = newVal; anySupplied = true; supplyParts.Add("Ammo+"); }
+            anySupplied = true;
+            supplyParts.Add("Ammo+");
         }
 
         if (anySupplied)
@@ -537,6 +584,36 @@ public partial class Crystal : Weapon
         pt.Parallel().TweenProperty(pulse, "modulate:a", 0f, 0.6f);
         pt.TweenCallback(Callable.From(() => { if (IsInstanceValid(pulse)) pulse.QueueFree(); }));
     }
+
+    // ========== ✅ AI 查询接口（只读，不改任何状态） ==========
+    private int AIDist(Grids g) => (g == null || grid == null) ? 9999
+        : Mathf.Abs(g.GridIndex.X - grid.GridIndex.X) + Mathf.Abs(g.GridIndex.Y - grid.GridIndex.Y);
+    public bool AIInHealRange(Grids g) { int d = AIDist(g); return d >= crystalHealMinRange && d <= crystalHealMaxRange; }
+    public bool AIInSupplyRange(Grids g)
+    {
+        int d = AIDist(g);
+        if (!crystalSupplyAffectsSelf && g == grid) return false;
+        return d >= crystalSupplyMinRange && d <= crystalSupplyMaxRange;
+    }
+    /// <summary>单位若站在治疗范围内，本次脉冲的血量变化（正=回血，负=扣血，0=无效）</summary>
+    public int AIPreviewHealDelta(Infantry unit)
+    {
+        if (unit == null || !CheckTeamFilter(unit.team, crystalHealTeamMode)) return 0;
+        if (!CheckTypeFilter(unit.UnitTypeId, crystalHealUnitTypes)) return 0;
+        int amt = Mathf.RoundToInt(unit.maxHealth * crystalHealPercent);
+        if (amt > 0)
+        {
+            int cap = crystalHealCanOverMaxHp ? Mathf.RoundToInt(unit.maxHealth * Mathf.Max(1, crystalHealMaxHpCapPercent) / 100f) : unit.maxHealth;
+            return Mathf.Max(0, Mathf.Min(unit.health + amt, cap) - unit.health);
+        }
+        if (amt < 0) return Mathf.Max(1, unit.health + amt) - unit.health;
+        return 0;
+    }
+    /// <summary>单位若站在补给范围内，本次脉冲是否会被补给（与实际执行同一判定）</summary>
+    public bool AIWouldSupply(Infantry unit) => unit != null && WouldSupplyUnit(unit);
+    /// <summary>补给是否会因自身弹药不足整体跳过</summary>
+    public bool AISupplyBlockedByAmmo(int targetCount)
+        => crystalSupplyConsumesAmmo && useAmmoSystem && targetCount * crystalSupplyAmmoCostPerTarget > currentAmmo;
 
     // ========== AI 执行入口 ==========
     public override void ExecuteAI()

@@ -30,6 +30,7 @@ public enum UnitCategory
     TCopter,    // 运输直升机
     AntiAirMissile,    // 防空导弹车
     Stealth,    // 隐身战机
+    Dog,    // 机械狗
 
     Other       // 其他未分类单位
 }
@@ -84,6 +85,7 @@ public partial class GameManager : Node
     // 回合管理
     public int turns = 1;
     public int turnPhase = 1;
+    public bool encounterPause = false;   // ✅ 回合中回合：遭遇战决策期间的全局冻结
     // ✅ totalPhases 动态计算 = 启用的战斗势力数（不含 P-1 和 P0）
     public int totalPhases => Mathf.Max(1, TeamHelper.GetActiveFactions().Count(f => f.Id != TeamHelper.Player && f.Id != TeamHelper.Player0));
 
@@ -784,6 +786,7 @@ private void AutoCategorizeUnit(Infantry unit)
         int pn1TCopter = 0, p0TCopter = 0, p1TCopter = 0, p2TCopter = 0;
         int pn1AntiAirMissile = 0, p0AntiAirMissile = 0, p1AntiAirMissile = 0, p2AntiAirMissile = 0;
         int pn1Stealth = 0, p0Stealth = 0, p1Stealth = 0, p2Stealth = 0;
+        int pn1Dog = 0, p0Dog = 0, p1Dog = 0, p2Dog = 0;
         int pn1Bike = 0, p0Bike = 0, p1Bike = 0, p2Bike = 0;
         int pn1PipeRunner = 0, p0PipeRunner = 0, p1PipeRunner = 0, p2PipeRunner = 0;
         int pn1RepairBoat = 0, p0RepairBoat = 0, p1RepairBoat = 0, p2RepairBoat = 0;
@@ -842,6 +845,7 @@ private void AutoCategorizeUnit(Infantry unit)
                 case TCopter _: if (t == "Player") pn1TCopter++; else if (t == "Player0") p0TCopter++; else if (t == "Player1") p1TCopter++; else if (t == "Player2") p2TCopter++; break;
                 case AntiAirMissile _: if (t == "Player") pn1AntiAirMissile++; else if (t == "Player0") p0AntiAirMissile++; else if (t == "Player1") p1AntiAirMissile++; else if (t == "Player2") p2AntiAirMissile++; break;
                 case Stealth _: if (t == "Player") pn1Stealth++; else if (t == "Player0") p0Stealth++; else if (t == "Player1") p1Stealth++; else if (t == "Player2") p2Stealth++; break;
+                case Dog _: if (t == "Player") pn1Dog++; else if (t == "Player0") p0Dog++; else if (t == "Player1") p1Dog++; else if (t == "Player2") p2Dog++; break;
                 case Flare _: if (t == "Player") pn1Flare++; else if (t == "Player0") p0Flare++; else if (t == "Player1") p1Flare++; else if (t == "Player2") p2Flare++; break;
                 case Bike _: if (t == "Player") pn1Bike++; else if (t == "Player0") p0Bike++; else if (t == "Player1") p1Bike++; else if (t == "Player2") p2Bike++; break;
                 case PipeRunner _: if (t == "Player") pn1PipeRunner++; else if (t == "Player0") p0PipeRunner++; else if (t == "Player1") p1PipeRunner++; else if (t == "Player2") p2PipeRunner++; break;
@@ -937,11 +941,13 @@ private void AutoCategorizeUnit(Infantry unit)
             text += $"导 [color={cPN1}]{pn1AntiAirMissile,2}|[color={cP0}]{p0AntiAirMissile,2}|[color={cP1}]{p1AntiAirMissile,2}|[color={cP2}]{p2AntiAirMissile,2}[/color]\n";
         if (pn1Stealth > 0 || p0Stealth > 0 || p1Stealth > 0 || p2Stealth > 0)
             text += $"隐 [color={cPN1}]{pn1Stealth,2}|[color={cP0}]{p0Stealth,2}|[color={cP1}]{p1Stealth,2}|[color={cP2}]{p2Stealth,2}[/color]\n";
+        if (pn1Dog > 0 || p0Dog > 0 || p1Dog > 0 || p2Dog > 0)
+            text += $"狗 [color={cPN1}]{pn1Dog,2}|[color={cP0}]{p0Dog,2}|[color={cP1}]{p1Dog,2}|[color={cP2}]{p2Dog,2}[/color]\n";
 
-        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike + pn1PipeRunner + pn1RepairBoat + pn1Fighter + pn1Bomber + pn1BCopter + pn1TCopter + pn1AntiAirMissile + pn1Stealth;
-        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike + p0PipeRunner + p0RepairBoat + p0Fighter + p0Bomber + p0BCopter + p0TCopter + p0AntiAirMissile + p0Stealth;
-        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike + p1PipeRunner + p1RepairBoat + p1Fighter + p1Bomber + p1BCopter + p1TCopter + p1AntiAirMissile + p1Stealth;
-        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike + p2PipeRunner + p2RepairBoat + p2Fighter + p2Bomber + p2BCopter + p2TCopter + p2AntiAirMissile + p2Stealth;
+        int pn1TotalUnits = pn1Infantry + pn1Mech + pn1Oozium + pn1Tank + pn1MdTank + pn1Artillery + pn1Rocket + pn1APC + pn1Recon + pn1AntiAir + pn1AntiTank + pn1FlyBomb + pn1Flare + pn1Bike + pn1PipeRunner + pn1RepairBoat + pn1Fighter + pn1Bomber + pn1BCopter + pn1TCopter + pn1AntiAirMissile + pn1Stealth + pn1Dog;
+        int p0TotalUnits = p0Infantry + p0Mech + p0Oozium + p0Tank + p0MdTank + p0Artillery + p0Rocket + p0APC + p0Recon + p0AntiAir + p0AntiTank + p0FlyBomb + p0Flare + p0Bike + p0PipeRunner + p0RepairBoat + p0Fighter + p0Bomber + p0BCopter + p0TCopter + p0AntiAirMissile + p0Stealth + p0Dog;
+        int p1TotalUnits = p1Infantry + p1Mech + p1Oozium + p1Tank + p1MdTank + p1Artillery + p1Rocket + p1APC + p1Recon + p1AntiAir + p1AntiTank + p1FlyBomb + p1Flare + p1Bike + p1PipeRunner + p1RepairBoat + p1Fighter + p1Bomber + p1BCopter + p1TCopter + p1AntiAirMissile + p1Stealth + p1Dog;
+        int p2TotalUnits = p2Infantry + p2Mech + p2Oozium + p2Tank + p2MdTank + p2Artillery + p2Rocket + p2APC + p2Recon + p2AntiAir + p2AntiTank + p2FlyBomb + p2Flare + p2Bike + p2PipeRunner + p2RepairBoat + p2Fighter + p2Bomber + p2BCopter + p2TCopter + p2AntiAirMissile + p2Stealth + p2Dog;
 
         int pn1TotalWeapons = pn1Cannons + pn1Lasers + pn1Weapons;
         int p0TotalWeapons = p0Cannons + p0Lasers + p0Weapons;
@@ -1844,6 +1850,7 @@ public void RestartGame()
     // 切换回合
     public void NextPhase()
     {
+        if (encounterPause) return;   // ✅ 回合中回合冻结
         // ✅ 关键修复：编辑模式下禁止切换回合
         var terrainEditor = GetTree()?.GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
         if (terrainEditor != null && terrainEditor.IsEditMode)
@@ -1943,9 +1950,22 @@ public void RestartGame()
                 apc.OnTurnStartAutoSupply();
             }
             // RepairBoat 自动修复
-            if (unit is RepairBoat rb && rb.autoRepairOnTurnStart)
+            // ✅ 通用：任何开启修理模块的单位
+            if (unit.CanPerformRepair && unit.autoRepairOnTurnStart)
             {
-                rb.OnTurnStartAutoRepair();
+                unit.OnTurnStartAutoRepair();
+            }
+
+            // 设施压制：回合开始刷新施加（Aura）
+            if (unit.canSuppressFacilities)
+            {
+                unit.OnTurnStartFacilitySuppression();
+            }
+
+            // 群体狂热：回合开始刷新（覆盖式生效/持续回合衰减）
+            if (unit.packFrenzyEnabled)
+            {
+                unit.OnTurnStartPackFrenzy();
             }
         }
 
@@ -2775,14 +2795,15 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
             if (!UnitProductionDatabase.HasUnit(unitName)) continue;
 
             var info = UnitProductionDatabase.GetInfo(unitName);
-            bool canAfford = currentFunds >= info.Cost;
+            int prodCost = productionTargetFacility.GetProductionCost(info.Cost);
+            bool canAfford = currentFunds >= prodCost;
             bool gridEmpty = grid.infantries.Count == 0 && grid.weapons.Count == 0;
             bool productionAvailable = facility.CanProduceNow();
 
             var btn = new Button();
             btn.CustomMinimumSize = new Godot.Vector2(300, 50);
             btn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            btn.Text = $"{info.DisplayName}\n💰 {info.Cost} G";
+            btn.Text = $"{info.DisplayName}\n💰 {prodCost} G";
             btn.AddThemeFontSizeOverride("font_size", 13);
 
             if (!productionAvailable)
@@ -2960,11 +2981,12 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         if (!isEditMode)
         {
             int currentFunds = GetTeamFunds(currentTeam);
-            if (currentFunds < info.Cost)
+            int prodCostUI = productionTargetFacility.GetProductionCost(info.Cost);
+            if (currentFunds < prodCostUI)
             {
                 return;
             }
-            SetTeamFunds(currentTeam, currentFunds - info.Cost);
+            SetTeamFunds(currentTeam, currentFunds - prodCostUI);
         }
 
         // 生成单位
@@ -3035,10 +3057,11 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
 
         var info = UnitProductionDatabase.GetInfo(unitName);
         int currentFunds = GetTeamFunds(team);
-        if (currentFunds < info.Cost) return false;
+        int prodCostAI = facility.GetProductionCost(info.Cost);
+        if (currentFunds < prodCostAI) return false;
 
         // 扣除资金
-        SetTeamFunds(team, currentFunds - info.Cost);
+        SetTeamFunds(team, currentFunds - prodCostAI);
 
         // 生成单位
         var scene = GD.Load<PackedScene>(info.ScenePath);
@@ -3152,4 +3175,29 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         }
     }
 
+
+    // ✅ 回合中回合：人类伏击手的临场决策（确认=攻击 / 取消=放过）
+    public void RequestEncounterDecision(Infantry mover, Infantry blocker)
+    {
+        encounterPause = true;
+        var dlg = new ConfirmationDialog();
+        dlg.Title = "遭遇战！";
+        dlg.DialogText = $"{blocker.GetType().Name} 截断了 {mover.GetType().Name} 的移动\n是否发起攻击？";
+        dlg.OkButtonText = "攻击";
+        dlg.CancelButtonText = "放过";
+        AddChild(dlg);
+        dlg.PopupCentered();
+        dlg.Confirmed += () =>
+        {
+            encounterPause = false;
+            dlg.QueueFree();
+            Infantry.ExecuteTruncationStrikes(mover, blocker, mover.truncCounterEnabled, true);
+        };
+        dlg.Canceled += () =>
+        {
+            encounterPause = false;
+            dlg.QueueFree();
+            Infantry.ExecuteTruncationStrikes(mover, blocker, mover.truncCounterEnabled, false);
+        };
+    }
 }

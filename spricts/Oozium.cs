@@ -3,6 +3,8 @@ using System;
 
 public partial class Oozium : Infantry
 {
+    public Oozium() { canDevour = true; }   // ✅ 默认吞噬（原行为）；检查器取消勾选即变为只重叠不吞噬
+
     public override void _Ready()
     {
         overlapType = UnitOverlapType.Oozium;
@@ -32,7 +34,7 @@ public partial class Oozium : Infantry
         animSprite?.Stop();
     }
 
-    public void OnMoveSelected()
+    public override void OnMoveSelected()
     {
         StopBreathAnimation();
         if (animSprite?.SpriteFrames.HasAnimation("move") == true)
@@ -41,7 +43,7 @@ public partial class Oozium : Infantry
         gm?.gridManager.ShowMoveRange(this);
     }
 
-    public void OnAttackSelected()
+    public override void OnAttackSelected()
     {
         StopBreathAnimation();
         if (animSprite?.SpriteFrames.HasAnimation("attack") == true)
