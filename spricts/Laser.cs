@@ -613,7 +613,7 @@ public partial class Laser : Weapon
         else
             target.health -= damage;
         target.UpdateHpLabel();
-        if (target.health <= 0)
+        if (target.health <= 0 && !target.TryFlee())
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
@@ -660,7 +660,7 @@ public partial class Laser : Weapon
         }
 
         target.UpdateHpLabel();
-        if (target.health <= 0 && CanDestroy)
+        if (target.health <= 0 && CanDestroy && !target.TryFlee())
         {
             var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
             gm?.RemovePiece(target);
@@ -678,7 +678,7 @@ public partial class Laser : Weapon
         else
             target.health -= damage;
         target.UpdateHpLabel();
-        if (target.health <= 0)
+        if (target.health <= 0 && !target.TryFlee())
             target.CallDeferred(Node.MethodName.QueueFree);
     }
 
