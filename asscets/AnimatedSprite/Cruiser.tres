@@ -1,26 +1,15 @@
-[gd_resource type="SpriteFrames" format=3 uid="uid://yswz4wyxgkmq4"]
+[gd_resource type="SpriteFrames" load_steps=5 format=3]
 
-[ext_resource type="Texture2D" uid="uid://0naupmnyikr05" path="res://asscets/units/ships/cruiser_placeholder.png" id="1_cruiser"]
-[ext_resource type="Texture2D" uid="uid://0naupmnyikr05" path="res://asscets/units/ships/cruiser_placeholder.png" id="2_cruiser"]
+[ext_resource type="Texture2D" path="res://asscets/units/Cruiser/cruiser1.png" id="1"]
+[ext_resource type="Texture2D" path="res://asscets/units/Cruiser/cruiser2.png" id="2"]
+[ext_resource type="Texture2D" path="res://asscets/units/Cruiser/cruiserblue1.png" id="3"]
+[ext_resource type="Texture2D" path="res://asscets/units/Cruiser/cruiserblue2.png" id="4"]
 
 [resource]
-animations = [
-{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("1_cruiser")
-}],
-"loop": 1,
-"name": &"Cruiser1",
-"speed": 5.0
-}
-{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_cruiser")
-}],
-"loop": 1,
-"name": &"Cruiser2",
-"speed": 5.0
-}
-]
+animations = [{
+"frames": [{"duration": 3.0, "texture": ExtResource("1")}, {"duration": 2.0, "texture": ExtResource("2")}],
+"loop": true, "name": &"Cruiser1", "speed": 6.25
+}, {
+"frames": [{"duration": 3.0, "texture": ExtResource("3")}, {"duration": 2.0, "texture": ExtResource("4")}],
+"loop": true, "name": &"Cruiser2", "speed": 6.25
+}]

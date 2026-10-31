@@ -1,26 +1,19 @@
-[gd_resource type="SpriteFrames" format=3 uid="uid://urad2cu2q24ji"]
+[gd_resource type="SpriteFrames" load_steps=9 format=3]
 
-[ext_resource type="Texture2D" uid="uid://77nf6krezdyn7" path="res://asscets/units/ships/sub_placeholder.png" id="1_sub"]
-[ext_resource type="Texture2D" uid="uid://77nf6krezdyn7" path="res://asscets/units/ships/sub_placeholder.png" id="2_sub"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/sub1.png" id="1"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/sub2.png" id="2"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/sub3.png" id="3"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/sub4.png" id="4"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/subblue1.png" id="5"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/subblue2.png" id="6"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/subblue3.png" id="7"]
+[ext_resource type="Texture2D" path="res://asscets/units/Submarine/subblue4.png" id="8"]
 
 [resource]
-animations = [
-{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("1_sub")
-}],
-"loop": 1,
-"name": &"Submarine1",
-"speed": 5.0
-}
-{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_sub")
-}],
-"loop": 1,
-"name": &"Submarine2",
-"speed": 5.0
-}
-]
+animations = [{
+"frames": [{"duration": 1.0, "texture": ExtResource("1")}, {"duration": 1.0, "texture": ExtResource("2")}, {"duration": 2.0, "texture": ExtResource("3")}, {"duration": 1.0, "texture": ExtResource("4")}],
+"loop": true, "name": &"Submarine1", "speed": 6.25
+}, {
+"frames": [{"duration": 1.0, "texture": ExtResource("5")}, {"duration": 1.0, "texture": ExtResource("6")}, {"duration": 2.0, "texture": ExtResource("7")}, {"duration": 1.0, "texture": ExtResource("8")}],
+"loop": true, "name": &"Submarine2", "speed": 6.25
+}]

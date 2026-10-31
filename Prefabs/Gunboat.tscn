@@ -93,7 +93,7 @@ animation = &"loaded"
 
 [node name="Base2D" type="AnimatedSprite2D" parent="." unique_id=6954915875]
 position = Vector2(16, 16)
-scale = Vector2(2, 2)
+scale = Vector2(1.3333334, 1.3333334)
 sprite_frames = ExtResource("4_anim")
 animation = &"Gunboat1"
 
