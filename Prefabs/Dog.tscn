@@ -11,7 +11,7 @@
 size = Vector2(34, 34)
 
 [node name="Dog" type="Node2D" unique_id=1148536001 node_paths=PackedStringArray("loadedIcon", "noFuelIcon", "noAmmoIcon", "animSprite", "baseAnimSprite")]
-script = ExtResource("1_c8rcr")
+script = ExtResource("1_script")
 useDefaultConfig = false
 canCapture = false
 unitCategory = 23
