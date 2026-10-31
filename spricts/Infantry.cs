@@ -2768,6 +2768,17 @@ public virtual void SetWaitVisual(bool waiting)
 
     // ==================== 截断遭遇裁决引擎 ====================
     // 双方在截断点接触后的伤害仲裁：模式=伤害形状，权重=执行顺序，多次开关=是否全执行
+    // ✅ AI 遭遇直觉：现场算账——打不动不打；能秒必打；换血不亏才打
+    public static bool AIDecideEncounterStrike(Infantry self, Infantry foe)
+    {
+        if (self == null || foe == null) return false;
+        int myDmg = self.GetMatrixDamage(foe);
+        int foeDmg = foe.GetMatrixDamage(self);
+        if (myDmg <= 0) return false;                    // 白挨打
+        if (foe.health - myDmg <= 0) return true;          // 能击杀
+        return myDmg >= foeDmg;                            // 换血不亏
+    }
+
     // 入口：判定由谁决策（人类伏击手→回合中回合弹菜单冻结全局；AI→自动按条令）
     public static void ResolveTruncationEncounter(Infantry mover, Infantry blocker)
     {
@@ -2781,7 +2792,11 @@ public virtual void SetWaitVisual(bool waiting)
             gm?.RequestEncounterDecision(mover, blocker);   // ✅ 回合中回合：冻结+人类确认菜单
             return;
         }
-        ExecuteTruncationStrikes(mover, blocker, mover.truncCounterEnabled, blocker.truncAmbusherEnabled);
+        // ✅ AI 遭遇策略：任一方为AI时，该方的"是否攻击"由现场算账决定（而非静态条令）
+        bool moverIsAI = aiMgr != null && aiMgr.IsAITeam(mover.team);
+        bool mConsent = mover.truncCounterEnabled && (!moverIsAI || AIDecideEncounterStrike(mover, blocker));
+        bool bConsent = blocker.truncAmbusherEnabled && (!blockerIsAI || AIDecideEncounterStrike(blocker, mover));
+        ExecuteTruncationStrikes(mover, blocker, mConsent, bConsent);
     }
 
     public static void ExecuteTruncationStrikes(Infantry mover, Infantry blocker, bool moverConsents, bool blockerConsents)
