@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://c73op6io5jykj"]
 
 [ext_resource type="Script" uid="uid://b4mjogwpmd5la" path="res://spricts/Dog.cs" id="1_script"]
-[ext_resource type="SpriteFrames" uid="uid://cb0n87m77t285" path="res://asscets/AnimatedSprite/lighttank.tres" id="2_frames"]
+[ext_resource type="SpriteFrames" path="res://asscets/AnimatedSprite/Dog.tres" id="2_frames"]
 [ext_resource type="Texture2D" uid="uid://bf75lljd6qnq8" path="res://asscets/units/Tank/ostank1.png" id="3_l7g7b"]
 [ext_resource type="SpriteFrames" uid="uid://bkmjpiqqtw4s5" path="res://asscets/AnimatedSprite/NoFuelIcno.tres" id="4_nnocp"]
 [ext_resource type="SpriteFrames" uid="uid://ci4pry7uh77cq" path="res://asscets/AnimatedSprite/NoAmmoIcon.tres" id="5_jgva2"]
@@ -14,20 +14,22 @@ size = Vector2(34, 34)
 script = ExtResource("1_script")
 useDefaultConfig = false
 canCapture = false
+canTearFlag = true
+unitDisplayName = "机械狗"
 unitCategory = 23
 visionRange = 5
 isArmoredUnit = true
 IsAirUnit = false
 defenseBonusType = 0
-loadedIcon = NodePath("HpLabel/loaded")
-noFuelIcon = NodePath("HpLabel/NoFuelIcno")
+loadedIcon = NodePath("loaded")
+noFuelIcon = NodePath("NoFuelIcno")
 moveType = 1
 attackType = 0
 defaultMovePoints = 6
 movePoints = 6
 baseAttack = 50
 canAttackAfterMoving = true
-noAmmoIcon = NodePath("HpLabel/NoAmmoIcon")
+noAmmoIcon = NodePath("NoAmmoIcon")
 maxFuel = 60
 fuel = 60
 consumeFuel = true
@@ -40,8 +42,8 @@ maxPrimaryAmmo = 0
 currentPrimaryAmmo = 0
 primaryHasLimitedAmmo = false
 hasSecondaryWeapon = false
-animSprite = NodePath("Base2D")
-baseAnimSprite = NodePath("Base2D")
+animSprite = NodePath("AnimatedSprite2D")
+baseAnimSprite = NodePath("AnimatedSprite2D")
 cost = 1500
 
 scentEnabled = true
