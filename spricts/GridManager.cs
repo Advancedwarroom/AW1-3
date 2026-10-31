@@ -27,6 +27,9 @@ public partial class GridManager : Node
     private bool isMobilePlatform = false;
     private bool touchPathActive = false;
     private System.Collections.Generic.List<Grids> touchPathGrids;   // ✅ 手画路径航点
+
+    // ✅ 单位交互激活态：移动范围显示/画轨迹期间，相机须让位
+    public bool IsMoveRangeActive => moveRange != null && moveRange.Count > 0 && selectedUnit != null;
     private int activeTouchCount = 0;
     private Grids touchHoverGrid = null;
 

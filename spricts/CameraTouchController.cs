@@ -74,6 +74,15 @@ public partial class CameraTouchController : Camera2D
         HandleTouchInput(@event);
     }
 
+    // ✅ 单位交互期间（移动范围/画轨迹/遭遇战冻结）地图不拖动；双指缩放不受影响
+    private bool UICapturingGestures()
+    {
+        var gridMgr = GetTree()?.GetFirstNodeInGroup("grid_manager") as GridManager;
+        if (gridMgr != null && gridMgr.IsMoveRangeActive) return true;
+        var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        return gm != null && gm.encounterPause;
+    }
+
     private void HandleTouchInput(InputEvent @event)
     {
         // 屏幕触摸开始
@@ -122,6 +131,7 @@ public partial class CameraTouchController : Camera2D
             // 单指拖拽（如果只有一个触摸点）
             else if (activeTouches.Count == 1)
             {
+                if (UICapturingGestures()) return;   // ✅ 移动范围/画轨迹期间地图钉死
                 Position -= new Vector2(drag.Relative.X / Zoom.X, drag.Relative.Y / Zoom.X);
             }
         }
