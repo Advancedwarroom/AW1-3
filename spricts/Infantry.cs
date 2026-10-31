@@ -2833,7 +2833,7 @@ public virtual void SetWaitVisual(bool waiting)
         }
         foreach (var s in exec)
         {
-            // ✅ 死亡截断铁律：同发互兑原子化(Attack内反击已锁定)；跨发死亡=取消其未执行的后续拳
+            // ✅ 死亡消除（跨发）：已死者取消其未执行的后续拳（同发内的反击由Attack内生存门统一裁决）
             if (s.atk == null || s.def == null || s.atk.health <= 0 || s.def.health <= 0) continue;
             s.atk.Attack(s.def, allowCounter: s.counter);   // 唯一战斗结算点：隐身门/反击门/阈值矩阵全自动
         }
@@ -3485,7 +3485,7 @@ public virtual void Attack(Infantry target, bool allowCounter = true)
         counterDamage = target.CalculateFinalDamage(this, counterWeapon, isCounter: true);
     }
         if (stealthRevealOnAttack) RevealStealth();   // ✅ 攻击后现形（先于反击结算：现形即暴露给反击）
-        if (!allowCounter || !CanTargetStealth(target, this)) counterDamage = 0;   // ✅ 反击门：单向打击(allowCounter=false)或打不了隐身者→不还手
+        if (!allowCounter || !CanTargetStealth(target, this) || target.health <= 0) counterDamage = 0;   // ✅ 反击门+死亡消除(AW原教旨)：单向打击/打不了隐身者/被秒者→不还手
     this.health -= counterDamage;
         if (counterDamage > 0) ApplyStealthRevealOnDamage(this);   // ✅ 反击也是单位攻击：攻击方受伤同样走受伤现形
         CheckStealthThresholds();   // ✅ 反击掉血后阈值矩阵重判
