@@ -2795,14 +2795,15 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
             if (!UnitProductionDatabase.HasUnit(unitName)) continue;
 
             var info = UnitProductionDatabase.GetInfo(unitName);
-            bool canAfford = currentFunds >= info.Cost;
+            int prodCost = productionTargetFacility.GetProductionCost(info.Cost);
+            bool canAfford = currentFunds >= prodCost;
             bool gridEmpty = grid.infantries.Count == 0 && grid.weapons.Count == 0;
             bool productionAvailable = facility.CanProduceNow();
 
             var btn = new Button();
             btn.CustomMinimumSize = new Godot.Vector2(300, 50);
             btn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            btn.Text = $"{info.DisplayName}\n💰 {info.Cost} G";
+            btn.Text = $"{info.DisplayName}\n💰 {prodCost} G";
             btn.AddThemeFontSizeOverride("font_size", 13);
 
             if (!productionAvailable)
@@ -2980,11 +2981,12 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
         if (!isEditMode)
         {
             int currentFunds = GetTeamFunds(currentTeam);
-            if (currentFunds < info.Cost)
+            int prodCostUI = productionTargetFacility.GetProductionCost(info.Cost);
+            if (currentFunds < prodCostUI)
             {
                 return;
             }
-            SetTeamFunds(currentTeam, currentFunds - info.Cost);
+            SetTeamFunds(currentTeam, currentFunds - prodCostUI);
         }
 
         // 生成单位
@@ -3055,10 +3057,11 @@ public void RegisterUnit(Infantry unit, UnitCategory category)
 
         var info = UnitProductionDatabase.GetInfo(unitName);
         int currentFunds = GetTeamFunds(team);
-        if (currentFunds < info.Cost) return false;
+        int prodCostAI = facility.GetProductionCost(info.Cost);
+        if (currentFunds < prodCostAI) return false;
 
         // 扣除资金
-        SetTeamFunds(team, currentFunds - info.Cost);
+        SetTeamFunds(team, currentFunds - prodCostAI);
 
         // 生成单位
         var scene = GD.Load<PackedScene>(info.ScenePath);
