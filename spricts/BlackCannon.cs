@@ -355,10 +355,7 @@ private void InitializeCooldownState()
     public bool HasAmmoAndCooldown()
     {
         // 1. 检查弹药
-        if (useAmmoSystem && currentAmmo <= 0)
-        {
-            return false;
-        }
+        if (!HasFireAmmo()) return false;   // ✅ 8弹药许可
 
         // 2. 检查冷却
         if (useCooldownSystem)
@@ -380,14 +377,7 @@ private void InitializeCooldownState()
     // ========== ✅ 新增：消耗弹药 ==========
     public bool ConsumeAmmo()
     {
-        if (!useAmmoSystem) return true; // 无限弹药，直接成功
-
-        if (currentAmmo <= 0)
-        {
-            return false;
-        }
-
-        currentAmmo--;
+        if (!ConsumeFireAmmo()) return false;   // ✅ 8弹药消耗映射
         UpdateAmmoVisual();
         return true;
     }
@@ -395,27 +385,10 @@ private void InitializeCooldownState()
     // ========== ✅ 新增：补给弹药（APC调用） ==========
     public override bool ResupplyAmmo()
     {
-        if (!useAmmoSystem)
-        {
-            return false;
-        }
-
-        // 检查是否需要补给（现有弹药 < 最大弹药）
-        if (currentAmmo >= maxAmmo)
-        {
-            return false;
-        }
-
-        // 补给到maxAmmo（即使只差1发也补满，但不超过）
         int oldAmmo = currentAmmo;
-        currentAmmo = maxAmmo;
-
+        if (!base.ResupplyAmmo()) return false;   // ✅ 基类处理白名单+旧池
         UpdateAmmoVisual();
-
-        // 播放补给特效
-        ShowAmmoResupplyEffect();
-
-        return true;
+        return currentAmmo != oldAmmo;
     }
 
     
@@ -664,6 +637,23 @@ public override void TakeDamage(int damage)
             _ => "up"
         };
         return $"{teamPrefix}_{dirSuffix}";
+    }
+
+    /// <summary>✅ AI 入口：等同玩家点击射程内格子（走同一套弹药/冷却/目标筛选）。返回是否真的开火</summary>
+    public bool AIFireAtGrid(Grids targetGrid)
+    {
+        if (targetGrid == null || !CanAttack()) return false;
+        int before = remainingAttacks;
+        OnRangeGridClicked(targetGrid);
+        return remainingAttacks < before || hasActed;
+    }
+
+    /// <summary>✅ AI 用：该格子在玩家点击时会被选中的目标（与 OnRangeGridClicked 一致取第一个）</summary>
+    public Node2D AIPeekTargetInGrid(Grids targetGrid)
+    {
+        if (targetGrid == null) return null;
+        var t = GetValidTargetsInGrid(targetGrid);
+        return t.Count > 0 ? t[0] : null;
     }
 
     private void OnRangeGridClicked(Grids targetGrid)
