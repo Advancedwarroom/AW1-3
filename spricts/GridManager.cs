@@ -124,11 +124,15 @@ public partial class GridManager : Node
         touchHoverGrid = grid;
         if (grid != null && moveRange.Contains(grid))
         {
-            OnMouseEnteredGrid(grid);
             // ✅ 记录手画航点（去重、断链容忍，校验在松手时）
             if (touchPathGrids == null) touchPathGrids = new System.Collections.Generic.List<Grids>();
             if (touchPathGrids.Count == 0 || touchPathGrids[touchPathGrids.Count - 1] != grid)
                 touchPathGrids.Add(grid);
+            // ✅ 手画预览：画线走你的手指路线（含截断红标），不再是优化最短路径
+            if (touchPathGrids.Count > 0)
+                DrawTouchPathPreview(touchPathGrids);
+            else
+                OnMouseEnteredGrid(grid);
         }
         else
             ClearPathPreview();
@@ -1295,6 +1299,29 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         }
     }
 
+    // ✅ 手画轨迹预览：沿手指路线画线，第一个可见阻挡格红标截断
+    private void DrawTouchPathPreview(System.Collections.Generic.List<Grids> path)
+    {
+        if (selectedUnit == null) return;
+        ResetMoveRangeIconColors();
+        previewPath = path;
+        pathLine?.ClearPoints();
+        if (pathLine != null)
+            foreach (var g in path)
+                if (g != null) pathLine.AddPoint(g.Position + new Vector2(20, 20));
+        for (int i = 0; i < path.Count; i++)
+        {
+            var g = path[i];
+            if (g?.infantries == null) continue;
+            if (g.infantries.Any(u => u != null && u != selectedUnit && Infantry.IsVisibleTo(u, selectedUnit.team, grids)))
+            {
+                g.pathIcon?.Show();
+                g.pathIcon?.SetDeferred("modulate", Colors.Red);
+                break;   // 截断点之后不再渲染
+            }
+        }
+    }
+
     // ✅ 手画路径执行：路径路程计费、绕圈合法、终点≠起点、截断于路上单位（可见判定，隐形标准直通雾战）
     private bool HandleDrawnPath(System.Collections.Generic.List<Grids> waypoints)
     {
@@ -1327,6 +1354,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         if (valid.Count == 0) return false;
         var dest = valid[valid.Count - 1];
         if (dest == infantry.grid) return false;
+        CloseRange();   // ✅ 手画路径直接执行，须自清范围（点按流由回调收拾；不清=全局输入卡死）
         MoveTo(infantry, dest, showMenu: true, forcedPath: valid);
         // ✅ 截断遭遇结算：落定后按双方Export仲裁（总开关=是否攻击）
         var bk = pendingEncounterBlocker; pendingEncounterBlocker = null;
