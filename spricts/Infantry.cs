@@ -2900,7 +2900,7 @@ public virtual void SetWaitVisual(bool waiting)
         if (grid == null) return;
         if (grid.city != null)
             grid.city.facilityTeam = TeamHelper.Player0;   // 拆旗的终点不是易主，是剥夺
-        ShowCaptureCompleteEffect();
+        ShowTearFlagEffect();   // 纯代码美术：程序化撕旗
         currentTearProgress = 0;
         tearingGrid = null;
         originalGrid = null;
@@ -2929,7 +2929,7 @@ public virtual void SetWaitVisual(bool waiting)
                 if (suppressIncomeMode == 1) f.AddStatus(FacilityStatusType.NoIncome, 2, team);
                 else if (suppressIncomeMode == 2) f.SetIncomeSuppression(suppressIncomePercent);
                 if (suppressProductionMode == 1) f.AddStatus(FacilityStatusType.CannotProduce, 2, team);
-                // 生产百分比：TODO（生产资金消耗读取点在生产UI流程，待接）
+                else if (suppressProductionMode == 2) f.productionSuppressPercent = suppressProductionPercent;
                 if (suppressDefenseMode == 1) f.AddStatus(FacilityStatusType.NoCover, 2, team);
                 else if (suppressDefenseMode == 2) f.defenseSuppressPercent = suppressDefensePercent;
                 if (suppressSupplyStop) f.AddStatus(FacilityStatusType.NoSupply, 2, team);
@@ -3026,6 +3026,28 @@ public virtual void SetWaitVisual(bool waiting)
                 if (health > maxHealth) { health = maxHealth; UpdateHpLabel(); }   // 上限回收时钳制当前值
             }
         }
+    }
+
+    /// <summary>
+    /// 纯代码美术·撕旗：程序化旗面动画（零手绘资产）。
+    /// 倒三角旗面 = 被撕裂的旗：蜷曲坠落 → 压扁 → 消散。打底沿用占领光效。
+    /// </summary>
+    protected virtual void ShowTearFlagEffect()
+    {
+        ShowCaptureCompleteEffect();   // 打底光效沿用占领同款
+        if (grid?.city == null) return;
+        var flag = new Polygon2D();
+        flag.Polygon = new Vector2[] { new Vector2(-14, -26), new Vector2(14, -26), new Vector2(0, 4) };   // 倒三角=撕裂旗面
+        flag.Color = new Color(0.9f, 0.15f, 0.1f, 0.95f);
+        flag.Position = new Vector2(0, -30);
+        grid.city.AddChild(flag);
+        var tw = flag.CreateTween().SetParallel();
+        tw.TweenProperty(flag, "rotation", Mathf.DegToRad(160), 1.1f).SetEase(Tween.EaseType.In);
+        tw.TweenProperty(flag, "scale", new Vector2(0.15f, 0.05f), 1.1f).SetEase(Tween.EaseType.In);
+        tw.TweenProperty(flag, "modulate:a", 0.0f, 1.2f);
+        var tw2 = flag.CreateTween();
+        tw2.TweenInterval(1.25f);
+        tw2.TweenCallback(Callable.From(() => flag.QueueFree()));
     }
 
     protected virtual void ShowCaptureInterruptedEffect()
