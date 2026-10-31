@@ -413,7 +413,30 @@ public void InitializeDefaultMatrix()
             ["Recon_RepairBoat"] = 0,     ["Flare_RepairBoat"] = 0,
             ["Bike_RepairBoat"] = 0,      ["AntiTank_RepairBoat"] = 0,
             ["APC_RepairBoat"] = 0,       ["FlyBomb_RepairBoat"] = 0,
-        };
+        
+            // ✅ 矩阵空洞修复（2026-10-31审计：照明车机枪补全+互缺对补值）
+            ["Flare_Infantry"] = 65,
+            ["Flare_Mech"] = 50,
+            ["Flare_Bike"] = 60,
+            ["Flare_Recon"] = 65,
+            ["Flare_APC"] = 45,
+            ["Flare_LightTank"] = 35,
+            ["Flare_MdTank"] = 25,
+            ["Flare_Artillery"] = 45,
+            ["Flare_Rocket"] = 45,
+            ["Flare_AntiAir"] = 35,
+            ["Flare_AntiTank"] = 35,
+            ["Infantry_Flare"] = 55,
+            ["Bike_Flare"] = 50,
+            ["Recon_Flare"] = 70,
+            ["Infantry_Bike"] = 65,
+            ["Bike_Infantry"] = 70,
+            ["Recon_Bike"] = 60,
+            ["Bike_Recon"] = 35,
+            ["AntiTank_Oozium"] = 35,
+            ["PipeRunner_Oozium"] = 35,
+            ["BCopter_TCopter"] = 65,
+            };
     }
 
     if (defaultSecondaryMatrix == null)
