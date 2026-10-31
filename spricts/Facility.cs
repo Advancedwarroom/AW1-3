@@ -538,12 +538,12 @@ public partial class Facility : Node2D
                     {
                         int oldAmmo = unit.currentPrimaryAmmo;
                         if (primaryAmmoSupply >= 999)
-                            unit.currentPrimaryAmmo = unit.maxPrimaryAmmo;
+                            unit.currentPrimaryAmmo = unit.GetEffectiveMaxPrimaryAmmo();
                         else
                             unit.currentPrimaryAmmo = Mathf.Clamp(unit.currentPrimaryAmmo + primaryAmmoSupply, 0, unit.maxPrimaryAmmo);
-                        unit.currentStealthBullets = unit.maxStealthBullets;   // ✅ 隐身弹补给
-                        unit.currentRevealBullets = unit.maxRevealBullets;     // ✅ 显形弹补给
-                        unit.currentCamoBullets = unit.maxCamoBullets;         // ✅ 迷彩弹补给
+                        unit.currentStealthBullets = unit.GetEffectiveMaxStealthBullets();   // ✅ 隐身弹补给
+                        unit.currentRevealBullets = unit.GetEffectiveMaxRevealBullets();     // ✅ 显形弹补给
+                        unit.currentCamoBullets = unit.GetEffectiveMaxCamoBullets();         // ✅ 迷彩弹补给
                         if (unit.currentPrimaryAmmo != oldAmmo)
                         {
                             supplied = true;
@@ -562,7 +562,7 @@ public partial class Facility : Node2D
                     {
                         int oldFuel = unit.fuel;
                         if (fuelSupply >= 999)
-                            unit.fuel = unit.maxFuel;
+                            unit.fuel = unit.GetEffectiveMaxFuel();
                         else
                             unit.fuel = Mathf.Clamp(unit.fuel + fuelSupply, 0, unit.maxFuel);
                         if (unit.fuel != oldFuel)

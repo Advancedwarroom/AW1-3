@@ -93,7 +93,20 @@ public partial class Infantry : Node2D
     [Export] public bool terrainConcealment = true;
 
     [ExportGroup("截断遭遇")]
-    [Export] public bool overlongReflexArc = false;          // 反射弧过长：开=终点压隐形的冤枉费保留(不修)，关=正常退费
+    [ExportGroup("雾战模块")]
+    // ✅ 雾战加成（可为负=减成；不改实际数值，仅生效上限/判定）
+    [Export] public int fogMaxHpBonus = 0;
+    [Export] public int fogMaxFuelBonus = 0;
+    [Export] public int fogFlatDefenseBonus = 0;
+    [Export] public int fogPrimaryAmmoMaxBonus = 0;
+    [Export] public int fogExplodeAmmoMaxBonus = 0;
+    [Export] public int fogFlareAmmoMaxBonus = 0;
+    [Export] public int fogStealthBulletMaxBonus = 0;
+    [Export] public int fogRevealBulletMaxBonus = 0;
+    [Export] public int fogCamoBulletMaxBonus = 0;
+    [Export] public Godot.Collections.Dictionary<string, int> fogMatrixOverride = new();  // 雾战独立攻防表（固定数值，禁小数）
+
+[Export] public bool overlongReflexArc = false;          // 反射弧过长：开=终点压隐形的冤枉费保留(不修)，关=正常退费
     // —— 被截断方（移动方）——
     [Export] public bool truncCounterEnabled = false;        // 被截断时自动反击（总开关=是否攻击；关=组一全失效）
     [Export] public int truncCounterMode = 1;                // 1主动出击(我单向打对方不还手) 2两败俱伤(互吃反击) 3先发制人(对方伏击我,我只能反击)
@@ -571,6 +584,9 @@ public int GetMatrixDamage(Infantry target, bool secondary, bool? assumeStealthe
     // 隐身攻防表替换：隐身时同一张表同时替换主/副武器（填 0 = 隐身状态下打不了该目标）
     if ((assumeStealthed ?? isStealthed) && stealthMatrixOverride != null && stealthMatrixOverride.Count > 0)
         foreach (var k in keys) if (stealthMatrixOverride.TryGetValue(k, out int sval)) return sval;
+    // ✅ 雾战攻防表：优先级 隐身表 > 雾战表 > 默认/模板表（雾中隐身=上面已用隐身表返回）
+    if (FogActive() && fogMatrixOverride != null && fogMatrixOverride.Count > 0)
+        foreach (var k in keys) if (fogMatrixOverride.TryGetValue(k, out int fval)) return fval;
     var inst = secondary ? secondaryAttackMatrix : attackMatrix;
     var def = secondary ? defaultSecondaryMatrix : defaultMatrix;
     if (inst != null) foreach (var k in keys) if (inst.TryGetValue(k, out int v)) return v;
@@ -631,12 +647,14 @@ public virtual WeaponType SelectWeaponByMatrix(Infantry target)
 // 防御力（动态衰减：baseDefense × 血量% + 地形加成）
 public int GetEffectiveDefense(Grids targetGrid)
 {
-    float healthPercent = (float)health / maxHealth;
+    float healthPercent = (float)health / GetEffectiveMaxHealth();
     int dynamicDefense = Mathf.RoundToInt(baseDefense * healthPercent);
     float terrainBonus = (defenseBonusType == DefenseBonusType.CanDefenseBonus && targetGrid != null) 
         ? targetGrid.TerrainDefenseBonus 
         : 0f;
-    return Mathf.RoundToInt(dynamicDefense * (1.0f + terrainBonus));
+    int result = Mathf.RoundToInt(dynamicDefense * (1.0f + terrainBonus));
+    if (FogActive()) result = Mathf.Max(0, result + fogFlatDefenseBonus);   // ✅ 雾战固定防御（可负）
+    return result;
 }
 
 public virtual int CalculateFinalDamage(Infantry target, WeaponType weaponType, bool isCounter = false)
@@ -651,7 +669,7 @@ public virtual int CalculateFinalDamage(Infantry target, WeaponType weaponType, 
     if (baseDamage <= 0) return 0;
     
     // 攻击方血量系数
-    float attackerHealthPercent = (float)health / maxHealth;
+    float attackerHealthPercent = (float)health / GetEffectiveMaxHealth();
     float actualAttack = baseDamage * attackerHealthPercent;
     
     // 地形
@@ -1134,7 +1152,7 @@ public virtual bool ConsumePrimaryAmmo()
     {
         get 
         { 
-            float healthPercent = (float)health / maxHealth;
+            float healthPercent = (float)health / GetEffectiveMaxHealth();
             return Mathf.Max(0, Mathf.RoundToInt(baseAttack * healthPercent));
         }
     }
@@ -1143,7 +1161,7 @@ public virtual bool ConsumePrimaryAmmo()
     {
         get 
         { 
-            float healthPercent = (float)health / maxHealth;
+            float healthPercent = (float)health / GetEffectiveMaxHealth();
             return Mathf.Max(0, Mathf.RoundToInt(baseDefense * healthPercent));
         }
     }
@@ -1156,7 +1174,7 @@ public virtual bool ConsumePrimaryAmmo()
     {
         get 
         { 
-            float healthPercent = (float)health / maxHealth;
+            float healthPercent = (float)health / GetEffectiveMaxHealth();
             return Mathf.Max(0, Mathf.RoundToInt(secondaryAttack * healthPercent));
         }
     }
@@ -2786,6 +2804,23 @@ public virtual void SetWaitVisual(bool waiting)
             s.atk.Attack(s.def, allowCounter: s.counter);   // 唯一战斗结算点：隐身门/反击门/阈值矩阵全自动
     }
 
+    // ==================== 雾战模块助手 ====================
+    private GameManager _fogGmCache;
+    public bool FogActive()   // 雾战生效=全局迷雾开关
+    {
+        if (_fogGmCache == null || !GodotObject.IsInstanceValid(_fogGmCache))
+            _fogGmCache = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        return _fogGmCache?.fogOfWarManager?.isFogOfWarEnabled == true;
+    }
+    public int GetEffectiveMaxHealth() => FogActive() ? maxHealth + fogMaxHpBonus : maxHealth;
+    public int GetEffectiveMaxFuel() => FogActive() ? maxFuel + fogMaxFuelBonus : maxFuel;
+    public int GetEffectiveMaxPrimaryAmmo() => FogActive() ? maxPrimaryAmmo + fogPrimaryAmmoMaxBonus : maxPrimaryAmmo;
+    public int GetEffectiveMaxExplodeAmmo() => FogActive() ? maxExplodeAmmo + fogExplodeAmmoMaxBonus : maxExplodeAmmo;
+    public int GetEffectiveMaxFlareAmmo() => FogActive() ? maxFlareAmmo + fogFlareAmmoMaxBonus : maxFlareAmmo;
+    public int GetEffectiveMaxStealthBullets() => FogActive() ? maxStealthBullets + fogStealthBulletMaxBonus : maxStealthBullets;
+    public int GetEffectiveMaxRevealBullets() => FogActive() ? maxRevealBullets + fogRevealBulletMaxBonus : maxRevealBullets;
+    public int GetEffectiveMaxCamoBullets() => FogActive() ? maxCamoBullets + fogCamoBulletMaxBonus : maxCamoBullets;
+
     // ==================== 隐身模块 ====================
     public void ToggleStealth()
     {
@@ -3023,7 +3058,7 @@ public virtual void SetWaitVisual(bool waiting)
 {
     if (!CanTargetWeapon(target)) return 0;   // ✅ 兵器攻击准入闸门
     // 兵器没有类型名在攻防表中，使用基础攻击力的百分比
-    float healthPercent = (float)health / maxHealth;
+    float healthPercent = (float)health / GetEffectiveMaxHealth();
     
     int baseDamage = 0;
     if (weaponType == WeaponType.Primary && hasPrimaryWeapon)

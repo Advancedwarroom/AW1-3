@@ -1359,9 +1359,21 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         // ✅ 截断遭遇结算：落定后按双方Export仲裁（总开关=是否攻击）
         var bk = pendingEncounterBlocker; pendingEncounterBlocker = null;
         if (bk != null)
+        {
             Infantry.ResolveTruncationEncounter(infantry, bk,
                 moverConsents: infantry.truncCounterEnabled,
                 blockerConsents: bk.truncAmbusherEnabled);
+            // ✅ 非强制截断：新格重绑+剩余实际移动力+二次移动
+            if (!infantry.truncForcedStop && infantry.movePoints > 0 && infantry.health > 0)
+            {
+                infantry.state = Infantry.UnitState.Idle;
+                infantry.isMoved = false;
+                infantry.isAttacked = false;
+                infantry.hasActed = false;
+                infantry.SetWaitVisual(false);
+                ShowMoveRange(infantry);
+            }
+        }
         return true;
     }
 
