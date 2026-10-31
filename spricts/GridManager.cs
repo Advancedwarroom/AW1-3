@@ -812,6 +812,9 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
     var fog = gm?.fogOfWarManager;
     bool isFogEnabled = fog != null && fog.isFogOfWarEnabled;
 
+    // ✅ 本单位脚下格同样禁选（起点不在范围集内，循环盖不到它）
+    OverrideUnitInput(infantry.grid, true);
+
     foreach (var g in moveRange)
     {
         g.pathIcon?.Show();
@@ -1669,6 +1672,10 @@ public void CloseRange()
             OverrideUnitInput(grid, false);
         }
     }
+    // ✅ 恢复本单位脚下格的输入（显示范围时单独禁用过）
+    if (selectedUnit != null && IsInstanceValid(selectedUnit) && selectedUnit.grid != null)
+        OverrideUnitInput(selectedUnit.grid, false);
+
     moveRange.Clear();
     HideExplosionRange(); // ✅ 关闭移动范围时也清除爆炸预览
 
