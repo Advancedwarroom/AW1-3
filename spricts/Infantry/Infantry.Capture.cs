@@ -1,0 +1,248 @@
+using Godot;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+
+// Infantry · Capture（由 Infantry.cs 按模块拆分；partial class，Export 分组已显式标注）
+public partial class Infantry
+{
+
+    [ExportGroup("远程搭载")]
+    [Export]
+    public CaptureAbility captureAbility = CaptureAbility.CannotCapture;  // 默认不能占领
+    
+    [Export]
+    public int capturePower = 10;  // 占领力，默认10（两回合）
+
+    [Export]
+    public bool allowCaptureAfterMove = true;  // 移动后是否允许占领（AW标准=true）
+
+
+    // 当前占领进度（运行时）
+    public int currentCaptureProgress = 0;
+    public Grids capturingGrid = null;  // 正在占领的格子
+    private CaptureEffect currentCaptureEffect;
+    public virtual int GetCapturePower()
+{
+    if (health <= maxHealth)
+    {
+        float healthPerBar = maxHealth / 10f;
+        return Mathf.Clamp(Mathf.RoundToInt(health / healthPerBar), 1, 10);
+    }
+    else
+    {
+        float healthPerBar = maxHealth / 10f;
+        return Mathf.RoundToInt(health / healthPerBar);
+    }
+}
+
+       public virtual bool CanCaptureCurrentGrid()
+{
+    if (captureAbility == CaptureAbility.CannotCapture)
+        return false;
+    
+    if (grid == null)
+        return false;
+    
+    if (grid.city == null)
+        return false;
+    
+    // ✅ 关键：如果城市已被己方占领，不能再次占领
+    if (grid.city.facilityTeam == team)
+        return false;
+    
+    // ✅ 如果正在占领中，但占领的是当前格子，允许继续
+    if (currentCaptureProgress > 0 && capturingGrid == grid)
+        return true;
+    
+    // ✅ 如果其他己方单位正在占领，检查是否可以协助
+    if (grid.city.capturingUnits.Count > 0)
+    {
+        var allyCapturing = grid.city.capturingUnits
+            .FirstOrDefault(u => u.team == this.team && u != this);
+        if (allyCapturing != null)
+        {
+            // 同队伍可以协助占领
+            return true;
+        }
+    }
+    
+    return true;
+}
+
+    private bool isCapturingInProgress = false;
+    public virtual void PerformCapture()
+{
+    if (isStealthed && !canCaptureWhileStealthed) return;   // ✅ 隐身占点锁
+
+    if (isCapturingInProgress) return;
+    
+    if (!CanCaptureCurrentGrid())
+        return;
+
+    // 拆旗冻结：敌方撕旗者在场时，本楼占领进度冻结（只冻结不清零；遭遇清零由 PerformTearFlag 负责）
+    if (grid != null && grid.city != null && grid.infantries != null &&
+        grid.infantries.Any(u => u != this && u != null && IsInstanceValid(u) && u.team != this.team
+            && u.tearingGrid == grid && u.currentTearProgress > 0))
+    {
+        ShowCaptureInterruptedEffect();
+        return;
+    }
+
+    isCapturingInProgress = true;  // 设置标志
+    
+    try  // ✅ 添加 try-finally
+    {
+        int currentCapturePower = GetCapturePower();
+        
+        // 第一次占领这个格子
+        if (capturingGrid != grid)
+        {
+            if (capturingGrid != null)
+            {
+                capturingGrid.city?.OnCaptureInterrupted(this);
+            }
+            
+            currentCaptureProgress = 0;
+            capturingGrid = grid;
+            grid.city?.OnCaptureStarted(this);
+        }
+        
+        var contestUnits = grid.infantries
+            .Where(u => u != this 
+                        && u != null
+                        && IsInstanceValid(u)
+                        && u.currentCaptureProgress > 0 
+                        && u.capturingGrid == grid
+                        && u.team != this.team)
+            .ToList();
+            
+        if (contestUnits.Count > 0)
+        {
+            grid.city?.ShowCaptureContestVisual();
+            currentCaptureProgress = 0;
+            foreach (var enemy in contestUnits)
+            {
+                enemy.currentCaptureProgress = 0;
+            }
+            
+            MarkAsCapturing();
+            return;  // 这里return，但finally会执行！
+        }
+        
+        currentCaptureProgress += currentCapturePower;
+        
+        ShowCaptureEffect();
+        
+        if (currentCaptureProgress >= (grid.city?.capturePointsRequired ?? 20))
+        {
+            CompleteCapture();
+        }
+        else
+        {
+            MarkAsCapturing();
+        }
+    }
+    finally  // ✅ 确保标志总是重置
+    {
+        isCapturingInProgress = false;
+    }
+}
+
+
+    protected virtual void CompleteCapture()
+{
+    if (grid == null) return;
+    
+    string oldOwner = grid.city?.facilityTeam ?? "";
+    
+    // ✅ 关键修复：实际改变城市归属！
+    if (grid.city != null)
+        grid.city.facilityTeam = team;
+    
+    // 显示占领完成特效
+    ShowCaptureCompleteEffect();
+    
+    // 重置占领状态
+    currentCaptureProgress = 0;
+    capturingGrid = null;
+    
+    // 标记为已完全行动
+    isMoved = true;
+    isAttacked = true;
+    state = UnitState.Acted;
+    originalGrid = null;
+    
+    // 视觉变暗
+    SetWaitVisual(true);
+    
+    // 通知刷新城市视觉
+    grid.city?.UpdateCityVisual();
+    
+    var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+    gm?.CheckVictoryCondition();
+}
+
+    protected virtual void ShowCaptureInterruptedEffect()
+    {
+        var effect = new CaptureInterruptedEffect
+        {
+            Position = GlobalPosition
+        };
+        GetTree().CurrentScene.AddChild(effect);
+    }
+
+    protected virtual void MarkAsCapturing()
+    {
+        // 关键：占领中也算已行动，不能移动/攻击
+        isMoved = true;
+        isAttacked = true;
+        state = UnitState.Acted;
+        originalGrid = null;
+        
+        // 视觉变暗（但可能用不同颜色表示占领中？）
+        FreezeToIdleDark();
+    }
+
+    protected virtual void ShowCaptureEffect()
+    {
+        // 清理旧特效
+        if (currentCaptureEffect != null && IsInstanceValid(currentCaptureEffect))
+        {
+            currentCaptureEffect.QueueFree();
+            currentCaptureEffect = null;
+        }
+        
+        // ✅ 计算进度百分比（0-100）
+        float progressPercent = Mathf.Min(100f, (currentCaptureProgress / (float)(grid.city?.capturePointsRequired ?? 20)) * 100f);
+        
+        currentCaptureEffect = new CaptureEffect
+        {
+            CapturePower = GetCapturePower(), 
+            CaptureProgress = progressPercent,  // 传递正确的进度
+            TeamColor = GetTeamColor(),
+            IsCapturing = true,
+            Position = new Vector2(0, -20)
+        };
+        AddChild(currentCaptureEffect);
+    }
+
+    protected virtual void ShowCaptureCompleteEffect()
+    {
+        if (currentCaptureEffect != null && IsInstanceValid(currentCaptureEffect))
+        {
+            currentCaptureEffect.QueueFree();
+            currentCaptureEffect = null;
+        }
+        
+        var effect = new CaptureEffect
+        {
+            CaptureProgress = 100f,
+            TeamColor = GetTeamColor(),
+            IsCapturing = false,  // 完成状态
+            Position = new Vector2(0, -20)
+        };
+        AddChild(effect);
+        // 完成特效不记录引用，让它自己消失
+    }
+}
