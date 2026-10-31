@@ -1,5 +1,8 @@
 # 格战原创模块图鉴（AI-KIMI-ENG 作品名录）
 
+
+> 代码已按模块拆分为 partial class，`Infantry.cs` 的各模块现位于 `spricts/Infantry/Infantry.<模块>.cs`，见 [CODE_LAYOUT.md](CODE_LAYOUT.md)。
+
 > 本文档供所有协作者（人类指挥官 + AI-2 参谋）阅读。记录 2026-10-28 至 10-30 由主程 AI 设计并落地的**原创机制**（非 AW 原作内容）。每个模块都可经检查器按单位配置，默认全关 = 零行为变化。
 
 ## 模块一：合流模块（Join）
