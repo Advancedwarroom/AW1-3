@@ -158,9 +158,7 @@ public virtual bool ConsumePrimaryAmmo()
 {
     if (!hasPrimaryWeapon) return false;
     if (HasInfinitePrimaryAmmo) return true;
-    if (currentPrimaryAmmo <= 0) return false;
-    currentPrimaryAmmo--;
-    return true;
+    return TryConsumeAmmo(AmmoKind.Primary);   // ✅ 统一弹药系统
 }
 
     public virtual int attack

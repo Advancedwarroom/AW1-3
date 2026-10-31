@@ -27,7 +27,7 @@ public partial class TerrainEditor
     };
     private readonly Dictionary<string, string> compactFacilityAbbr = new()
     {
-        { "City", "Cty" }, { "Base", "Bse" }, { "AirPort", "Apt" }
+        { "City", "Cty" }, { "Base", "Bse" }, { "AirPort", "Apt" }, { "Port", "Prt" }
     };
     private readonly Dictionary<string, string> compactTeamAbbr = new()
     {

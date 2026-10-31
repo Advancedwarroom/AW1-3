@@ -103,7 +103,7 @@ public partial class ActionMenu
         if (gm == null) return;
 
         // 消耗照明弹
-        unit.currentFlareAmmo--;
+        unit.TryConsumeAmmo(Infantry.AmmoKind.Flare);   // ✅ 统一弹药系统
 
         // 添加照明效果
         gm.fogOfWarManager?.AddIllumination(

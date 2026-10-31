@@ -16,6 +16,30 @@ public static Dictionary<Infantry, int> unitsCannotMove = new Dictionary<Infantr
         return fuel > 0;
     }
 
+    /// <summary>
+    /// 移动中断判定（每次移动完成时调用）：
+    /// ✅ 生产/建造「可否移动」开关 = 移动会不会打断进度——
+    ///    内部模式看各自开关（关=移动即中断）；外部模式一律移动即中断。
+    /// </summary>
+    public void OnMovedInterruptCheck()
+    {
+        if (isProducing && (!productionInternal || !canMoveWhileProducing)) CancelProduction();
+        if (isConstructing && (!constructionInternal || !canMoveWhileBuilding)) CancelConstruction();
+    }
+
+    /// <summary>
+    /// 按格子取移动开销（含设施覆盖）。
+    /// ✅ 港口：海军/气垫单位可进入港口格（与原作一致——舰船可靠泊、在港口生产/补给/维修）。
+    /// 其余格子仍按 gridType 的移动开销表。
+    /// </summary>
+    public virtual int GetMoveCostOnGrid(Grids targetGrid)
+    {
+        if (targetGrid != null && targetGrid.city is Port
+            && (moveType == MoveType.Naval || moveType == MoveType.Hover))
+            return 1;
+        return GetMoveCost(targetGrid != null ? targetGrid.gridType : GridType.GROUND);
+    }
+
     public virtual void ConsumeFuel(int amount)
     {
         if (!consumeFuel) return;

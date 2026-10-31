@@ -47,7 +47,7 @@ public partial class AI_Manager
 
     private static int StepCost(Infantry u, Grids g)
     {
-        int c = u.GetMoveCost(g.gridType);
+        int c = u.GetMoveCostOnGrid(g);
         return (c >= 999 || c == int.MaxValue || c < 0) ? -1 : Math.Max(1, c);
     }
 

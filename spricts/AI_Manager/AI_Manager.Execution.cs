@@ -120,7 +120,7 @@ public partial class AI_Manager
             case Act.Illuminate:
                 if (p.actGrid != null && u.currentFlareAmmo > 0)
                 {
-                    u.currentFlareAmmo--;
+                    u.TryConsumeAmmo(Infantry.AmmoKind.Flare);
                     gm.fogOfWarManager?.AddIllumination(p.actGrid, u.minIlluminationRange, u.maxIlluminationRange, u.flareDurationTurns);
                     gm.fogOfWarManager?.RefreshFog();
                 }

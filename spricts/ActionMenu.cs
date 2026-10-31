@@ -354,13 +354,16 @@ private List<Grids> GetAdjacentGrids(Grids center)
             bool canToggleStealth = unit.canStealth && !unit.IsStealthFormLocked
                 && (!unit.stealthToggleCostsAction || (!unit.hasActed && unit.state != UnitState.Acted));
             stealthButton.Visible = canToggleStealth;
-            TranslateGroup.SetText(stealthButton, unit.isStealthed ? "显形" : "隐身");
+            TranslateGroup.SetText(stealthButton, unit.isStealthed ? unit.GetStealthShowButtonText() : unit.GetStealthHideButtonText());
         }
         if (scentButton != null)
         {
             scentButton.Visible = unit.scentEnabled && !unit.hasActed && unit.state != UnitState.Acted;
             TranslateGroup.SetText(scentButton, "嗅探");
         }
+
+        // ✅ 生产模块 / 建造模块 / 部署建筑 按钮可见性
+        ShowProductionBuildButtons(unit);
 
         if (isCapturing)
         {

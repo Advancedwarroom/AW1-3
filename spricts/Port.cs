@@ -1,0 +1,70 @@
+using Godot;
+using System;
+
+// ✅ 港口（原作 AW Port）：可生产海军单位、维修/补给舰船、每回合 1000 收入、可占领。
+//    检查器优先：默认值只在「未配置」时补上（场景 .tscn / 检查器里写好的值不会被覆盖）。
+//    舰船可靠泊（海军移动开销覆盖见 Infantry.GetMoveCostOnGrid）。
+public partial class Port : City
+{
+    // 港口默认可生产的舰船（含既有维修艇）
+    private static readonly string[] DefaultNavalUnits =
+    {
+        "Battleship", "Cruiser", "Submarine", "Lander", "Carrier", "Gunboat", "RepairBoat"
+    };
+
+    // ✅ 检查器优先：默认补给兵种列表重写为海军
+    protected override string[] DefaultSupplyUnitTypes() => DefaultNavalUnits;
+
+    public override void _Ready()
+    {
+        base._Ready();
+
+        // ✅ 新弹药：生产/建造弹（仅当未配置时补默认）
+        if (productionAmmoSupply == 0) productionAmmoSupply = 999;
+        if (constructionAmmoSupply == 0) constructionAmmoSupply = 999;
+
+        // 生产模块默认值（检查器优先）
+        if (producibleUnitNames.Count == 0)
+        {
+            canProduce = true;
+            producibleUnitNames = new Godot.Collections.Array<string>(DefaultNavalUnits);
+        }
+
+        animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");
+        if (animSprite == null)
+        {
+            GD.PushError(TranslateGroup.T("[Port] 找不到 AnimatedSprite2D 节点！"));
+            return;
+        }
+
+        UpdateCityVisual();
+    }
+
+    public override void UpdateCityVisual()
+    {
+        if (animSprite == null) return;
+
+        string animName = facilityTeam switch
+        {
+            "Player1" => "portteam1",
+            "Player2" => "portteam2",
+            "Player0" => "P0Port",
+            "Player" => "portteam1",
+            _ => "P0Port"
+        };
+
+        if (animSprite.SpriteFrames.HasAnimation(animName))
+        {
+            animSprite.Play(animName);
+        }
+        else if (animSprite.SpriteFrames.HasAnimation("P0Port"))
+        {
+            animSprite.Play("P0Port");
+        }
+
+        Color tint = (facilityTeam == TeamHelper.Player)
+            ? TeamHelper.GetTeamColor(facilityTeam)
+            : Colors.White;
+        animSprite.Modulate = tint;
+    }
+}

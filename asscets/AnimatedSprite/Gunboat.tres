@@ -1,0 +1,26 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://it7janwx4dfjl"]
+
+[ext_resource type="Texture2D" uid="uid://659ixhll4h8sh" path="res://asscets/units/ships/gunboat_placeholder.png" id="1_gunboat"]
+[ext_resource type="Texture2D" uid="uid://659ixhll4h8sh" path="res://asscets/units/ships/gunboat_placeholder.png" id="2_gunboat"]
+
+[resource]
+animations = [
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_gunboat")
+}],
+"loop": 1,
+"name": &"Gunboat1",
+"speed": 5.0
+}
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_gunboat")
+}],
+"loop": 1,
+"name": &"Gunboat2",
+"speed": 5.0
+}
+]

@@ -1,0 +1,26 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://yswz4wyxgkmq4"]
+
+[ext_resource type="Texture2D" uid="uid://0naupmnyikr05" path="res://asscets/units/ships/cruiser_placeholder.png" id="1_cruiser"]
+[ext_resource type="Texture2D" uid="uid://0naupmnyikr05" path="res://asscets/units/ships/cruiser_placeholder.png" id="2_cruiser"]
+
+[resource]
+animations = [
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_cruiser")
+}],
+"loop": 1,
+"name": &"Cruiser1",
+"speed": 5.0
+}
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_cruiser")
+}],
+"loop": 1,
+"name": &"Cruiser2",
+"speed": 5.0
+}
+]

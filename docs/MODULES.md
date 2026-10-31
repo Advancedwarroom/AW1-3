@@ -128,3 +128,48 @@ GitHub Actions 手动触发（workflow_dispatch），Mono+android-arm64 正路�
 - **Wargroove 贡献三基因**：狗本体 / 侧翼加成 / 败逃机制；格战将其全部模块化为可插拔系统
 
 *模块六~十三由 AI-KIMI-ENG 根据 10-31 提交记录补录；机制本体由 AI-2（主程）实现，人类指挥官裁决。*
+---
+
+## 模块十四：港口与海军线（2026-11-01）
+
+**文件**：`Port.cs`（建筑，继承 City）/ `Battleship.cs` `Cruiser.cs` `Submarine.cs` `Lander.cs` `Carrier.cs` `Gunboat.cs` / `Infantry.Movement.cs`（GetMoveCostOnGrid）
+**数值**：AW3/AWDS 原作值（战列舰 28000/2-6 间接、巡洋 18000/对空105反潜90、潜艇 20000/下潜油5、登陆艇 12000/载2、航母 30000/3-8 对空）；炮艇为 DoR 跨作智能适配原创值（5000/移动7/弹1/载1步兵系）
+**规则**：
+- 港口与原作一致：可占领、1000/回合收入、维修补给舰船、生产海军；海军单位可靠泊（`GetMoveCostOnGrid` 覆盖：海军/气垫进港口格=1，移动范围/路径/AI 寻路/逃离全走此口）
+- 潜艇下潜/上浮 = 直接复用隐身模块，按钮文字可检查器改（`stealthHideButtonText`/`stealthShowButtonText`，默认隐身/显形，潜艇填下潜/上浮）；下潜贴身可见（相邻1格），只有巡洋舰和潜艇能打水下潜艇（stealthAttackableBy）
+- 登陆艇装卸限制（原作）：只能浅滩（BEACH）和港口
+- 贴图：占位贴图（`asscets/units/ships/`），换真图只改 .tres 引用
+**编辑器**：设施模板列表 + 紧凑格式缩写 Prt + 生成器搜索框（按显示名/描述/场景路径过滤，单位/兵器/设施通用）
+
+## 模块十五：统一弹药系统（AmmoKind）
+
+**文件**：`Infantry/Infantry.Ammo.cs`
+**设计**：全部弹药种类（主武器/自爆/照明/隐身弹/显形弹/迷彩弹/生产弹/建造弹）走同一套接口：`GetAmmo/GetMaxAmmo/HasAmmo/TryConsumeAmmo/AddAmmo/RefillAmmo/RefillAllAmmo`。旧消耗点（武器开火、自爆、照明、隐身切换、AI 照明）全部改走 `TryConsumeAmmo` 单一咽喉；设施/补给单位补给走 `RefillAmmo`。
+**新增弹种**：生产弹/建造弹（见模块十六/十七），设施补给表新增 `productionAmmoSupply`/`constructionAmmoSupply` + 独立兵种白名单。
+
+## 模块十六：内部服务（舱内单位：内部补给 + 内部回血）
+
+**文件**：`Infantry/Infantry.InternalService.cs`
+**字段**（ExportGroup「内部服务（舱内单位）」）：
+- `internalSupplyEnabled` + `internalSupplyWhitelist`（独立白名单，空=全部舱内单位）
+- `internalHealEnabled` + `internalHealAmount`（每回合回 x HP，**可为负=扣血，扣到 0 以下=舱内单位损毁**）+ `internalHealWhitelist`（与补给/搭载白名单各自独立）
+**规则**：每个大回合开始结算（挂在回合燃料结算同处）；补给=燃料+全弹药补满（走统一弹药系统）。航母（给舰载机）/巡洋舰（AW3 可载2直升机）即内置用户。
+
+## 模块十七：生产模块（单位级，11 字段规范）
+
+**文件**：`Infantry/Infantry.Production.cs` / `ActionMenu/ActionMenu.Production.cs`（按钮与目标选择）
+**字段**（ExportGroup「生产模块」）：①canProduceUnits ②位置模式（关闭/内部/外部/可选内外）③外部范围 x-y ④自动随机放置 vs 手选目标格 ⑤生产白名单 ⑥生产弹药（决定按钮显示，开工耗1发）⑦总进度 N ⑧每回合进度 Z（如 20/10=两回合）⑨内部生产时可否移动（**=移动会不会打断进度**，关=移动即中断；外部一律移动即中断）⑩自动化（开=点一次后每回合自动推进，只显示中断按钮，生产不消耗行动——照常攻击/操作/待机；关=生产占用回合，单位待机）⑪冷却回合数
+**内部生产依赖**：点「内部生产」自动开启搭载模块（仅需搭载，白名单可空——产出单位直接进舱可待着，出舱后不在搭载白名单就装不回去）。
+**完工**：内部→直接进舱；外部→放到目标格（手选时高亮有效格）。
+
+## 模块十八：建造模块（与生产对称）
+
+**文件**：`Infantry/Infantry.Construction.cs` / `FacilityDatabase.cs`
+**字段**：与生产模块一一对应（canBuildFacilities/位置模式/范围/自动放置/建造白名单（建筑类型名）/建造弹药/进度 N/Z/内部建造时可否移动/自动化/冷却）。
+**规则**：内部建造与搭载模块**无绑定**——建好的建筑存舱内数据，用「📦 部署建筑」按钮放到相邻空格；外部建造直接放目标格。可建建筑登记在 `FacilityDatabase`（City/Base/AirPort/Port）。
+
+## 模块十九：检查器优先审计（2026-11-01 顺手修）
+
+- `City`/`AirPort`/`Base`/`Port`：补给兵种表、生产名单改为「仅当未配置时补默认」（默认列表抽成 `DefaultSupplyUnitTypes()` 虚方法，子类重写），改检查器不再被 _Ready 覆盖
+- `RepairBoat`：删掉 _Ready 里整套硬编码强制覆盖（移动/燃料/修理字段），改为「0=未配置才补默认」
+- 舰船六类 + 港口场景值全部写进 .tscn 检查器，代码零硬编码

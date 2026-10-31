@@ -164,7 +164,7 @@ public partial class GridManager
             if (wp == infantry.grid) break;
             int dist = Mathf.Abs(wp.GridIndex.X - prev.GridIndex.X) + Mathf.Abs(wp.GridIndex.Y - prev.GridIndex.Y);
             if (dist != 1) break;   // 断链（快速滑动跳格）
-            int c = GetActualMoveCost(infantry, wp.gridType);
+            int c = GetActualMoveCost(infantry, wp);
             // 路上有单位即截断（可见判定——隐形的存在不截断、不泄漏，雾战同标准）
             var blockerU = wp.infantries.FirstOrDefault(u => u != null && u != infantry && Infantry.IsVisibleTo(u, infantry.team, grids));
             if (blockerU != null)

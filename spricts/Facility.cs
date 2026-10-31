@@ -91,6 +91,8 @@ public partial class Facility : Node2D
     [Export] public int explodeAmmoSupply = 0;
     [Export] public int primaryAmmoSupply = 0;
     [Export] public int fuelSupply = 0;
+    [Export] public int productionAmmoSupply = 0;     // ✅ 新弹药：生产弹补给（999=补满）
+    [Export] public int constructionAmmoSupply = 0;   // ✅ 新弹药：建造弹补给（999=补满）
 
     [ExportGroup("补给支持兵种过滤（为空=不限制）")]
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForHeal = new();
@@ -98,6 +100,8 @@ public partial class Facility : Node2D
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForExplode = new();
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForPrimaryAmmo = new();
     [Export] public Godot.Collections.Array<string> supportedUnitTypesForFuel = new();
+    [Export] public Godot.Collections.Array<string> supportedUnitTypesForProductionAmmo = new();
+    [Export] public Godot.Collections.Array<string> supportedUnitTypesForConstructionAmmo = new();
 
     // ========== P-1设施收入共享配置 ==========
     [ExportGroup("P-1公共设施配置")]
@@ -616,6 +620,50 @@ public partial class Facility : Node2D
                             supplied = true;
                             supplyParts.Add("Bomb+");
                             if (supplyColor == Colors.Green) supplyColor = new Color(0.9f, 0.5f, 0.1f);
+                        }
+                    }
+                }
+            }
+
+            // ✅ 新弹药：生产弹补给（统一弹药系统）
+            if (productionAmmoSupply != 0)
+            {
+                if (unit.canProduceUnits)
+                {
+                    if (supportedUnitTypesForProductionAmmo.Count == 0 || supportedUnitTypesForProductionAmmo.Contains(unitType))
+                    {
+                        int oldProd = unit.currentProductionAmmo;
+                        if (productionAmmoSupply >= 999)
+                            unit.currentProductionAmmo = unit.maxProductionAmmo;
+                        else
+                            unit.currentProductionAmmo = Mathf.Clamp(unit.currentProductionAmmo + productionAmmoSupply, 0, unit.maxProductionAmmo);
+                        if (unit.currentProductionAmmo != oldProd)
+                        {
+                            supplied = true;
+                            supplyParts.Add("Prod+");
+                            if (supplyColor == Colors.Green) supplyColor = new Color(0.6f, 0.5f, 0.9f);
+                        }
+                    }
+                }
+            }
+
+            // ✅ 新弹药：建造弹补给（统一弹药系统）
+            if (constructionAmmoSupply != 0)
+            {
+                if (unit.canBuildFacilities)
+                {
+                    if (supportedUnitTypesForConstructionAmmo.Count == 0 || supportedUnitTypesForConstructionAmmo.Contains(unitType))
+                    {
+                        int oldBuild = unit.currentConstructionAmmo;
+                        if (constructionAmmoSupply >= 999)
+                            unit.currentConstructionAmmo = unit.maxConstructionAmmo;
+                        else
+                            unit.currentConstructionAmmo = Mathf.Clamp(unit.currentConstructionAmmo + constructionAmmoSupply, 0, unit.maxConstructionAmmo);
+                        if (unit.currentConstructionAmmo != oldBuild)
+                        {
+                            supplied = true;
+                            supplyParts.Add("Build+");
+                            if (supplyColor == Colors.Green) supplyColor = new Color(0.5f, 0.7f, 0.9f);
                         }
                     }
                 }

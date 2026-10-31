@@ -16,11 +16,10 @@ public partial class GameManager
         // ✅ 无限自爆模式消耗自爆弹
         if (!unit.explosionDestroysSelf)
         {
-            if (unit.currentExplodeAmmo <= 0)
+            if (!unit.TryConsumeAmmo(Infantry.AmmoKind.Explode))   // ✅ 统一弹药系统
             {
                 return;
             }
-            unit.currentExplodeAmmo--;
         }
 
         var gridPos = unit.grid?.GridIndex ?? unitManager.WorldToGrid(unit.Position);

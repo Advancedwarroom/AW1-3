@@ -91,44 +91,20 @@ public virtual void PerformSupply()
         string supplyText = "";
         Color supplyColor = new Color(0.2f, 0.9f, 0.3f);
 
-        // 补给弹药
-        if (unit.hasPrimaryWeapon && unit.primaryHasLimitedAmmo && 
-            unit.currentPrimaryAmmo < unit.maxPrimaryAmmo)
+        // ✅ 统一弹药系统：全弹药种类补满（主武器/自爆/照明/隐身弹/显形弹/迷彩弹/生产弹/建造弹）
+        //    只有确实补到了的弹药才计入补给提示
+        foreach (var kind in Infantry.AllAmmoKinds)
         {
-            unit.currentPrimaryAmmo = unit.maxPrimaryAmmo;
+            int max = unit.GetMaxAmmo(kind);
+            if (max <= 0) continue;
+            if (unit.GetAmmo(kind) >= max) continue;
+            // 主弹药：无主武器/无限弹不补
+            if (kind == Infantry.AmmoKind.Primary && (!unit.hasPrimaryWeapon || !unit.primaryHasLimitedAmmo)) continue;
+            if (kind == Infantry.AmmoKind.Explode && (!unit.canExplode || unit.explosionDestroysSelf)) continue;
+            if (kind == Infantry.AmmoKind.Flare && !unit.canIlluminate) continue;
+            unit.RefillAmmo(kind);
             supplied = true;
-            supplyText = "Ammo+";
-        }
-
-        // ✅ 补给照明弹（通用：任何开启照明模块的单位）
-        if (unit.canIlluminate && unit.currentFlareAmmo < unit.maxFlareAmmo)
-        {
-            unit.currentFlareAmmo = unit.maxFlareAmmo;
-            if (!supplied)
-            {
-                supplyText = "Flare+";
-                supplyColor = new Color(0.9f, 0.9f, 0.2f);
-            }
-            else
-            {
-                supplyText += " Flare+";
-            }
-            supplied = true;
-        }
-        if (unit is Flare flareUnit && flareUnit.canIlluminate && 
-            flareUnit.currentFlareAmmo < flareUnit.maxFlareAmmo)
-        {
-            flareUnit.currentFlareAmmo = flareUnit.maxFlareAmmo;
-            if (!supplied)
-            {
-                supplyText = "Flare+";
-                supplyColor = new Color(0.9f, 0.9f, 0.2f);
-            }
-            else
-            {
-                supplyText += " Flare+";
-            }
-            supplied = true;
+            supplyText = string.IsNullOrEmpty(supplyText) ? "Ammo+" : supplyText + " Ammo+";
         }
 
         // 补给燃料
@@ -142,7 +118,7 @@ public virtual void PerformSupply()
             }
             else
             {
-                supplyText = "Ammo+ Fuel+";
+                supplyText += " Fuel+";
             }
             supplied = true;
         }

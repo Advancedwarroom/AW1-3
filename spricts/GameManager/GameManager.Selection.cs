@@ -133,7 +133,7 @@ public void RollbackMove()
             isFirst = false;
             continue;
         }
-        moveCost += unit.GetMoveCost(g.gridType);
+        moveCost += unit.GetMoveCostOnGrid(g);
     }
 
     // 恢复移动力

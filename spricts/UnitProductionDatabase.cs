@@ -92,6 +92,13 @@ public static class UnitProductionDatabase
         ["AntiAirMissile"] = new("res://Prefabs/AntiAirMissile.tscn", 12000, "防空导弹"),
         ["Stealth"]      = new("res://Prefabs/Stealth.tscn",          24000, "隐身战机"),
         ["Dog"]          = new("res://Prefabs/Dog.tscn",              1500, "机械狗"),
+        // ==================== 海军线（AW3 原作造价；炮艇 DoR 跨作适配） ====================
+        ["Battleship"]   = new("res://Prefabs/Battleship.tscn",      28000, "战列舰"),
+        ["Cruiser"]      = new("res://Prefabs/Cruiser.tscn",          18000, "巡洋舰"),
+        ["Submarine"]    = new("res://Prefabs/Submarine.tscn",        20000, "潜艇"),
+        ["Lander"]       = new("res://Prefabs/Lander.tscn",           12000, "登陆艇"),
+        ["Carrier"]      = new("res://Prefabs/Carrier.tscn",           30000, "航母"),
+        ["Gunboat"]      = new("res://Prefabs/Gunboat.tscn",           5000, "炮艇"),
     };
 
     public static bool HasUnit(string unitName) => Units.ContainsKey(unitName);
