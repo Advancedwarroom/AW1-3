@@ -1961,6 +1961,12 @@ public void RestartGame()
             {
                 unit.OnTurnStartFacilitySuppression();
             }
+
+            // 群体狂热：回合开始刷新（覆盖式生效/持续回合衰减）
+            if (unit.packFrenzyEnabled)
+            {
+                unit.OnTurnStartPackFrenzy();
+            }
         }
 
         // 重置所有单位状态
