@@ -12,6 +12,7 @@ script = ExtResource("1_4jlpy")
 canRotate = false
 fixedDamagePercent = 0.5
 canRotate = false
+cost = 18000
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1542309704]
 position = Vector2(16, 15.999996)

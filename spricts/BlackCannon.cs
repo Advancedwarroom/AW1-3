@@ -179,7 +179,7 @@ public override void _Ready()
     base._Ready();
     InitializeCooldownState();
     
-    cost = 18000;  // BlackCannon造价
+    // 造价以检查器 cost 为准（已写入 .tscn），不在代码里覆盖
     
     var love = GetNode<Sprite2D>("LoveIcon");
     if (love != null) love.Show();

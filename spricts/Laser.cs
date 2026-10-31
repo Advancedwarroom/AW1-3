@@ -116,7 +116,7 @@ public partial class Laser : Weapon
         base.canRotate = this.canRotate;
         base.CanAttackWeapon = this.canAttackWeapons;
         base.maxAttacksPerTurn = this.attacksPerCooldown;
-        cost = 19000;  // Laser造价
+        // 造价以检查器 cost 为准（已写入 .tscn），不在代码里覆盖
         base.CanAttackWeapon = this.canAttackWeapons;
         base.maxAttacksPerTurn = this.attacksPerCooldown;
         UpdateLaserVisual();
