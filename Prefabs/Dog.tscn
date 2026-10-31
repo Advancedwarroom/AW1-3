@@ -1,0 +1,105 @@
+[gd_scene format=3 uid="uid://dfh33eosbmvkb"]
+
+[ext_resource type="Script" uid="uid://d16omq4ux3t8j" path="res://spricts/Dog.cs" id="1_script"]
+[ext_resource type="SpriteFrames" uid="uid://cb0n87m77t285" path="res://asscets/AnimatedSprite/lighttank.tres" id="2_frames"]
+[ext_resource type="Texture2D" uid="uid://bf75lljd6qnq8" path="res://asscets/units/Tank/ostank1.png" id="3_l7g7b"]
+[ext_resource type="SpriteFrames" uid="uid://bkmjpiqqtw4s5" path="res://asscets/AnimatedSprite/NoFuelIcno.tres" id="4_nnocp"]
+[ext_resource type="SpriteFrames" uid="uid://ci4pry7uh77cq" path="res://asscets/AnimatedSprite/NoAmmoIcon.tres" id="5_jgva2"]
+[ext_resource type="SpriteFrames" uid="uid://bta18psd6oght" path="res://asscets/AnimatedSprite/loaded.tres" id="6_8lkuh"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tank"]
+size = Vector2(34, 34)
+
+[node name="Dog" type="Node2D" unique_id=1148536001 node_paths=PackedStringArray("loadedIcon", "noFuelIcon", "noAmmoIcon", "animSprite", "baseAnimSprite")]
+script = ExtResource("1_c8rcr")
+useDefaultConfig = false
+canCapture = false
+unitCategory = 23
+visionRange = 5
+isArmoredUnit = true
+IsAirUnit = false
+defenseBonusType = 0
+loadedIcon = NodePath("HpLabel/loaded")
+noFuelIcon = NodePath("HpLabel/NoFuelIcno")
+moveType = 1
+attackType = 0
+defaultMovePoints = 6
+movePoints = 6
+baseAttack = 50
+canAttackAfterMoving = true
+noAmmoIcon = NodePath("HpLabel/NoAmmoIcon")
+maxFuel = 60
+fuel = 60
+consumeFuel = true
+lowFuelThreshold = 15
+dailyFuelConsumption = 2
+destroyOnOutOfFuel = true
+useDefaultAmmoConfig = false
+hasPrimaryWeapon = true
+maxPrimaryAmmo = 0
+currentPrimaryAmmo = 0
+primaryHasLimitedAmmo = false
+hasSecondaryWeapon = false
+animSprite = NodePath("Base2D")
+baseAnimSprite = NodePath("Base2D")
+
+scentEnabled = true
+scentRangeMin = 1
+scentRangeMax = 6
+scentIgnoresConcealment = true
+scentIgnoresStealth = true
+scentKeepObserving = true
+scentTrackTurns = 3
+strongSight = false
+strongDetect = false
+
+[node name="Area2D" type="Area2D" parent="." unique_id=1496334006]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1548780876]
+position = Vector2(16, 16)
+shape = SubResource("RectangleShape2D_tank")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1828372812]
+position = Vector2(16, 16)
+sprite_frames = ExtResource("2_frames")
+animation = &"Dog1"
+frame_progress = 0.9627719
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1080152555]
+visible = false
+position = Vector2(16, 16)
+texture = ExtResource("3_l7g7b")
+
+[node name="HpLabel" type="Label" parent="." unique_id=610387109]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 40.0
+offset_bottom = 42.0
+pivot_offset = Vector2(4, 4)
+theme_override_colors/font_color = Color(0.99999994, 0.09249958, 0.972881, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 18
+text = "10"
+
+[node name="NoFuelIcno" type="AnimatedSprite2D" parent="." unique_id=526062287]
+visible = false
+modulate = Color(1, 0.83137256, 0, 1)
+position = Vector2(8, 32)
+sprite_frames = ExtResource("4_nnocp")
+animation = &"No"
+
+[node name="NoAmmoIcon" type="AnimatedSprite2D" parent="." unique_id=1245001215]
+visible = false
+modulate = Color(1, 1, 1, 0.654902)
+position = Vector2(8, 32)
+sprite_frames = ExtResource("5_jgva2")
+animation = &"NoAmmoIcon"
+
+[node name="loaded" type="AnimatedSprite2D" parent="." unique_id=893339734]
+visible = false
+position = Vector2(8, 32)
+sprite_frames = ExtResource("6_8lkuh")
+animation = &"loaded"
+
+[connection signal="input_event" from="Area2D" to="." method="InputClick"]

@@ -19,6 +19,7 @@ public partial class ActionMenu : Control
     [Export] public Button illuminateButton; // ✅ 照明按钮
     [Export] public Button repairButton; // ✅ 修复按钮
     [Export] public Button stealthButton; // ✅ 隐身按钮
+    [Export] public Button scentButton; // ✅ 嗅探按钮
 
     [Export] public Button healButton; // ✅ Crystal 黑水晶治疗按钮
 
@@ -254,6 +255,14 @@ public void ShowTransportUnloadMenu(Infantry transport, bool afterMove = false)
 
         return null;
     }
+    public void OnScentPressed()
+    {
+        GetViewport().SetInputAsHandled();
+        if (currentUnit == null || currentWeapon != null) return;
+        currentUnit.ToggleScent();
+        Hide();
+    }
+
     public void OnStealthPressed()
     {
         GetViewport().SetInputAsHandled();
@@ -689,6 +698,7 @@ private List<Grids> GetAdjacentGrids(Grids center)
         explodeButton?.Hide();
         illuminateButton?.Hide();
         stealthButton?.Hide();
+        scentButton?.Hide();
         loadButton?.Hide();
         supplyButton.Visible = false;
 
@@ -868,6 +878,9 @@ private List<Grids> GetAdjacentGrids(Grids center)
             stealthButton = new Button();
             stealthButton.Pressed += OnStealthPressed;
             illuminateButton.GetParent().AddChild(stealthButton);
+            scentButton = new Button();
+            scentButton.Pressed += OnScentPressed;
+            illuminateButton.GetParent().AddChild(scentButton);
         }
         if (stealthButton != null)
         {
@@ -875,6 +888,11 @@ private List<Grids> GetAdjacentGrids(Grids center)
                 && (!unit.stealthToggleCostsAction || (!unit.hasActed && unit.state != UnitState.Acted));
             stealthButton.Visible = canToggleStealth;
             TranslateGroup.SetText(stealthButton, unit.isStealthed ? "显形" : "隐身");
+        }
+        if (scentButton != null)
+        {
+            scentButton.Visible = unit.scentEnabled && !unit.hasActed && unit.state != UnitState.Acted;
+            TranslateGroup.SetText(scentButton, "嗅探");
         }
 
         if (isCapturing)

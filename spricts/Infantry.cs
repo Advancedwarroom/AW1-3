@@ -118,7 +118,23 @@ public partial class Infantry : Node2D
     [Export] public int fogStealthBulletMaxBonus = 0;
     [Export] public int fogRevealBulletMaxBonus = 0;
     [Export] public int fogCamoBulletMaxBonus = 0;
-    [Export] public Godot.Collections.Dictionary<string, int> fogMatrixOverride = new();  // 雾战独立攻防表（固定数值，禁小数）
+    [Export] public Godot.Collections.Dictionary<string, int> fogMatrixOverride = new();
+
+    [ExportGroup("嗅探")]
+    [Export] public bool scentEnabled = false;
+    [Export] public int scentRangeMin = 1;
+    [Export] public int scentRangeMax = 1;
+    [Export] public bool scentIgnoresConcealment = false;
+    [Export] public bool scentIgnoresStealth = false;
+    [Export] public bool scentKeepObserving = false;
+    [Export] public int scentTrackTurns = 1;
+
+    [ExportGroup("感知强化")]
+    [Export] public bool strongSight = false;
+    [Export] public bool strongDetect = false;
+
+    [ExportGroup("补给")]
+    [Export] public string[] supplyBlacklist = System.Array.Empty<string>();  // 雾战独立攻防表（固定数值，禁小数）
     [Export] public bool canStealth = false;
     [Export] public bool stealthToggleCostsAction = true;    // 隐身/显形是否算独立操作：true=切换后待机；false=切换后仍可攻击移动                            // 可否隐身
     [Export] public bool isStealthed = false;                           // 运行时：当前是否隐身
@@ -436,7 +452,18 @@ public void InitializeDefaultMatrix()
             ["AntiTank_Oozium"] = 35,
             ["PipeRunner_Oozium"] = 35,
             ["BCopter_TCopter"] = 65,
-            };
+            
+            ["Dog_Infantry"] = 28, ["Dog_Mech"] = 22, ["Dog_Bike"] = 32, ["Dog_Recon"] = 6,
+            ["Dog_APC"] = 8, ["Dog_LightTank"] = 8, ["Dog_MdTank"] = 2, ["Dog_Artillery"] = 12,
+            ["Dog_Rocket"] = 12, ["Dog_AntiAir"] = 12, ["Dog_AntiTank"] = 1, ["Dog_Oozium"] = 18,
+            ["Dog_Flare"] = 28, ["Dog_AntiAirMissile"] = 12,
+            ["AntiAir_Dog"] = 74, ["Artillery_Dog"] = 63, ["AntiTank_Dog"] = 52, ["Bike_Dog"] = 49,
+            ["Bomber_Dog"] = 77, ["Flare_Dog"] = 46, ["Infantry_Dog"] = 38, ["LightTank_Dog"] = 52,
+            ["MdTank_Dog"] = 77, ["Mech_Dog"] = 46, ["Oozium_Dog"] = 699, ["PipeRunner_Dog"] = 66,
+            ["Recon_Dog"] = 49, ["Rocket_Dog"] = 66, ["Stealth_Dog"] = 66, ["Dog_Dog"] = 32,
+
+            ["BCopter_Dog"] = 53, ["TCopter_Dog"] = 53,
+};
     }
 
     if (defaultSecondaryMatrix == null)
@@ -1145,6 +1172,8 @@ public virtual bool ConsumePrimaryAmmo()
 
         stealthFlareRevealed = false;   // 照明临时显形每回合刷新
         ApplyStealthDailyCost();   // ✅ 隐身日耗（独立于燃料开关）
+        MaintainScentTracking();
+        PerformScentScan();
 
         // ✅ 燃料耗尽坠毁：统一在日耗全部结算后判定一次（修复：此前与 ApplyStealthDailyCost 各判一次，隐身时重复销毁）
         if (fuel <= 0 && destroyOnOutOfFuel && !pendingFuelDestroy)
@@ -2863,6 +2892,55 @@ public virtual void SetWaitVisual(bool waiting)
         }
     }
 
+    // ==================== 嗅探引擎 ====================
+    private readonly System.Collections.Generic.Dictionary<Infantry, int> scentTracked = new();
+
+    public void ToggleScent()
+    {
+        if (!scentEnabled) return;
+        SetWaitVisual(true);
+        state = UnitState.Acted;
+        PerformScentScan();
+    }
+
+    public void PerformScentScan()
+    {
+        if (!scentEnabled || grid == null || gridManager == null) return;
+        scentTracked.Clear();
+        foreach (var g in gridManager.grids)
+        {
+            if (g == null || g == grid) continue;
+            int dist = Math.Abs(g.GridIndex.X - grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - grid.GridIndex.Y);
+            if (dist < scentRangeMin || dist > scentRangeMax) continue;
+            foreach (var u in g.infantries)
+            {
+                if (u == null || u.team == team || !GodotObject.IsInstanceValid(u)) continue;
+                if (u.isStealthed && !scentIgnoresStealth) continue;
+                if (!u.isStealthed && u.terrainConcealment && !scentIgnoresConcealment
+                    && (g.gridType == GridType.FOREST || g.gridType == GridType.REEF)) continue;
+                if (scentKeepObserving)
+                {
+                    scentTracked[u] = scentTrackTurns;
+                    u.stealthFlareRevealed = true;
+                    u.UpdateStealthVisual();
+                }
+            }
+        }
+    }
+
+    public void MaintainScentTracking()
+    {
+        if (scentTracked.Count == 0) return;
+        var expired = new System.Collections.Generic.List<Infantry>();
+        foreach (var kv in scentTracked)
+        {
+            int left = kv.Value - 1;
+            if (left <= 0 || !GodotObject.IsInstanceValid(kv.Key)) expired.Add(kv.Key);
+            else { scentTracked[kv.Key] = left; kv.Key.stealthFlareRevealed = true; }
+        }
+        foreach (var u in expired) scentTracked.Remove(u);
+    }
+
     // ==================== 雾战模块助手 ====================
     private GameManager _fogGmCache;
     public bool FogActive()   // 雾战生效=全局迷雾开关
@@ -3044,7 +3122,7 @@ public virtual void SetWaitVisual(bool waiting)
                         int dist = Math.Abs(g.GridIndex.X - unit.grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - unit.grid.GridIndex.Y);
                         if (dist != 1) continue;
                         foreach (var u in g.infantries)
-                            if (u != null && u.team == viewerTeam) { adjEnemy = true; break; }
+                            if (u != null && u.team == viewerTeam && (u.strongSight || u.strongDetect)) { adjEnemy = true; break; }
                         if (adjEnemy) break;
                     }
                 if (!adjEnemy) return false;
@@ -3065,7 +3143,7 @@ public virtual void SetWaitVisual(bool waiting)
                 int dist = Math.Abs(g.GridIndex.X - unit.grid.GridIndex.X) + Math.Abs(g.GridIndex.Y - unit.grid.GridIndex.Y);
                 if (dist < unit.stealthVisibleMinRange || dist > unit.stealthVisibleMaxRange) continue;
                 foreach (var u in g.infantries)
-                    if (u != null && u.team == viewerTeam) return true;
+                    if (u != null && u.team == viewerTeam && (u.strongDetect || u.strongSight)) return true;
             }
         if (unit.stealthRevealOnFlare && unit.IsFlareLit()) return true;   // ✅ 照明弹照出（实时查询，离开亮格自动恢复）
         return false;
@@ -3948,6 +4026,8 @@ public virtual void PerformSupply()
     var targetUnits = GetSupplyRangeUnits();
     foreach (var unit in targetUnits)
     {
+        if (supplyBlacklist != null && supplyBlacklist.Length > 0
+            && System.Array.IndexOf(supplyBlacklist, unit.UnitTypeId) >= 0) continue;
         bool supplied = false;
         string supplyText = "";
         Color supplyColor = new Color(0.2f, 0.9f, 0.3f);

@@ -1467,6 +1467,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         // ✅ 移动完成后立即刷新战争迷雾
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.fogOfWarManager?.OnUnitMoved();
+        infantry.PerformScentScan();
 
         CloseRange();
         HideAttackRange();
