@@ -13,36 +13,28 @@ public partial class RepairBoat : Infantry
 
     public override void _Ready()
     {
-        // ✅ 设置 RepairBoat 默认属性（在 base._Ready 之前，覆盖场景预设值）
-        moveType = MoveType.Hover;           // 移动方式：Hover（水陆两用）
-        // 造价以检查器 cost 为准（已写入 .tscn），不在代码里覆盖
-        visionRange = 1;                      // 视野：1
-        defaultMovePoints = 7;                // 移动力：7
-        movePoints = 7;
-        maxFuel = 50;                         // 燃料上限：50
-        fuel = 50;                            // 当前燃料：50
-        consumeFuel = true;                   // 消耗燃料
-        dailyFuelConsumption = 1;             // 每日消耗：1
-        destroyOnOutOfFuel = true;            // 燃料耗尽自毁
-        hasPrimaryWeapon = false;             // 无武器
+        // ✅ 检查器优先：以下默认值只在「未配置」（数值为 0 / 初始状态）时补上，
+        //    .tscn / 检查器里写好的值不再被代码覆盖（此前是硬编码强制覆盖，改检查器不生效，已修复）。
+        if (moveType == MoveType.Infantry) moveType = MoveType.Hover;   // 移动方式：Hover（水陆两用）
+        if (visionRange == 0) visionRange = 1;                          // 视野：1
+        if (defaultMovePoints == 0) defaultMovePoints = 7;               // 移动力：7
+        if (movePoints == 0) movePoints = 7;
+        if (maxFuel == 0) { maxFuel = 50; fuel = 50; }                  // 燃料上限：50
+        if (dailyFuelConsumption == 0) dailyFuelConsumption = 1;         // 每日消耗：1
+        destroyOnOutOfFuel = true;                                      // 燃料耗尽自毁
+        hasPrimaryWeapon = false;                                       // 无武器
         hasSecondaryWeapon = false;
-        attackType = AttackType.NoAttack;     // 不能攻击
-        canCapture = false;                   // 不能占领
-        canTransportUnits = true;             // 可搭载
-        canSupplyUnits = false;               // ✅ 不能补给（只有修复功能）
-        maxTransportCapacity = 1;             // 搭载容量：1
-        canTransportUnits = true;             // 可搭载
-        maxTransportCapacity = 1;             // 搭载容量：1
-        transportRequireCanCapture = true;    // 只能运输可占领单位（步兵类）
-        transportMaxMovePoints = 5;           // 最大移动力限制（过滤掉非步兵）
-        baseDefense = 20;                     // 基础防御
+        attackType = AttackType.NoAttack;                               // 不能攻击
+        canCapture = false;                                              // 不能占领
+        canSupplyUnits = false;                                          // ✅ 不能补给（只有修复功能）
+        if (maxTransportCapacity == 0) maxTransportCapacity = 1;        // 搭载容量：1
+        transportRequireCanCapture = true;                              // 只能运输可占领单位（步兵类）
+        if (transportMaxMovePoints == 0) transportMaxMovePoints = 5;    // 最大移动力限制（过滤掉非步兵）
+        if (baseDefense == 0) baseDefense = 20;                         // 基础防御
         overlapType = UnitOverlapType.NonOverlapping;
 
         base._Ready();
-        // ✅ 强制确保 RepairBoat 修复字段正确（覆盖 Inspector/序列化可能带来的错误值）
-        canRepair = true;
-        canRepairAfterMove = true;
-        repairAmountPerAction = 10;
+        // ✅ 修复字段：场景 .tscn 已写入（canRepair/repairAmountPerAction），不再强制覆盖检查器
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.RegisterUnit(this, UnitCategory.RepairBoat);
     }
@@ -59,7 +51,7 @@ public partial class RepairBoat : Infantry
         if (unitToUnload == null) return false;
 
         // 关键：检查被卸载单位是否能通过该地形
-        int moveCost = unitToUnload.GetMoveCost(targetGrid.gridType);
+        int moveCost = unitToUnload.GetMoveCostOnGrid(targetGrid);
         if (moveCost >= 999 || moveCost == int.MaxValue)
             return false; // 被卸载单位无法通过这种地形
 

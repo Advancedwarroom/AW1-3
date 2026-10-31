@@ -278,7 +278,7 @@ public bool CanMoveTo(Vector2I gridPos, Infantry unit)
     // ✅ 使用 GetMoveCost 检查地形是否可通行（替代硬编码的 METEORITE 检查）
     if (unit != null)
     {
-        int moveCost = unit.GetMoveCost(grid.gridType);
+        int moveCost = unit.GetMoveCostOnGrid(grid);
         if (moveCost >= 999 || moveCost == int.MaxValue)
             return false; // 该单位无法通过这种地形
     }

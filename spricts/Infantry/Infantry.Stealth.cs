@@ -10,6 +10,9 @@ public partial class Infantry
     [ExportGroup("隐身模块")]
     [Export] public bool terrainConcealment = true;
     [Export] public bool canStealth = false;
+    // ✅ 隐身按钮文字（检查器可改；留空=默认「隐身/显形」）。潜艇填「下潜/上浮」直接复用隐身模块。
+    [Export] public string stealthHideButtonText = "";   // 未隐身时按钮文字（动作=进入隐身）
+    [Export] public string stealthShowButtonText = "";  // 已隐身时按钮文字（动作=解除隐身）
     [Export] public bool stealthToggleCostsAction = true;    // 隐身/显形是否算独立操作：true=切换后待机；false=切换后仍可攻击移动                            // 可否隐身
     [Export] public bool isStealthed = false;                           // 运行时：当前是否隐身
     // —— 每日消耗（维持隐身时扣，0=该项不扣）——
@@ -111,6 +114,15 @@ public partial class Infantry
     }
 
     // ==================== 隐身模块 ====================
+    /// <summary>隐身按钮文字（未隐身时，动作=进入隐身；留空=「隐身」）</summary>
+    public string GetStealthHideButtonText()
+        => string.IsNullOrEmpty(stealthHideButtonText) ? TranslateGroup.T("隐身") : TranslateGroup.T(stealthHideButtonText);
+
+    /// <summary>隐身按钮文字（已隐身时，动作=解除隐身；留空=「显形」）</summary>
+    public string GetStealthShowButtonText()
+        => string.IsNullOrEmpty(stealthShowButtonText) ? TranslateGroup.T("显形") : TranslateGroup.T(stealthShowButtonText);
+
+    // ==================== 隐身模块 ====================
     public void ToggleStealth()
     {
         if (!canStealth) return;
@@ -118,13 +130,13 @@ public partial class Infantry
         // ✅ 弹系统（三选一模式，不能通吃）：切换扣弹，无弹拒绝
         if (stealthAmmoMode == 1)
         {
-            if (!isStealthed) { if (currentStealthBullets <= 0) return; currentStealthBullets--; }
-            else { if (currentRevealBullets <= 0) return; currentRevealBullets--; }
+            // ✅ 统一弹药系统：下潜弹/上浮弹
+            if (!isStealthed) { if (!TryConsumeAmmo(AmmoKind.StealthBullet)) return; }
+            else { if (!TryConsumeAmmo(AmmoKind.RevealBullet)) return; }
         }
         else if (stealthAmmoMode == 2)
         {
-            if (currentCamoBullets <= 0) return;
-            currentCamoBullets--;
+            if (!TryConsumeAmmo(AmmoKind.CamoBullet)) return;
         }
         isStealthed = !isStealthed;
         if (stealthToggleCostsAction)

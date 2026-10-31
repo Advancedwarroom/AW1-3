@@ -34,5 +34,12 @@ public enum UnitCategory
     Stealth,    // 隐身战机
     Dog,    // 机械狗
 
+    Battleship,    // 战列舰
+    Cruiser,      // 巡洋舰
+    Submarine,    // 潜艇
+    Lander,       // 登陆艇
+    Carrier,      // 航母
+    Gunboat,      // 炮艇
+
     Other       // 其他未分类单位
 }

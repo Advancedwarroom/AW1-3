@@ -1,0 +1,26 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://99bt59ivdpdt6"]
+
+[ext_resource type="Texture2D" uid="uid://39k52d16lbgqn" path="res://asscets/units/ships/lander_placeholder.png" id="1_lander"]
+[ext_resource type="Texture2D" uid="uid://39k52d16lbgqn" path="res://asscets/units/ships/lander_placeholder.png" id="2_lander"]
+
+[resource]
+animations = [
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_lander")
+}],
+"loop": 1,
+"name": &"Lander1",
+"speed": 5.0
+}
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_lander")
+}],
+"loop": 1,
+"name": &"Lander2",
+"speed": 5.0
+}
+]

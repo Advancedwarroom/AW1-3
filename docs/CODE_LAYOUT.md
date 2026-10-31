@@ -4,7 +4,7 @@
 
 | 类 | 主文件 | 模块目录 |
 |---|---|---|
-| Infantry | `spricts/Infantry.cs`（生命周期 / 通用字段） | `spricts/Infantry/`：Stealth、FogWar、Scent、Flee、TearFlag、FacilitySuppression、PackFrenzy、Truncation、Vision、DamageMatrix、Combat、Transport、Supply、Repair、SelfDestruct、Flare、Movement、Capture、Visual、Input、Identity |
+| Infantry | `spricts/Infantry.cs`（生命周期 / 通用字段） | `spricts/Infantry/`：Stealth、FogWar、Scent、Flee、TearFlag、FacilitySuppression、PackFrenzy、Truncation、Vision、DamageMatrix、Combat、Transport、Supply、Repair、SelfDestruct、Flare、Movement、Capture、Visual、Input、Identity、Ammo、InternalService、Production、Construction |
 | TerrainEditor | `spricts/TerrainEditor.cs` | `spricts/TerrainEditor/`：SpawnMenu、SpawnDestroy、GridClick、TerrainMenu、PropertyEditor、SpecialFieldEditors、GridPropertyEditor、TerrainMatrixEditor、GlobalConfig、MapExport、MapImport、MapCompactFormat、MapImportAWBW、MapImportAWME、BatchTerrain、MultiTileWeapon、SavedData、Texture |
 | GameManager | `spricts/GameManager.cs` | `spricts/GameManager/`：Funds、Turn、Selection、UnitRegistry、StatsPanel、Victory、Production、Explosion、Merge、Fog、Weapons、Zoom、Reset、AndroidPermission |
 | CustomConfigUI / GridManager / ActionMenu / ExtraSave / AI_Manager / BlackCannon / MapEditorHelper / TranslateGroup / Laser | `spricts/<类名>.cs` | `spricts/<类名>/<类名>.<模块>.cs` |

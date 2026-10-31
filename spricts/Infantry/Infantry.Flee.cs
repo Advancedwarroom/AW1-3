@@ -35,7 +35,7 @@ public partial class Infantry
                 if (!gm.unitManager.IsValidGrid(pos)) continue;
                 var g = gm.gridManager.map[pos.X, pos.Y];
                 if (g == null || g.infantries.Count > 0) continue;      // 有单位的不选
-                if (GetMoveCost(g.gridType) >= 999) continue;           // 本兵种不可通行的地形不选（水面/陨石）
+                if (GetMoveCostOnGrid(g) >= 999) continue;           // 本兵种不可通行的地形不选（水面/陨石）
                 candidates.Add(g);
             }
         if (candidates.Count == 0) return false;                        // 无处可逃：原地阵亡

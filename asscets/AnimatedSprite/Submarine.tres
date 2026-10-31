@@ -1,0 +1,26 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://urad2cu2q24ji"]
+
+[ext_resource type="Texture2D" uid="uid://77nf6krezdyn7" path="res://asscets/units/ships/sub_placeholder.png" id="1_sub"]
+[ext_resource type="Texture2D" uid="uid://77nf6krezdyn7" path="res://asscets/units/ships/sub_placeholder.png" id="2_sub"]
+
+[resource]
+animations = [
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_sub")
+}],
+"loop": 1,
+"name": &"Submarine1",
+"speed": 5.0
+}
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_sub")
+}],
+"loop": 1,
+"name": &"Submarine2",
+"speed": 5.0
+}
+]

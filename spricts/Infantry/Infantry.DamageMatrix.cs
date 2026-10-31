@@ -170,7 +170,55 @@ public void InitializeDefaultMatrix()
             ["Recon_RepairBoat"] = 0,     ["Flare_RepairBoat"] = 0,
             ["Bike_RepairBoat"] = 0,      ["AntiTank_RepairBoat"] = 0,
             ["APC_RepairBoat"] = 0,       ["FlyBomb_RepairBoat"] = 0,
-        
+
+            // ==================== 海军线（AW3/AWDS 原作值；炮艇为 DoR 跨作适配） ====================
+            // 战列舰（AWDS B Ship 行）：2-6 间接
+            ["Battleship_Infantry"] = 95,  ["Battleship_Mech"] = 90,      ["Battleship_Bike"] = 90,
+            ["Battleship_Recon"] = 90,     ["Battleship_APC"] = 80,       ["Battleship_LightTank"] = 80,
+            ["Battleship_MdTank"] = 55,    ["Battleship_Artillery"] = 80, ["Battleship_Rocket"] = 85,
+            ["Battleship_AntiAir"] = 85,   ["Battleship_AntiAirMissile"] = 90, ["Battleship_AntiTank"] = 55,
+            ["Battleship_PipeRunner"] = 80,["Battleship_Flare"] = 90,     ["Battleship_Oozium"] = 20,
+            ["Battleship_Dog"] = 90,      ["Battleship_RepairBoat"] = 95,
+            ["Battleship_Battleship"] = 50, ["Battleship_Cruiser"] = 95, ["Battleship_Lander"] = 95,
+            ["Battleship_Submarine"] = 95, ["Battleship_Carrier"] = 60,   ["Battleship_Gunboat"] = 95,
+            // 巡洋舰（AWDS Cruiser 行）：对空 + 反潜
+            ["Cruiser_Fighter"] = 85,      ["Cruiser_Bomber"] = 100,      ["Cruiser_BCopter"] = 105,
+            ["Cruiser_TCopter"] = 105,     ["Cruiser_Stealth"] = 100,     ["Cruiser_FlyBomb"] = 120,
+            ["Cruiser_Battleship"] = 5,    ["Cruiser_Cruiser"] = 25,      ["Cruiser_Lander"] = 25,
+            ["Cruiser_Submarine"] = 90,    ["Cruiser_Carrier"] = 5,       ["Cruiser_Gunboat"] = 25,
+            ["Cruiser_RepairBoat"] = 25,
+            // 潜艇（AWDS Sub 行）：鱼雷只对海
+            ["Submarine_Battleship"] = 65, ["Submarine_Cruiser"] = 25,    ["Submarine_Lander"] = 95,
+            ["Submarine_Submarine"] = 55, ["Submarine_Carrier"] = 75,    ["Submarine_Gunboat"] = 95,
+            ["Submarine_RepairBoat"] = 95,
+            // 航母（AWDS Carrier 行）：防空导弹 3-8 间接，只对空
+            ["Carrier_Fighter"] = 100,     ["Carrier_Bomber"] = 100,      ["Carrier_BCopter"] = 115,
+            ["Carrier_TCopter"] = 115,     ["Carrier_Stealth"] = 100,     ["Carrier_FlyBomb"] = 120,
+            // 炮艇（DoR 跨作适配：单发火箭，只对海 55）
+            ["Gunboat_Battleship"] = 55,   ["Gunboat_Cruiser"] = 55,      ["Gunboat_Lander"] = 55,
+            ["Gunboat_Submarine"] = 55,   ["Gunboat_Carrier"] = 55,      ["Gunboat_Gunboat"] = 55,
+            ["Gunboat_RepairBoat"] = 55,
+            // ===== 挨揍表：其他单位打海军（AW2/AWDS 原作值） =====
+            // 轰炸机：对所有舰船 75
+            ["Bomber_Battleship"] = 75,   ["Bomber_Cruiser"] = 75,       ["Bomber_Lander"] = 75,
+            ["Bomber_Submarine"] = 75,    ["Bomber_Carrier"] = 75,       ["Bomber_Gunboat"] = 75,
+            // 中坦（AW2 MdTank）：B舰55 巡洋25 登陆95 潜55
+            ["MdTank_Battleship"] = 55,   ["MdTank_Cruiser"] = 25,       ["MdTank_Lander"] = 95,
+            ["MdTank_Submarine"] = 55,    ["MdTank_Carrier"] = 55,       ["MdTank_Gunboat"] = 95,
+            ["MdTank_RepairBoat"] = 95,
+            // 轻坦（AW2 Tank）：对舰 chip 伤害
+            ["LightTank_Battleship"] = 1, ["LightTank_Cruiser"] = 5,     ["LightTank_Lander"] = 10,
+            ["LightTank_Submarine"] = 1,  ["LightTank_Carrier"] = 5,      ["LightTank_Gunboat"] = 10,
+            // 火炮（AWDS Artillery 对海）
+            ["Artillery_Battleship"] = 55,["Artillery_Cruiser"] = 55,    ["Artillery_Lander"] = 60,
+            ["Artillery_Submarine"] = 60, ["Artillery_Carrier"] = 55,    ["Artillery_Gunboat"] = 60,
+            // 火箭车（AWDS Rockets 对海）
+            ["Rocket_Battleship"] = 55,   ["Rocket_Cruiser"] = 60,       ["Rocket_Lander"] = 60,
+            ["Rocket_Submarine"] = 60,    ["Rocket_Carrier"] = 55,       ["Rocket_Gunboat"] = 60,
+            // 隐身战机（AWDS Stealth 对海 60；水下潜艇打不了）
+            ["Stealth_Battleship"] = 60, ["Stealth_Cruiser"] = 60,      ["Stealth_Lander"] = 60,
+            ["Stealth_Carrier"] = 60,     ["Stealth_Gunboat"] = 60,      ["Stealth_Submarine"] = 0,
+
             // ✅ 矩阵空洞修复（2026-10-31审计：照明车机枪补全+互缺对补值）
             ["Flare_Infantry"] = 65,
             ["Flare_Mech"] = 50,

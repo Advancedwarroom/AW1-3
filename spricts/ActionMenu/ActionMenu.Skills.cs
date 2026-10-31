@@ -21,7 +21,7 @@ public partial class ActionMenu
         GetViewport().SetInputAsHandled();
         if (currentUnit == null || currentWeapon != null) return;
         currentUnit.ToggleStealth();   // 无弹/锁定时内部静默拒绝
-        TranslateGroup.SetText(stealthButton, currentUnit.isStealthed ? "显形" : "隐身");
+        TranslateGroup.SetText(stealthButton, currentUnit.isStealthed ? currentUnit.GetStealthShowButtonText() : currentUnit.GetStealthHideButtonText());
         if (currentUnit.stealthToggleCostsAction || currentUnit.state == UnitState.Acted)
             Hide();
     }

@@ -116,7 +116,7 @@ public partial class GridManager
                     }
                     
                     // 检查3: 地形不可移动
-                    int moveCost = infantry.GetMoveCost(g.gridType);
+                    int moveCost = infantry.GetMoveCostOnGrid(g);
                     if (moveCost >= 999 || moveCost == int.MaxValue)
                     {
                         TruncateAndMove(infantry, lastValidGrid);
@@ -301,7 +301,7 @@ public partial class GridManager
         foreach (var g in path)
         {
             if (isFirst) { isFirst = false; continue; }
-            int moveCost = GetActualMoveCost(infantry, g.gridType);
+            int moveCost = GetActualMoveCost(infantry, g);
             totalMoveCost += moveCost;
             // ✅ 传送点(TP)不消耗燃料，其他地形正常消耗
             if (infantry.consumeFuel && g.gridType != GridType.TP)
@@ -338,6 +338,7 @@ public partial class GridManager
         infantry.state = UnitState.Moved;
         infantry.isMoved = true;
         infantry.movedThisTurnForAutoRepair = true;   // ✅ autoRepairAfterMove：行动结束时触发
+        infantry.OnMovedInterruptCheck();             // ✅ 生产/建造：移动中断判定（关=移动即打断进度）
 
         // ✅ 移动完成后立即刷新战争迷雾
         var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -471,7 +472,7 @@ public partial class GridManager
             }
             
             // ✅ 检查3: 地形不可移动
-            int moveCost = infantry.GetMoveCost(g.gridType);
+            int moveCost = infantry.GetMoveCostOnGrid(g);
             if (moveCost >= 999 || moveCost == int.MaxValue)
             {
                 break; // 截断到上一个可停留格
@@ -507,6 +508,20 @@ public partial class GridManager
     }
 
     private int GetActualMoveCost(Infantry infantry, GridType gridType)
+    {
+        int cost = infantry.GetMoveCost(gridType);
+        // ✅ 如果返回 int.MaxValue，表示不可通行，但在路径计算中应该已经被过滤了
+        // 这里作为安全检查，返回一个极大值
+        return cost >= 999 ? 999 : cost;
+    }
+
+    private int GetActualMoveCost(Infantry infantry, Grids g)
+    {
+        int cost = infantry.GetMoveCostOnGrid(g);
+        return cost >= 999 ? 999 : cost;
+    }
+
+    private int GetActualMoveCostOld(Infantry infantry, GridType gridType)
     {
         int cost = infantry.GetMoveCost(gridType);
         // ✅ 如果返回 int.MaxValue，表示不可通行，但在路径计算中应该已经被过滤了

@@ -1,0 +1,26 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://mh0enwdnmuv5o"]
+
+[ext_resource type="Texture2D" uid="uid://rnsta5gypey08" path="res://asscets/units/ships/battleship_placeholder.png" id="1_battleship"]
+[ext_resource type="Texture2D" uid="uid://rnsta5gypey08" path="res://asscets/units/ships/battleship_placeholder.png" id="2_battleship"]
+
+[resource]
+animations = [
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_battleship")
+}],
+"loop": 1,
+"name": &"Battleship1",
+"speed": 5.0
+}
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_battleship")
+}],
+"loop": 1,
+"name": &"Battleship2",
+"speed": 5.0
+}
+]

@@ -228,6 +228,12 @@ private void AutoCategorizeUnit(Infantry unit)
             AntiTank _ => UnitCategory.AntiTank,
             PipeRunner _ => UnitCategory.PipeRunner,
             RepairBoat _ => UnitCategory.RepairBoat,
+            Battleship _ => UnitCategory.Battleship,
+            Cruiser _ => UnitCategory.Cruiser,
+            Submarine _ => UnitCategory.Submarine,
+            Lander _ => UnitCategory.Lander,
+            Carrier _ => UnitCategory.Carrier,
+            Gunboat _ => UnitCategory.Gunboat,
             Infantry _ => UnitCategory.Infantry,
             _ => UnitCategory.Other
         };

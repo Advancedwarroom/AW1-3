@@ -115,6 +115,24 @@ private readonly List<UnitTemplate> unitTemplates = new()
     new UnitTemplate { DisplayName = TranslateGroup.T("🔧 修理船"), ScenePath = "res://Prefabs/RepairBoat.tscn", 
         Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f), 
         Description = TranslateGroup.T("海军修理单位，可修复友军，可搭载步兵，Hover移动") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚢 战列舰"), ScenePath = "res://Prefabs/Battleship.tscn",
+        Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f),
+        Description = TranslateGroup.T("AW3原作值：28000/移动5/视野2/射程2-6间接/弹9/油99") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🛥️ 巡洋舰"), ScenePath = "res://Prefabs/Cruiser.tscn",
+        Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f),
+        Description = TranslateGroup.T("AW3原作值：18000/移动6/视野3/对空105反潜90/可载2直升机") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🤿 潜艇"), ScenePath = "res://Prefabs/Submarine.tscn",
+        Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f),
+        Description = TranslateGroup.T("AW3原作值：20000/移动5/视野5/弹6/油60；下潜复用隐身模块") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("⛴️ 登陆艇"), ScenePath = "res://Prefabs/Lander.tscn",
+        Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f),
+        Description = TranslateGroup.T("AW3原作值：12000/移动6/油99/载2地面单位；浅滩和港口装卸") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🛳️ 航母"), ScenePath = "res://Prefabs/Carrier.tscn",
+        Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f),
+        Description = TranslateGroup.T("AW3原作值：30000/移动5/视野4/射程3-8对空/载2飞机并内部补给") },
+    new UnitTemplate { DisplayName = TranslateGroup.T("🚤 炮艇"), ScenePath = "res://Prefabs/Gunboat.tscn",
+        Category = TranslateGroup.T("海军"), Team = "Player1", DisplayColor = new Color(0.3f, 0.6f, 0.8f),
+        Description = TranslateGroup.T("DoR跨作适配：5000/移动7/弹1/载1步兵系；靠港补弹") },
 };
 
 private readonly List<UnitTemplate> weaponTemplates = new()
@@ -147,6 +165,9 @@ private readonly List<UnitTemplate> facilityTemplates = new()
     new UnitTemplate { DisplayName = "✈️ Airport", ScenePath = "res://Prefabs/AirPort.tscn", 
         Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.4f, 0.6f, 0.8f), 
         Description = TranslateGroup.T("机场设施，可占领、补给并生产空军单位") },
+    new UnitTemplate { DisplayName = "⚓ Port", ScenePath = "res://Prefabs/Port.tscn", 
+        Category = TranslateGroup.T("设施"), Team = "Player0", DisplayColor = new Color(0.3f, 0.6f, 0.7f), 
+        Description = TranslateGroup.T("港口设施，可占领、维修补给舰船并生产海军单位") },
 };
 
 // UI 引用

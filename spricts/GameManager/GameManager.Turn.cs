@@ -168,6 +168,20 @@ public partial class GameManager
             unit.isMoved = false;
             unit.isAttacked = false;
 
+            // ✅ 生产/建造占用回合（非自动化）：进度没走完的回合，单位保持待机
+            if (unit.isProducing && !unit.productionAutomation)
+            {
+                unit.hasActed = true;
+                unit.state = UnitState.Acted;
+                unit.SetWaitVisual(true);
+            }
+            if (unit.isConstructing && !unit.constructionAutomation)
+            {
+                unit.hasActed = true;
+                unit.state = UnitState.Acted;
+                unit.SetWaitVisual(true);
+            }
+
 
 
 
@@ -204,8 +218,11 @@ public partial class GameManager
         {
             foreach (var u in unitManager?.AllUnits ?? new List<Infantry>())
             {
-                if (IsInstanceValid(u))
-                    u.ConsumeDailyFuel();
+                if (!IsInstanceValid(u)) continue;
+                u.ConsumeDailyFuel();
+                u.ProcessInternalServices();      // ✅ 内部补给/内部回血（舱内单位）
+                u.ProcessTurnProduction();        // ✅ 生产模块：进度推进/完工/冷却
+                u.ProcessTurnConstruction();      // ✅ 建造模块：进度推进/完工/冷却
             }
         }
 

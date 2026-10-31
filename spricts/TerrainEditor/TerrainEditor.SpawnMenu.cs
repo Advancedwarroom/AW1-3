@@ -116,10 +116,21 @@ private void CreateSpawnMenu()
     spawnHintLabel.Size = new Vector2(380, 25);
     spawnMenuPanel.AddChild(spawnHintLabel);
 
+    // ✅ 搜索框（过滤当前模式的模板列表；中英文/场景名均可搜）
+    spawnSearchBox = new LineEdit();
+    spawnSearchBox.Name = "SpawnSearchBox";
+    spawnSearchBox.PlaceholderText = TranslateGroup.T("🔍 搜索：单位/兵器/设施（如 港口/Port）");
+    spawnSearchBox.CustomMinimumSize = new Vector2(370, 30);
+    spawnSearchBox.Position = new Vector2(15, 152);
+    spawnSearchBox.Size = new Vector2(370, 30);
+    spawnSearchBox.AddThemeFontSizeOverride("font_size", 13);
+    spawnSearchBox.TextChanged += text => RefreshSpawnButtons();
+    spawnMenuPanel.AddChild(spawnSearchBox);
+
     // 滚动容器
     var scroll = new ScrollContainer();
-    scroll.Position = new Vector2(15, 155);
-    scroll.Size = new Vector2(370, 435);
+    scroll.Position = new Vector2(15, 190);
+    scroll.Size = new Vector2(370, 400);
     scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
 
     spawnButtonContainer = new VBoxContainer();
@@ -155,6 +166,7 @@ private void CreateSpawnMenu()
 }
 
 private bool isDestroyMode = false;
+private LineEdit spawnSearchBox;
 
 private void ToggleDestroyMode()
 {
@@ -202,6 +214,12 @@ private string GetFriendlyTypeName(Infantry unit)
             AntiAirMissile => TranslateGroup.T("防空导弹"),
             Stealth => TranslateGroup.T("隐身战机"),
             Dog => TranslateGroup.T("机械狗"),
+        Battleship => TranslateGroup.T("战列舰"),
+        Cruiser => TranslateGroup.T("巡洋舰"),
+        Submarine => TranslateGroup.T("潜艇"),
+        Lander => TranslateGroup.T("登陆艇"),
+        Carrier => TranslateGroup.T("航母"),
+        Gunboat => TranslateGroup.T("炮艇"),
         RepairBoat => TranslateGroup.T("修理船"),
         Infantry => TranslateGroup.T("步兵"),
         _ => unit.GetType().Name
@@ -309,6 +327,17 @@ private void RefreshSpawnButtons()
         templates = weaponTemplates;
     else
         templates = facilityTemplates;
+
+    // ✅ 搜索过滤（按显示名/描述/场景路径，不区分大小写）
+    string keyword = spawnSearchBox?.Text?.Trim() ?? "";
+    if (keyword.Length > 0)
+    {
+        templates = templates.Where(t =>
+            (t.DisplayName?.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+            || (t.Description?.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+            || (t.ScenePath?.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+        ).ToList();
+    }
 
     var grouped = templates.GroupBy(t => t.Category).OrderBy(g => g.Key);
 

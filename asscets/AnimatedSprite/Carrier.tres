@@ -1,0 +1,26 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://2ujjetak3dspr"]
+
+[ext_resource type="Texture2D" uid="uid://dhwhy69iefjki" path="res://asscets/units/ships/carrier_placeholder.png" id="1_carrier"]
+[ext_resource type="Texture2D" uid="uid://dhwhy69iefjki" path="res://asscets/units/ships/carrier_placeholder.png" id="2_carrier"]
+
+[resource]
+animations = [
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_carrier")
+}],
+"loop": 1,
+"name": &"Carrier1",
+"speed": 5.0
+}
+{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_carrier")
+}],
+"loop": 1,
+"name": &"Carrier2",
+"speed": 5.0
+}
+]
