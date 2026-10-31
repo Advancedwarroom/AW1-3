@@ -71,7 +71,7 @@ public partial class Grids : Node2D
 
     public bool HasEnemyWeapon(string myTeam)
     {
-        return weapons.Any(w => w.team != myTeam && IsInstanceValid(w));
+        return weapons.Any(w => IsInstanceValid(w) && !w.IsQueuedForDeletion() && w.team != myTeam);
     }
 
     public override void _Ready()
@@ -592,13 +592,19 @@ public partial class Grids : Node2D
     }
 
     public List<Infantry> GetOtherInfantries(Infantry exclude) { return infantries.Where(i => i != exclude && IsInstanceValid(i)).ToList(); }
-    public List<Infantry> GetEnemyInfantries(Infantry reference) { return infantries.Where(i => i != reference && IsInstanceValid(i) && TeamHelper.IsEnemyForAttacker(reference.team, i.team)).ToList(); }
+    // ✅ 有效敌方目标：排除自身/已失效/阵亡/运输中/同队（P-1/P0 也不打自己队）
+    public static bool IsLiveEnemyOf(Infantry reference, Infantry i)
+        => i != null && i != reference && IsInstanceValid(i) && !i.IsQueuedForDeletion() && i.health > 0 && !i.isTransported
+           && i.team != reference.team && TeamHelper.IsEnemyForAttacker(reference.team, i.team);
+    public List<Infantry> GetEnemyInfantries(Infantry reference) { return infantries.Where(i => IsLiveEnemyOf(reference, i)).ToList(); }
     public bool HasEnemyInfantry(Infantry reference) { return infantries.Any(i => i != reference && IsInstanceValid(i) && TeamHelper.IsEnemyForAttacker(reference.team, i.team)); }
 
     // 格子上是否存在攻击者实际能造成伤害的敌方单位（伤害矩阵中有可用武器，含弹药检查）
-    public bool HasAttackableEnemyInfantry(Infantry attacker)
+    public bool HasAttackableEnemyInfantry(Infantry attacker, List<Grids> allGrids = null)
     {
-        return GetEnemyInfantries(attacker).Any(e => attacker.SelectWeaponByMatrix(e) != WeaponType.None);
+        // allGrids 非空时追加感知判定（隐身/林地隐蔽中看不见的不算目标，防按钮泄漏位置）
+        return GetEnemyInfantries(attacker).Any(e => attacker.SelectWeaponByMatrix(e) != WeaponType.None
+            && (allGrids == null || Infantry.IsVisibleTo(e, attacker.team, allGrids)));
     }
 
     // ========== 地形绑定图标系统 ==========

@@ -11,7 +11,7 @@ z_index = 1
 script = ExtResource("1_port")
 canProduce = true
 fundsPerTurn = 1000
-producibleUnitNames = PackedStringArray("Battleship", "Cruiser", "Submarine", "Lander", "Carrier", "Gunboat", "RepairBoat")
+producibleUnitNames = Array[String](["Battleship", "Cruiser", "Submarine", "Lander", "Carrier", "Gunboat", "RepairBoat", "ProducibleBoat", "KamikazeBoat"])
 
 [node name="Area2D" type="Area2D" parent="." unique_id=5837819781]
 

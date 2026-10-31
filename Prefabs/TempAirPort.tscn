@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://spricts/TempAirPort.cs" id="1_kxu4x"]
+[ext_resource type="SpriteFrames" uid="uid://nck2ejarqrer" path="res://asscets/AnimatedSprite/Airport.tres" id="2_kxu4x"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bx6pw"]
+size = Vector2(33, 33)
+
+[node name="TempAirPort" type="Node2D" unique_id=607371403]
+z_index = 1
+script = ExtResource("1_kxu4x")
+canProduce = false
+fundsPerTurn = 0
+
+[node name="Area2D" type="Area2D" parent="." unique_id=173658074]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1552285411]
+position = Vector2(16.5, 16.5)
+shape = SubResource("RectangleShape2D_bx6pw")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1513004313]
+position = Vector2(16, 16)
+scale = Vector2(0.99999994, 0.9166667)
+sprite_frames = ExtResource("2_kxu4x")
+animation = &"airportteam2"

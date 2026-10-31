@@ -114,7 +114,7 @@ public partial class AI_Manager
         partner = known.FirstOrDefault(o => o.canTransportUnits && (o.team == u.team || o.team == TeamHelper.Player) && o.CanTransportUnit(u));
         if (partner != null && !(u.isStealthed && !u.canLoadUnloadWhileStealthed)) return EndKind.Load;
 
-        partner = known.FirstOrDefault(o => o.team == u.team && o.GetType() == u.GetType());
+        partner = known.FirstOrDefault(o => o.team == u.team && o.UnitTypeId == u.UnitTypeId);
         if (partner != null && !(u.isStealthed && u.stealthOverlapMode == 1) && gameManager.CanMerge(u, partner)) return EndKind.Merge;
 
         partner = null;

@@ -9,8 +9,12 @@ public partial class Port : City
     // 港口默认可生产的舰船（含既有维修艇）
     private static readonly string[] DefaultNavalUnits =
     {
-        "Battleship", "Cruiser", "Submarine", "Lander", "Carrier", "Gunboat", "RepairBoat"
+        "Battleship", "Cruiser", "Submarine", "Lander", "Carrier", "Gunboat", "RepairBoat",
+        "ProducibleBoat", "KamikazeBoat"
     };
+
+    /// <summary>默认可生产兵种（子类可重写；空数组=不生产，如临时港口）</summary>
+    protected virtual string[] DefaultProducibleUnits() => DefaultNavalUnits;
 
     // ✅ 检查器优先：默认补给兵种列表重写为海军
     protected override string[] DefaultSupplyUnitTypes() => DefaultNavalUnits;
@@ -26,8 +30,12 @@ public partial class Port : City
         // 生产模块默认值（检查器优先）
         if (producibleUnitNames.Count == 0)
         {
-            canProduce = true;
-            producibleUnitNames = new Godot.Collections.Array<string>(DefaultNavalUnits);
+            var defs = DefaultProducibleUnits();
+            if (defs.Length > 0)
+            {
+                canProduce = true;
+                producibleUnitNames = new Godot.Collections.Array<string>(defs);
+            }
         }
 
         animSprite = GetNodeOrNull<AnimatedSprite2D>("AnimatedSprite2D");

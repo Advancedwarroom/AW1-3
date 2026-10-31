@@ -99,6 +99,8 @@ public partial class Infantry
             state = UnitState.Acted;
             SetWaitVisual(true);
         }
+        // ✅ 总进度 N ≤ 0 = 即时生产（DoR 航母造水上飞机：当回合完成）
+        if (productionTotalProgress <= 0) CompleteProduction();
         return true;
     }
 
@@ -150,6 +152,7 @@ public partial class Infantry
             EnsureTransportForInternalProduction();
             transportedUnits.Add(unit);
             unit.isTransported = true;
+            MarkCargoBoardedThisTurn(unit);   // 刚造好的舰载机本回合不能起飞
             unit.Hide();
             unit.ProcessMode = ProcessModeEnum.Disabled;
             AddChild(unit);

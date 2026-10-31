@@ -99,6 +99,15 @@ public static class UnitProductionDatabase
         ["Lander"]       = new("res://Prefabs/Lander.tscn",           12000, "登陆艇"),
         ["Carrier"]      = new("res://Prefabs/Carrier.tscn",           30000, "航母"),
         ["Gunboat"]      = new("res://Prefabs/Gunboat.tscn",           5000, "炮艇"),
+        // ==================== 新增原版兵种（DS 原作值 / DoR 原作值；弩级坦克跨作适配） ====================
+        ["Neotank"]        = new("res://Prefabs/Neotank.tscn", 22000, "新型坦克"),
+        ["Megatank"]       = new("res://Prefabs/Megatank.tscn", 28000, "巨型坦克"),
+        ["WarTank"]        = new("res://Prefabs/WarTank.tscn", 22000, "弩级坦克"),
+        ["Rig"]            = new("res://Prefabs/Rig.tscn", 5000, "工程车"),
+        ["Duster"]         = new("res://Prefabs/Duster.tscn", 13000, "螺旋桨机"),
+        ["Seaplane"]       = new("res://Prefabs/Seaplane.tscn", 15000, "水上飞机"),
+        ["ProducibleBoat"] = new("res://Prefabs/ProducibleBoat.tscn", 28000, "生产舰"),
+        ["KamikazeBoat"]   = new("res://Prefabs/KamikazeBoat.tscn", 25000, "突击舰"),
     };
 
     public static bool HasUnit(string unitName) => Units.ContainsKey(unitName);

@@ -21,6 +21,18 @@ public partial class Infantry
     [Export] public int truncAmbusherWeight = 0;             // 伏击手权重（平权=被截断方先执行）
     [Export] public bool truncAllowMultiStrike = false;      // 允许多次截断出击：开=双方各执行；关=只执行权重高者              // ✅ 林地/礁岩隐蔽（AW规则）：无贴身敌人时藏于森林/礁岩不可见
 
+    // ==================== 截断判定（唯一口径） ====================
+    // ✅ 只有“敌方”才能截断：同队/中立公共(P-1)/运输中/阵亡/已失效的单位一律不截断，
+    //    友军格可以穿过（不能停留），绝不会被友军静默截断或触发遭遇战
+    public static bool IsTruncationBlocker(Infantry mover, Infantry other)
+    {
+        if (mover == null || other == null || other == mover) return false;
+        if (!IsInstanceValid(other) || other.IsQueuedForDeletion() || other.health <= 0 || other.isTransported) return false;
+        if (other.team == mover.team) return false;
+        if (other.team == TeamHelper.Player) return false;   // P-1 公共单位不截断
+        return true;
+    }
+
     // ==================== 截断遭遇裁决引擎 ====================
     // 双方在截断点接触后的伤害仲裁：模式=伤害形状，权重=执行顺序，多次开关=是否全执行
     // ✅ AI 遭遇直觉：现场算账——打不动不打；能秒必打；换血不亏才打
@@ -38,6 +50,7 @@ public partial class Infantry
     public static void ResolveTruncationEncounter(Infantry mover, Infantry blocker)
     {
         if (mover == null || blocker == null) return;
+        if (!IsTruncationBlocker(mover, blocker)) return;   // ✅ 友军永不触发遭遇战
         if (!mover.truncCounterEnabled && !blocker.truncAmbusherEnabled) return;
         var gm = mover.GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         var aiMgr = mover.GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
@@ -57,6 +70,7 @@ public partial class Infantry
     public static void ExecuteTruncationStrikes(Infantry mover, Infantry blocker, bool moverConsents, bool blockerConsents)
     {
         if (mover == null || blocker == null) return;
+        if (!IsTruncationBlocker(mover, blocker)) return;   // ✅ 双保险：人类确认菜单回调也不会打友军
         bool mW = moverConsents && mover.truncCounterEnabled;
         bool bW = blockerConsents && blocker.truncAmbusherEnabled;
         if (!mW && !bW) return;
