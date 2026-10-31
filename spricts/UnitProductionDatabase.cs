@@ -20,7 +20,7 @@ public static class UnitProductionDatabase
     public static Dictionary<string, UnitInfo> Units { get { EnsureBuiltinCosts(); EnsureCustomUnits(); return builtinUnits; } }
 
     // ✅ 内置兵种造价读检查器：下表里的数字只是兜底（场景加载失败 / cost≤0 时才用）
-    //    真正的造价 = 各兵种 .tscn 根节点检查器里的 cost（勾了 useDefaultConfig 的兵种按 UnitRegistry，与单位自身开局取值一致）
+    //    真正的造价 = 各兵种 .tscn 根节点检查器里的 cost（勾不勾 useDefaultConfig 都一样）
     private static bool builtinCostsLoaded = false;
     private static void EnsureBuiltinCosts()
     {
@@ -38,16 +38,8 @@ public static class UnitProductionDatabase
         }
     }
 
-    /// <summary>单位的生产造价：与单位开局后自身的 cost 取值规则一致</summary>
-    private static int ResolveCost(Infantry u, int fallback)
-    {
-        if (u.useDefaultConfig)   // 勾选 useDefaultConfig：开局时 UnitRegistry 会覆盖 cost
-        {
-            var reg = UnitRegistry.Get(u.UnitTypeId) ?? UnitRegistry.Get(u.TemplateId);
-            if (reg != null && reg.Cost > 0) return reg.Cost;
-        }
-        return u.cost > 0 ? u.cost : fallback;
-    }
+    /// <summary>单位的生产造价 = 检查器 cost（勾选 useDefaultConfig 也不再被 UnitRegistry 覆盖，与单位自身取值一致）</summary>
+    private static int ResolveCost(Infantry u, int fallback) => u.cost > 0 ? u.cost : fallback;
 
     // ✅ 不写代码造新兵种：把单位场景放进此目录并填写 unitTypeId，即自动加入生产数据库
     //    工厂/机场/港口的 producibleUnitNames 里填这个 unitTypeId 就能生产

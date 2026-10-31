@@ -27,5 +27,5 @@
 
 - 内置兵种的生产价格读各兵种 `.tscn` 根节点检查器里的 `cost`（玩家生产菜单显示/扣款、AI 估价/扣款全部生效，设施压制百分比照常叠加）。
 - `UnitProductionDatabase.cs` 表里的数字只是兜底：场景加载失败或 cost≤0 时才用。
-- 勾选了 `useDefaultConfig` 的兵种（目前是摩托兵 Bike、照明车 Flare），开局时 UnitRegistry 会覆盖 cost，生产价同样按 UnitRegistry；想用检查器价格请取消勾选。
+- 勾选了 `useDefaultConfig` 的兵种（目前是摩托兵 Bike、照明车 Flare）同样以检查器 cost 为准：UnitRegistry 不再覆盖 cost，其余默认值照常应用。
 - 造价在游戏启动后首次打开生产时读取一次，改完检查器需重新运行游戏。
