@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://spricts/TempPort.cs" id="1_port"]
-[ext_resource type="SpriteFrames" path="res://asscets/AnimatedSprite/Port.tres" id="2_anim"]
+[ext_resource type="SpriteFrames" path="res://asscets/AnimatedSprite/TempPort.tres" id="2_anim"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_port"]
 size = Vector2(33, 33)
@@ -20,7 +20,6 @@ shape = SubResource("RectangleShape2D_port")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1314300434]
 position = Vector2(16, 16)
-scale = Vector2(0.99999994, 0.9166667)
-offset = Vector2(0, -4)
+scale = Vector2(1.3333334, 1.3333334)
 sprite_frames = ExtResource("2_anim")
 animation = &"P0Port"
