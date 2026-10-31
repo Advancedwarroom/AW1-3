@@ -36,6 +36,7 @@ aiAutoRotate = false
 aiUseAllAttacks = false
 aiShowEffects = false
 CanAttackWeapon = true
+cost = 19000
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=524686475]
 position = Vector2(16, 15.999999)

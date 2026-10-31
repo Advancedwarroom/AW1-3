@@ -15,7 +15,7 @@ public partial class RepairBoat : Infantry
     {
         // ✅ 设置 RepairBoat 默认属性（在 base._Ready 之前，覆盖场景预设值）
         moveType = MoveType.Hover;           // 移动方式：Hover（水陆两用）
-        cost = 7500;                          // 费用：7500
+        // 造价以检查器 cost 为准（已写入 .tscn），不在代码里覆盖
         visionRange = 1;                      // 视野：1
         defaultMovePoints = 7;                // 移动力：7
         movePoints = 7;

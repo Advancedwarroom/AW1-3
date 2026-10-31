@@ -45,7 +45,7 @@ public partial class DeathRay : BlackCannon
         // 初始化DeathRay特有的冷却状态
         InitializeDeathRayCooldownState();
 
-        cost = 25000;  // DeathRay造价（比LargeCannon更贵）
+        // 造价以检查器 cost 为准（已写入 .tscn），不在代码里覆盖
     }
 
     // ========== 方向与偏移系统 ==========

@@ -9,6 +9,7 @@ size = Vector2(33, 33)
 
 [node name="DeathRay" type="Node2D" unique_id=1890132736]
 script = ExtResource("1_lqs7y")
+cost = 25000
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=926751692]
 position = Vector2(16, 15.999996)

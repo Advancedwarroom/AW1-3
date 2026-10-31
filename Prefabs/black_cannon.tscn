@@ -12,6 +12,7 @@ z_index = 10
 script = ExtResource("1_oy4ns")
 fixedDamagePercent = 0.5
 direction = 2
+cost = 18000
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=524686475]
 position = Vector2(16, 16)

@@ -28,4 +28,5 @@
 - 内置兵种的生产价格读各兵种 `.tscn` 根节点检查器里的 `cost`（玩家生产菜单显示/扣款、AI 估价/扣款全部生效，设施压制百分比照常叠加）。
 - `UnitProductionDatabase.cs` 表里的数字只是兜底：场景加载失败或 cost≤0 时才用。
 - 勾选了 `useDefaultConfig` 的兵种（目前是摩托兵 Bike、照明车 Flare）同样以检查器 cost 为准：UnitRegistry 不再覆盖 cost，其余默认值照常应用。
+- 无例外：代码里不再有任何写死造价。维修艇 RepairBoat(7500)、黑炮 BlackCannon(18000)、巨炮 LargeCannon(18000)、激光 Laser(19000)、死光 DeathRay(25000) 原本在 `_Ready` 里写死 cost，现已移入各自 `.tscn` 检查器。
 - 造价在游戏启动后首次打开生产时读取一次，改完检查器需重新运行游戏。

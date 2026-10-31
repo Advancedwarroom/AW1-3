@@ -25,6 +25,7 @@ noAmmoIcon = NodePath("NoAmmoIcon")
 canRepair = true
 repairAmountPerAction = 10
 animSprite = NodePath("AnimatedSprite2D")
+cost = 7500
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 
