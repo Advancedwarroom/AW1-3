@@ -45,6 +45,30 @@ public partial class ActionMenu
         }
     }
 
+    /// <summary>
+    /// 快速移动：选中即进入移动范围（不弹菜单）。不能移动时返回 false，由调用方照常弹菜单。
+    /// 判定与「移动」按钮可见性一致：未移动 + CanMove（燃料）+ 有移动力 + 隐身行为锁。
+    /// </summary>
+    public bool TryQuickMove(Infantry unit)
+    {
+        if (unit == null || !IsInstanceValid(unit)) return false;
+        if (unit.isMoved || unit.state == UnitState.Acted || !unit.CanMove()) return false;
+        if (unit.movePoints <= 0) return false;
+        if (unit.isStealthed && !unit.canMoveWhileStealthed) return false;
+        var gm = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm?.gridManager == null) return false;
+
+        Hide();
+        currentUnit = unit;
+        currentWeapon = null;
+        currentTransport = null;
+        gm.gridManager.ClearWeaponRange();
+        gm.gridManager.HideAttackRange();
+        foreach (var grid in gm.gridManager.grids) grid.OnClickEmpty = null;
+        gm.gridManager.ShowMoveRange(unit);   // 无可达格也进入范围模式：再点本单位即原地菜单
+        return true;
+    }
+
     public void OnMovePressed()
     {
         GetViewport().SetInputAsHandled();

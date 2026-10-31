@@ -7,6 +7,8 @@ using System.Linq;
 // GameManager · Selection（由 GameManager.cs 按模块拆分；partial class，Export 分组已显式标注）
 public partial class GameManager
 {
+    [ExportGroup("操作手感")]
+    [Export] public bool quickMoveOnSelect = true;   // 选中单位即显示移动范围（AW 式）；关=旧流程（先弹菜单再点「移动」）
 
     // 清空选中
     public void ClearSelectedInfantry()
@@ -57,9 +59,19 @@ public partial class GameManager
             selectedWeapon = null; // 清除兵器选择
             gridManager.ClearWeaponRange(); 
 
+            // ✅ 快速移动：选中即显示移动范围；再次点击本单位 = 原地打开行动菜单
+            bool rangeShowingForThis = selectedInfantry == infantry && gridManager.moveRange.Count > 0;
             selectedInfantry = infantry;
             HideProductionMenu();
             var actionMenu = GetTree().GetFirstNodeInGroup("action_menu") as ActionMenu;
+            if (rangeShowingForThis)
+            {
+                gridManager.CloseRange();
+                actionMenu?.ShowMenu(infantry);
+                return;
+            }
+            if (quickMoveOnSelect && actionMenu != null && actionMenu.TryQuickMove(infantry))
+                return;
             actionMenu?.ShowMenu(infantry);
         }
         else
