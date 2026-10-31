@@ -8,7 +8,7 @@ public enum FacilityStatusType
 {
     None,           // 无状态
     CannotProduce,  // 不可生产
-    NoIncome        // 无收入,
+    NoIncome,       // 无收入
     NoCover,   // 无掩体（防御加成归零）
     NoSupply   // 无物资（无法补给）
 }

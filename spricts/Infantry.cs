@@ -3268,6 +3268,16 @@ public virtual void SetWaitVisual(bool waiting)
 
     // ==================== 雾战模块助手 ====================
     private GameManager _fogGmCache;
+    /// <summary>GameManager 缓存访问器（逃跑/拆旗/设施压制/群体狂热等模块共用）</summary>
+    private GameManager gameManager
+    {
+        get
+        {
+            if (_fogGmCache == null || !GodotObject.IsInstanceValid(_fogGmCache))
+                _fogGmCache = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+            return _fogGmCache;
+        }
+    }
     public bool FogActive()   // 雾战生效=全局迷雾开关
     {
         if (_fogGmCache == null || !GodotObject.IsInstanceValid(_fogGmCache))
