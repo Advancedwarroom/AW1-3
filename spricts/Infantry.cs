@@ -2768,7 +2768,23 @@ public virtual void SetWaitVisual(bool waiting)
 
     // ==================== 截断遭遇裁决引擎 ====================
     // 双方在截断点接触后的伤害仲裁：模式=伤害形状，权重=执行顺序，多次开关=是否全执行
-    public static void ResolveTruncationEncounter(Infantry mover, Infantry blocker, bool moverConsents, bool blockerConsents)
+    // 入口：判定由谁决策（人类伏击手→回合中回合弹菜单冻结全局；AI→自动按条令）
+    public static void ResolveTruncationEncounter(Infantry mover, Infantry blocker)
+    {
+        if (mover == null || blocker == null) return;
+        if (!mover.truncCounterEnabled && !blocker.truncAmbusherEnabled) return;
+        var gm = mover.GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        var aiMgr = mover.GetTree()?.GetFirstNodeInGroup("ai_manager") as AI_Manager;
+        bool blockerIsAI = aiMgr != null && aiMgr.IsAITeam(blocker.team);
+        if (!blockerIsAI && blocker.truncAmbusherEnabled)
+        {
+            gm?.RequestEncounterDecision(mover, blocker);   // ✅ 回合中回合：冻结+人类确认菜单
+            return;
+        }
+        ExecuteTruncationStrikes(mover, blocker, mover.truncCounterEnabled, blocker.truncAmbusherEnabled);
+    }
+
+    public static void ExecuteTruncationStrikes(Infantry mover, Infantry blocker, bool moverConsents, bool blockerConsents)
     {
         if (mover == null || blocker == null) return;
         bool mW = moverConsents && mover.truncCounterEnabled;
@@ -3187,6 +3203,11 @@ public virtual void SetWaitVisual(bool waiting)
 // Infantry.cs - 修改 InputClick 方法
 public virtual void InputClick(Node viewport, InputEvent inputs, int shape_index)
 {
+    // ✅ 回合中回合冻结：遭遇战决策期间全操作禁入
+    {
+        var gm0 = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
+        if (gm0 != null && gm0.encounterPause) return;
+    }
     // ✅ 被迷雾/隐身隐藏的单位不响应点击（Area2D 拾取不受 Visible 影响，否则会暴露位置/信息）
     if (!IsVisibleInTree()) return;
 

@@ -137,6 +137,7 @@ public partial class AI_Manager : Node
     private void OnAIStep()
     {
         if (!isRunningAI || isBusy) return;
+        if (gameManager != null && gameManager.encounterPause) return;   // ✅ 回合中回合：遭遇决策期间AI步进冻结
         if (gameManager == null || !IsInstanceValid(gameManager) || gameManager.gameEnded || !IsCurrentPhaseAI())
         {
             isRunningAI = false;

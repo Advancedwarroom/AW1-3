@@ -1360,9 +1360,7 @@ private void SetupMoveRangeCallbacks(Infantry infantry)
         var bk = pendingEncounterBlocker; pendingEncounterBlocker = null;
         if (bk != null)
         {
-            Infantry.ResolveTruncationEncounter(infantry, bk,
-                moverConsents: infantry.truncCounterEnabled,
-                blockerConsents: bk.truncAmbusherEnabled);
+            Infantry.ResolveTruncationEncounter(infantry, bk);   // ✅ 回合中回合由入口判定人类/AI
             // ✅ 非强制截断：新格重绑+剩余实际移动力+二次移动
             if (!infantry.truncForcedStop && infantry.movePoints > 0 && infantry.health > 0)
             {

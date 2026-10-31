@@ -84,6 +84,7 @@ public partial class GameManager : Node
     // 回合管理
     public int turns = 1;
     public int turnPhase = 1;
+    public bool encounterPause = false;   // ✅ 回合中回合：遭遇战决策期间的全局冻结
     // ✅ totalPhases 动态计算 = 启用的战斗势力数（不含 P-1 和 P0）
     public int totalPhases => Mathf.Max(1, TeamHelper.GetActiveFactions().Count(f => f.Id != TeamHelper.Player && f.Id != TeamHelper.Player0));
 
@@ -1844,6 +1845,7 @@ public void RestartGame()
     // 切换回合
     public void NextPhase()
     {
+        if (encounterPause) return;   // ✅ 回合中回合冻结
         // ✅ 关键修复：编辑模式下禁止切换回合
         var terrainEditor = GetTree()?.GetFirstNodeInGroup("terrain_editor") as TerrainEditor;
         if (terrainEditor != null && terrainEditor.IsEditMode)
