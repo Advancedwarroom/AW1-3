@@ -1772,7 +1772,7 @@ public partial class ExtraSave : Node
                     result[field.Name] = ValueToString(value);
                 }
             }
-            catch { }
+            catch (System.Exception ex) { GD.PushWarning($"[ExtraSave] {ex.GetType().Name}: {ex.Message}"); }
         }
 
         var props = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
@@ -1788,7 +1788,7 @@ public partial class ExtraSave : Node
                     result[prop.Name] = ValueToString(value);
                 }
             }
-            catch { }
+            catch (System.Exception ex) { GD.PushWarning($"[ExtraSave] {ex.GetType().Name}: {ex.Message}"); }
         }
 
         return result;
@@ -1871,7 +1871,7 @@ public partial class ExtraSave : Node
         {
             if (!string.IsNullOrEmpty(data.terrainColorHex))
             {
-                try { return new Color(data.terrainColorHex); } catch { }
+                try { return new Color(data.terrainColorHex); } catch (System.Exception ex) { GD.PushWarning($"[ExtraSave] {ex.GetType().Name}: {ex.Message}"); }
             }
         }
         return null;

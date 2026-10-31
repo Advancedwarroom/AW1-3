@@ -109,7 +109,7 @@ public static class FactionPaletteManager
             return existing;
 
         // 创建 256x1 的 RGBA8 图像
-        var image = Image.Create(256, 1, false, Image.Format.Rgba8);
+        var image = Image.CreateEmpty(256, 1, false, Image.Format.Rgba8);
         
         Color main = faction.PrimaryColor;
         Color secondary = faction.SecondaryColor;

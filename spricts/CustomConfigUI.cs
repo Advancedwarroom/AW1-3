@@ -1463,7 +1463,7 @@ public partial class CustomConfigUI : Control
                             delBtn.AddThemeFontSizeOverride("font_size", 10);
                             delBtn.AddThemeColorOverride("font_color", new Color(1, 0.4f, 0.4f));
                             delBtn.Pressed += () => {
-                                try { DirAccess.RemoveAbsolute(fullPath); } catch { }
+                                try { DirAccess.RemoveAbsolute(fullPath); } catch (System.Exception ex) { GD.PushWarning($"[CustomConfigUI] {ex.GetType().Name}: {ex.Message}"); }
                                 RefreshUploadedTextureList();
                                 RefreshApplyTextureList();
                             };

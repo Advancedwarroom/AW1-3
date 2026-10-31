@@ -5720,7 +5720,7 @@ private void OpenWeaponTerrainMatrixEditor()
                     }
                     else
                     {
-                        try { gameManager.unitManager.units.RemoveChild(unit); } catch { }
+                        try { gameManager.unitManager.units.RemoveChild(unit); } catch (System.Exception ex) { GD.PushWarning($"[TerrainEditor] {ex.GetType().Name}: {ex.Message}"); }
                     }
                 }
             }
@@ -5747,7 +5747,7 @@ private void OpenWeaponTerrainMatrixEditor()
                     }
                     else
                     {
-                        try { gameManager.weaponManager.weaponsNode.RemoveChild(weapon); } catch { }
+                        try { gameManager.weaponManager.weaponsNode.RemoveChild(weapon); } catch (System.Exception ex) { GD.PushWarning($"[TerrainEditor] {ex.GetType().Name}: {ex.Message}"); }
                     }
                 }
             }
@@ -6170,7 +6170,7 @@ private void OpenWeaponTerrainMatrixEditor()
                     return new Color(str);
                 }
             }
-            catch { }
+            catch (System.Exception ex) { GD.PushWarning($"[TerrainEditor] {ex.GetType().Name}: {ex.Message}"); }
             return null;
         }
         // ✅ Godot Vector2 类型解析
@@ -6367,7 +6367,7 @@ private void OpenWeaponTerrainMatrixEditor()
                 return;
             }
         }
-        catch { }
+        catch (System.Exception ex) { GD.PushWarning($"[TerrainEditor] {ex.GetType().Name}: {ex.Message}"); }
         try
         {
             string path = Path.Combine(OS.GetUserDataDir(), fileName);
@@ -8421,7 +8421,7 @@ private void OpenWeaponTerrainMatrixEditor()
                     object value = ParseValueFromString(kvp.Value, field.FieldType);
                     if (value != null) field.SetValue(target, value);
                 }
-                catch { }
+                catch (System.Exception ex) { GD.PushWarning($"[TerrainEditor] {ex.GetType().Name}: {ex.Message}"); }
             }
             else
             {
@@ -8433,7 +8433,7 @@ private void OpenWeaponTerrainMatrixEditor()
                         object value = ParseValueFromString(kvp.Value, prop.PropertyType);
                         if (value != null) prop.SetValue(target, value);
                     }
-                    catch { }
+                    catch (System.Exception ex) { GD.PushWarning($"[TerrainEditor] {ex.GetType().Name}: {ex.Message}"); }
                 }
             }
         }
@@ -8847,7 +8847,7 @@ private void OpenWeaponTerrainMatrixEditor()
             if (img.Load(gifPath) == Error.Ok)
                 fallbackFrame = ImageTexture.CreateFromImage(img);
         }
-        catch { }
+        catch (System.Exception ex) { GD.PushWarning($"[TerrainEditor] {ex.GetType().Name}: {ex.Message}"); }
 
         try
         {

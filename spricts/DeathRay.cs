@@ -664,7 +664,7 @@ public partial class DeathRay : BlackCannon
         }
     }
 
-    private void ShowAttackRangeAsDisabled(GameManager gm)
+    private new void ShowAttackRangeAsDisabled(GameManager gm)
     {
         gm.gridManager.ClearWeaponRange();
         var rangeGrids = CalculateAttackRange();

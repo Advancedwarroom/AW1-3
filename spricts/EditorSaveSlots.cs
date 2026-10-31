@@ -490,7 +490,7 @@ public partial class EditorSaveSlots : Node
                     result[field.Name] = ValueToString(value);
                 }
             }
-            catch { }
+            catch (System.Exception ex) { GD.PushWarning($"[EditorSaveSlots] {ex.GetType().Name}: {ex.Message}"); }
         }
 
         var props = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
@@ -506,7 +506,7 @@ public partial class EditorSaveSlots : Node
                     result[prop.Name] = ValueToString(value);
                 }
             }
-            catch { }
+            catch (System.Exception ex) { GD.PushWarning($"[EditorSaveSlots] {ex.GetType().Name}: {ex.Message}"); }
         }
 
         return result;

@@ -678,7 +678,7 @@ public partial class Laser : Weapon
         else
             target.health -= damage;
         target.UpdateHpLabel();
-        if (target.health <= 0 && !target.TryFlee())
+        if (target.health <= 0)   // 兵器无逃跑模块（TryFlee 仅 Infantry 有）
             target.CallDeferred(Node.MethodName.QueueFree);
     }
 
