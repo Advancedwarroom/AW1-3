@@ -33,6 +33,7 @@ maxPrimaryAmmo = 9
 currentPrimaryAmmo = 9
 primaryAntiArmor = true
 primaryAntiInfantry = false
+cost = 7000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=1496334006]
 

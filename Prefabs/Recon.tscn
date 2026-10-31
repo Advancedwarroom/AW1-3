@@ -22,6 +22,7 @@ defaultMovePoints = 6
 movePoints = 6
 baseAttack = 10
 noAmmoIcon = NodePath("HpLabel/NoAmmoIcon")
+cost = 4000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

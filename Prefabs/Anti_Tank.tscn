@@ -34,6 +34,7 @@ hasPrimaryWeapon = true
 maxPrimaryAmmo = 6
 currentPrimaryAmmo = 6
 hasSecondaryWeapon = false
+cost = 11000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

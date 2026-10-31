@@ -31,6 +31,7 @@ maxPrimaryAmmo = 3
 currentPrimaryAmmo = 3
 secondaryAttack = 80
 counterMul = 0.4
+cost = 3000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=1539668194]
 

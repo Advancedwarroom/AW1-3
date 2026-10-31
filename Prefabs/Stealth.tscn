@@ -55,6 +55,7 @@ canMoveWhileStealthed = true
 canLoadUnloadWhileStealthed = false
 canCustomActionWhileStealthed = false
 canCaptureWhileStealthed = false
+cost = 24000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

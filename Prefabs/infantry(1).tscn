@@ -22,6 +22,7 @@ noAmmoIcon = NodePath("NoAmmoIcon")
 captureAbility = 0
 spriteRed = NodePath("Osinfantry")
 spriteBlue = NodePath("Bminfantry")
+cost = 1000
 
 [node name="Osinfantry" type="Sprite2D" parent="." unique_id=1156195392]
 position = Vector2(16, 16)

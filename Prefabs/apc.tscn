@@ -40,6 +40,7 @@ secondaryAntiInfantry = false
 team = "Player2"
 animSprite = NodePath("AnimatedSprite2D")
 idleSprite = NodePath("Sprite2D")
+cost = 5000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=979674784]
 

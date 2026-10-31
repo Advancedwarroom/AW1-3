@@ -15,6 +15,7 @@ animSprite = NodePath("Base2D")
 loadedIcon = NodePath("HpLabel/loaded")
 noFuelIcon = NodePath("HpLabel/NoFuelIcno")
 noAmmoIcon = NodePath("HpLabel/NoAmmoIcon")
+cost = 5000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=680524551]
 

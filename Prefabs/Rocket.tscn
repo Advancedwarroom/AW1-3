@@ -31,6 +31,7 @@ hasPrimaryWeapon = true
 maxPrimaryAmmo = 6
 currentPrimaryAmmo = 6
 primaryAntiArmor = true
+cost = 15000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=839834484]
 
