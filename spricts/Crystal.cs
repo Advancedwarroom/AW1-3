@@ -648,49 +648,58 @@ public partial class Crystal : Weapon
     private void UpdateCrystalVisual()
     {
         if (animSprite == null) return;
-        // 按队伍选择动画：P1=橙, P2=蓝, P0=无色基础, P-1=橙(染浅紫)
-        string animName = team switch
-        {
-            TeamHelper.Player1 => "OrangeCrystal",
-            TeamHelper.Player2 => "BlueCrystal",
-            TeamHelper.Player0 => "Crystal",
-            TeamHelper.Player => "OrangeCrystal", // P-1 用 Orange，但染浅紫
-            _ => "Crystal"
-        };
+        // P0=无色基础（染灰）；P2=蓝晶；其余（P1、P-1、P3…）=橙晶为模板，由 Shader 染成势力主色
+        string animName = TeamHelper.PickTeamArt(team, "Crystal", "OrangeCrystal", "BlueCrystal");
         if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation(animName))
             animSprite.Animation = animName;
         else if (animSprite.SpriteFrames != null && animSprite.SpriteFrames.HasAnimation("Crystal"))
             animSprite.Animation = "Crystal";
 
+        TuneCrystalMaterial();
         SetVisualNormal();
     }
+
+    public override void RefreshTeamVisual()
+    {
+        base.RefreshTeamVisual();
+        UpdateCrystalVisual();
+    }
+
+    // 水晶贴图为低饱和粉橙色，放宽模板识别范围
+    private void TuneCrystalMaterial()
+    {
+        if (animSprite?.Material is ShaderMaterial sm && sm.Shader == FactionPaletteManager.PaletteShader)
+        {
+            sm.SetShaderParameter("tpl_min_sat", 0.12f);
+            sm.SetShaderParameter("red_hue_min", 300.0f);
+        }
+    }
+
+    private Color CrystalBaseTint() =>
+        team == TeamHelper.Player0 ? TeamHelper.GetTeamColor(TeamHelper.Player0) : Colors.White;
 
     public override void SetVisualNormal()
     {
         if (animSprite == null) return;
-        // P1/P2 动画本身有颜色，保持 White；P0 染灰；P-1 染浅紫
-        Color tint = team switch
-        {
-            TeamHelper.Player1 => Colors.White,
-            TeamHelper.Player2 => Colors.White,
-            TeamHelper.Player0 => TeamHelper.GetTeamColor(TeamHelper.Player0),
-            TeamHelper.Player => TeamHelper.GetTeamColor(TeamHelper.Player),
-            _ => Colors.White
-        };
-        animSprite.Modulate = tint;
+        // 势力色由 Shader 处理（避免与 Modulate 双重染色）；仅 P0 无色水晶染灰
+        ApplyCrystalTone(CrystalBaseTint());
     }
 
     public override void SetVisualDark()
     {
         if (animSprite == null) return;
-        Color normal = team switch
+        Color normal = CrystalBaseTint();
+        ApplyCrystalTone(new Color(normal.R * 0.5f, normal.G * 0.5f, normal.B * 0.5f, 1f));
+    }
+
+    // 有调色板 Shader 时走 tone（Shader 不乘 Modulate 的 RGB），否则退回 Modulate
+    private void ApplyCrystalTone(Color c)
+    {
+        if (animSprite.Material is ShaderMaterial sm)
         {
-            TeamHelper.Player1 => Colors.White,
-            TeamHelper.Player2 => Colors.White,
-            TeamHelper.Player0 => TeamHelper.GetTeamColor(TeamHelper.Player0),
-            TeamHelper.Player => TeamHelper.GetTeamColor(TeamHelper.Player),
-            _ => Colors.White
-        };
-        animSprite.Modulate = new Color(normal.R * 0.5f, normal.G * 0.5f, normal.B * 0.5f, 1f);
+            sm.SetShaderParameter("tone", c);
+            animSprite.Modulate = Colors.White;
+        }
+        else animSprite.Modulate = c;
     }
 }

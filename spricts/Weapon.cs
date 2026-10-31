@@ -205,6 +205,12 @@ public partial class Weapon : Node2D
     /// <summary>
     /// ✅ 为兵器应用调色板Shader（双图层 + 兼容模式）
     /// </summary>
+    /// <summary>势力变更/势力配色修改后刷新外观（子类按需重选动画）</summary>
+    public virtual void RefreshTeamVisual()
+    {
+        ApplyPaletteMaterial();
+    }
+
     protected virtual void ApplyPaletteMaterial()
     {
         // ✅ 双图层 AnimatedSprite2D 方案（优先）

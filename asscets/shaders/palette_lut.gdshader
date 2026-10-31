@@ -3,7 +3,25 @@ shader_type canvas_item;
 // ==================== 模式选择 ====================
 // 0 = LUT模式（贴图R通道作为调色板索引）
 // 1 = 兼容模式（自动检测红/蓝区域并替换，适配现有红蓝双色贴图）
-uniform int mode : hint_range(0, 1) = 1;
+// 2 = 模板色表模式（参照 Commander Wars 的 color table：以红/蓝原版贴图为模板，
+//     模板色相带内的像素按亮度阶梯映射到「暗→势力主色→亮」，肤色等共享色排除）
+uniform int mode : hint_range(0, 2) = 2;
+
+// ==================== 模板色表模式参数 ====================
+// 0 = 红色模板（OS 红色贴图，P1 及所有无专属贴图的势力）  1 = 蓝色模板（BM 蓝色贴图，P2）
+uniform int template_side : hint_range(0, 1) = 0;
+// 模板亮度阶梯（Rec.601 亮度）：暗部 / 主色 / 高光，C# 按模板自动设置
+uniform float tpl_dark = 0.15;
+uniform float tpl_mid = 0.28;
+uniform float tpl_light = 0.80;
+uniform float tpl_min_sat = 0.35;   // 模板色最低饱和度（排除灰、金属）
+uniform float tpl_min_val = 0.25;   // 模板色最低明度（排除描边黑）
+uniform float red_hue_min = 330.0;  // 红色模板色相下限（含品红可调低，如水晶 300）
+uniform float red_hue_max = 40.0;   // 红色模板色相上限（含橙）
+uniform float blue_hue_min = 180.0;
+uniform float blue_hue_max = 265.0;
+uniform float dark_factor = 0.40;   // 暗部 = 主色 × 该值
+uniform float light_mix = 0.85;     // 高光 = 主色向白色混合的比例
 
 // ==================== LUT模式参数 ====================
 uniform sampler2D palette : repeat_disable, filter_nearest;
@@ -57,12 +75,57 @@ bool is_blue_dominant(vec3 rgb) {
     return (rgb.b - rgb.r > blue_threshold) && (rgb.b - rgb.g > blue_threshold);
 }
 
+vec3 rgb2hsv(vec3 c) {
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+// 红/蓝原版贴图共用的肤色、皮革色（两套贴图里都出现 → 不属于势力色）
+const vec3 SHARED_COLORS[6] = vec3[6](
+    vec3(216.0, 128.0, 80.0) / 255.0, vec3(124.0, 80.0, 76.0) / 255.0,
+    vec3(186.0, 156.0, 100.0) / 255.0, vec3(188.0, 136.0, 112.0) / 255.0,
+    vec3(222.0, 132.0, 82.0) / 255.0, vec3(248.0, 216.0, 128.0) / 255.0
+);
+
+bool is_template_color(vec3 rgb) {
+    for (int i = 0; i < 6; i++) {
+        if (distance(rgb, SHARED_COLORS[i]) < 0.02) return false;
+    }
+    vec3 hsv = rgb2hsv(rgb);
+    if (hsv.y < tpl_min_sat || hsv.z < tpl_min_val) return false;
+    float h = hsv.x * 360.0;
+    if (template_side == 0) return h >= red_hue_min || h <= red_hue_max;   // 红→橙
+    return h >= blue_hue_min && h <= blue_hue_max;                         // 青→蓝→蓝紫
+}
+
+vec3 map_to_faction(vec3 rgb) {
+    float l = dot(rgb, vec3(0.299, 0.587, 0.114));
+    vec3 p = primary_color.rgb;
+    vec3 dark = p * dark_factor;
+    vec3 light = mix(p, vec3(1.0), light_mix);
+    if (l <= tpl_mid) {
+        float t = clamp((l - tpl_dark) / max(tpl_mid - tpl_dark, 0.001), 0.0, 1.0);
+        vec3 c = mix(dark, p, t);
+        if (l < tpl_dark) c *= l / max(tpl_dark, 0.001);
+        return c;
+    }
+    float t = clamp((l - tpl_mid) / max(tpl_light - tpl_mid, 0.001), 0.0, 1.0);
+    return mix(p, light, t);
+}
+
 void fragment() {
     vec4 tex = texture(TEXTURE, UV);
+    // 继承节点（及父节点）Modulate 的透明度：潜行半透明、淡入淡出等效果依赖它
+    // RGB 不乘 COLOR：变暗统一走 tone，避免与 Modulate 双重变暗
+    float inherited_alpha = COLOR.a;
     
     // 完全透明或禁用时不处理
     if (!enabled || tex.a < 0.01) {
-        COLOR = tex * tone;
+        COLOR = vec4(tex.rgb * tone.rgb, tex.a * tone.a * inherited_alpha);
     }
     else {
         vec3 rgb = tex.rgb;
@@ -74,6 +137,10 @@ void fragment() {
             vec2 palette_uv = vec2(index, 0.0);
             vec4 replaced = texture(palette, palette_uv);
             result = replaced.rgb;
+        }
+        else if (mode == 2) {
+            // ===== 模板色表模式 =====
+            if (is_template_color(rgb)) result = map_to_faction(rgb);
         }
         else {
             // ===== 兼容模式：红蓝区域自动检测替换 =====
@@ -97,6 +164,6 @@ void fragment() {
         }
         
         // 应用全局色调（待机变暗等）
-        COLOR = vec4(result * tone.rgb, tex.a * tone.a);
+        COLOR = vec4(result * tone.rgb, tex.a * tone.a * inherited_alpha);
     }
 }

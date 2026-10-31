@@ -48,31 +48,6 @@ public partial class Port : City
         UpdateCityVisual();
     }
 
-    public override void UpdateCityVisual()
-    {
-        if (animSprite == null) return;
-
-        string animName = facilityTeam switch
-        {
-            "Player1" => "portteam1",
-            "Player2" => "portteam2",
-            "Player0" => "P0Port",
-            "Player" => "portteam1",
-            _ => "P0Port"
-        };
-
-        if (animSprite.SpriteFrames.HasAnimation(animName))
-        {
-            animSprite.Play(animName);
-        }
-        else if (animSprite.SpriteFrames.HasAnimation("P0Port"))
-        {
-            animSprite.Play("P0Port");
-        }
-
-        Color tint = (facilityTeam == TeamHelper.Player)
-            ? TeamHelper.GetTeamColor(facilityTeam)
-            : Colors.White;
-        animSprite.Modulate = tint;
-    }
+    protected override (string neutral, string red, string blue)? GetTeamAnimNames()
+        => ("P0Port", "portteam1", "portteam2");
 }

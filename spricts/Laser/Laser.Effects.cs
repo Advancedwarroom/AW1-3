@@ -117,6 +117,6 @@ public partial class Laser
 
     private Color GetTeamColor()
     {
-        return team == "Player2" ? new Color(0.2f, 0.4f, 1f) : new Color(1f, 0.2f, 0.2f);
+        return TeamHelper.GetTeamColor(team); // 激光颜色跟随势力主色（含新增势力）
     }
 }

@@ -292,15 +292,16 @@ public partial class FactionConfigPanel : VBoxContainer
         }
         
         TeamHelper.SaveFactionsToExtraSave();
-        FactionPaletteManager.ClearCache();
+        // 即时刷新场景内所有单位/设施/兵器颜色（内部会清缓存）
+        FactionPaletteManager.RefreshAllVisuals(GetTree()?.Root);
         
-        ShowToast("✅ 势力配置已保存！重启场景后生效。");
+        ShowToast("✅ 势力配置已保存，颜色已即时刷新。");
     }
     
     private void OnResetDefaults()
     {
         TeamHelper.InitializeDefaults();
-        FactionPaletteManager.ClearCache();
+        FactionPaletteManager.RefreshAllVisuals(GetTree()?.Root);
         RefreshList();
         ShowToast("已恢复默认势力配置");
     }

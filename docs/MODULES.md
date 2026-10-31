@@ -190,3 +190,27 @@ GitHub Actions 手动触发（workflow_dispatch），Mono+android-arm64 正路�
 - **移动范围预览改用 `GetMoveCostOnGrid`**：与实际移动一致（舰船可进港口格的高亮之前缺失）。
 - **环形射程**：战列舰（2–6）、航母（3–8）、突击舰（3–5）补上 `useMinMaxAttackRange = true`（之前漏开，只能打相邻格）。
 - **视野表**：海军线与 8 个新兵种登记进 `VisionConfig`；配置视野先查兵种自身 ID，再查参照兵种。
+
+## 模块二十二：翻译引擎全游戏化（2026-11-01）
+- **接入原生 TranslationServer**：`GameTranslation : Translation` 每语言一个实例（en/ja/ko/de/ru/zh_CN/zh_TW），重写 `_GetMessage`。所有 Control（Label/Button/提示/占位符/OptionButton/PopupMenu/Tab/Window 标题）自动翻译，切换语言时引擎通知整棵场景树即时重译，包括代码后设的文本。
+- **匹配顺序**（`TranslateGroup.Engine.cs`，按语言缓存）：精确键 → 反向索引（任意语言译文→原键，T() 已翻过的文字切换语言仍可重译）→ `{0}` 模式键 → 多行逐行 → 剥离首尾 emoji/数字 → 最长优先分词（西文/韩文补空格，全角标点转半角）。
+- **词库**：手写 `TranslateGroup.Dictionary.cs`（优先）+ `tools/i18n/terms.tsv`（584 条 UI 词条，5 语）经 `tools/i18n/gen_terms.py` 生成 `TranslateGroup.Terms.cs`；繁中由 OpenCC s2twp 自动生成，并附简→繁单字兜底表。
+- **持久化**：语言选择存 `user://settings.cfg`，优先于系统检测。
+- **外部覆盖**：`user://translations.csv`（key,en,ja,ko,de,ru,zh_CN,zh_TW），空单元格不覆盖。
+- **缺词报告**：非中文语言下未命中的中文片段写入 `user://missing_translations.csv`（同格式，可直接填好后改名为 translations.csv 生效）。
+- 旧 `RefreshAllUI` 的 tr_key 回写（会覆盖代码动态文本）已废弃，改为广播 `NotificationTranslationChanged`。语言面板本身 `AutoTranslateMode = Disabled`。
+- 局限：由 T() 片段拼接出的英文长句（如 "HP: 80"）切换到第三种语言时，需界面刷新一次才更新。
+
+## 模块二十三：势力配色（参照 Commander Wars color table，2026-11-01）
+- **贴图选择统一**：`TeamHelper.PickTeamArt(team, 中立, 红, 蓝)` / `ArtSuffix(team)`。P0 → 中立贴图，P2 → 蓝色贴图，其余（P1、P-1、P3…P100）→ 红色贴图作为模板。
+- **Shader 模式 2（模板色表）**（`palette_lut.gdshader`）：模板色相带内像素（红 330°–40° / 蓝 180°–265°，饱和度 ≥0.35）按亮度阶梯映射为「主色×0.4 → 主色 → 主色混白 85%」。红蓝贴图共有的肤色（实测 6 种）排除。P1/P2 主色未改时直出原图。
+- **修复**：
+  - 城市/工厂从不切换势力动画，占领后仍是中立图。现由 `Facility.GetTeamAnimNames()` 统一处理。
+  - 港口/机场（含临时港口、临时机场）新增势力回落中立灰图且不染色。
+  - P2 的蓝色贴图原先映射到副色，改主色无效。
+  - 激光束颜色写死红/蓝，现跟随势力主色。
+  - 黑水晶 Modulate 与 Shader 重复染色，新增势力显示无色。
+  - 卸载菜单图标不带势力色。
+  - Shader 忽略 Modulate 透明度，导致潜行半透明失效。
+- **即时刷新**：势力面板保存或恢复默认后，`FactionPaletteManager.RefreshAllVisuals` 刷新全场景单位、设施和兵器，无需重启场景。
+- 巨型炮、死光炮原作只有中立贴图，不染色。
