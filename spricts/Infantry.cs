@@ -243,7 +243,7 @@ protected virtual void ApplyUnitRegistryConfig()
     // 基础属性
     if (config.MoveType != default) moveType = config.MoveType;
     if (config.MovePoints > 0) defaultMovePoints = config.MovePoints;
-    if (config.Cost > 0) cost = config.Cost;
+    // cost 不再由 UnitRegistry 覆盖：造价一律以检查器为准（勾选 useDefaultConfig 也一样）
     if (config.CanMerge) canMerge = true;
     if (!string.IsNullOrEmpty(config.DisplayName) && string.IsNullOrEmpty(Name))
         Name = config.DisplayName;
