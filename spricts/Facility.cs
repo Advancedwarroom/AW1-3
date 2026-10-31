@@ -8,7 +8,9 @@ public enum FacilityStatusType
 {
     None,           // 无状态
     CannotProduce,  // 不可生产
-    NoIncome        // 无收入
+    NoIncome        // 无收入,
+    NoCover,   // 无掩体（防御加成归零）
+    NoSupply   // 无物资（无法补给）
 }
 
 public partial class FacilityStatus
@@ -32,6 +34,8 @@ public partial class FacilityStatus
         {
             FacilityStatusType.CannotProduce => TranslateGroup.T("不可生产"),
             FacilityStatusType.NoIncome => TranslateGroup.T("无收入"),
+            FacilityStatusType.NoCover => TranslateGroup.T("无掩体"),
+            FacilityStatusType.NoSupply => TranslateGroup.T("无物资"),
             _ => TranslateGroup.T("未知")
         };
     }
@@ -654,11 +658,16 @@ public partial class Facility : Node2D
         return visible;
     }
 
+    public int incomeSuppressPercent = 0;    // 资金压制百分比（设施压制Export写入）
+    public int defenseSuppressPercent = 0;   // 掩体压制百分比
+    public void SetIncomeSuppression(int percent) { incomeSuppressPercent = percent; }
+
     public int GetCurrentIncome()
     {
         if (HasStatus(FacilityStatusType.NoIncome))
             return 0;
-        return fundsPerTurn;
+        // 设施压制百分比（负=减弱 正=增强）；制止走 NoIncome 状态
+        return Mathf.RoundToInt(fundsPerTurn * (100 + incomeSuppressPercent) / 100f);
     }
 
     public bool ProvidesIncomeTo(string team)
