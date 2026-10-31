@@ -1,0 +1,16 @@
+name: 编译检查
+on:
+  push:
+  pull_request:
+
+jobs:
+  dotnet-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: 装 .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: dotnet build（0 错误才放行）
+        run: dotnet build AWone1.csproj -nologo -warnaserror:CS0108,CS0618
