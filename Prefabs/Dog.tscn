@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://dfh33eosbmvkb"]
+[gd_scene format=3 uid="uid://c73op6io5jykj"]
 
-[ext_resource type="Script" uid="uid://d16omq4ux3t8j" path="res://spricts/Dog.cs" id="1_script"]
+[ext_resource type="Script" uid="uid://b4mjogwpmd5la" path="res://spricts/Dog.cs" id="1_script"]
 [ext_resource type="SpriteFrames" uid="uid://cb0n87m77t285" path="res://asscets/AnimatedSprite/lighttank.tres" id="2_frames"]
 [ext_resource type="Texture2D" uid="uid://bf75lljd6qnq8" path="res://asscets/units/Tank/ostank1.png" id="3_l7g7b"]
 [ext_resource type="SpriteFrames" uid="uid://bkmjpiqqtw4s5" path="res://asscets/AnimatedSprite/NoFuelIcno.tres" id="4_nnocp"]
