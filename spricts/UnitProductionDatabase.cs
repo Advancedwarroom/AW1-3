@@ -17,7 +17,37 @@ public static class UnitProductionDatabase
     }
 
     /// <summary>全部可生产兵种（内置 + res://Prefabs/CustomUnits/ 下自动注册的自定义兵种）</summary>
-    public static Dictionary<string, UnitInfo> Units { get { EnsureCustomUnits(); return builtinUnits; } }
+    public static Dictionary<string, UnitInfo> Units { get { EnsureBuiltinCosts(); EnsureCustomUnits(); return builtinUnits; } }
+
+    // ✅ 内置兵种造价读检查器：下表里的数字只是兜底（场景加载失败 / cost≤0 时才用）
+    //    真正的造价 = 各兵种 .tscn 根节点检查器里的 cost（勾了 useDefaultConfig 的兵种按 UnitRegistry，与单位自身开局取值一致）
+    private static bool builtinCostsLoaded = false;
+    private static void EnsureBuiltinCosts()
+    {
+        if (builtinCostsLoaded) return;
+        builtinCostsLoaded = true;
+        foreach (var id in new List<string>(builtinUnits.Keys))
+        {
+            var info = builtinUnits[id];
+            var node = GD.Load<PackedScene>(info.ScenePath)?.Instantiate();
+            if (node is not Infantry u) { node?.Free(); GD.PushWarning($"[生产] {info.ScenePath} 无法读取检查器造价，沿用兜底 {info.Cost}"); continue; }
+            int cost = ResolveCost(u, info.Cost);
+            if (cost != info.Cost) GD.Print($"[生产] {id} 造价按检查器 {cost}（兜底表 {info.Cost}）");
+            builtinUnits[id] = new UnitInfo(info.ScenePath, cost, info.DisplayName);
+            u.Free();
+        }
+    }
+
+    /// <summary>单位的生产造价：与单位开局后自身的 cost 取值规则一致</summary>
+    private static int ResolveCost(Infantry u, int fallback)
+    {
+        if (u.useDefaultConfig)   // 勾选 useDefaultConfig：开局时 UnitRegistry 会覆盖 cost
+        {
+            var reg = UnitRegistry.Get(u.UnitTypeId) ?? UnitRegistry.Get(u.TemplateId);
+            if (reg != null && reg.Cost > 0) return reg.Cost;
+        }
+        return u.cost > 0 ? u.cost : fallback;
+    }
 
     // ✅ 不写代码造新兵种：把单位场景放进此目录并填写 unitTypeId，即自动加入生产数据库
     //    工厂/机场/港口的 producibleUnitNames 里填这个 unitTypeId 就能生产
@@ -40,7 +70,7 @@ public static class UnitProductionDatabase
             string id = u.unitTypeId;
             if (string.IsNullOrEmpty(id)) { GD.PushWarning($"[自定义兵种] {path} 未填写 unitTypeId，已跳过"); u.Free(); continue; }
             if (builtinUnits.ContainsKey(id)) { GD.PushWarning($"[自定义兵种] {path} 的 unitTypeId \"{id}\" 与已有兵种重名，已跳过"); u.Free(); continue; }
-            int cost = u.cost > 0 ? u.cost : (UnitRegistry.Get(u.TemplateId)?.Cost ?? 0);
+            int cost = ResolveCost(u, UnitRegistry.Get(u.TemplateId)?.Cost ?? 0);
             builtinUnits[id] = new UnitInfo(path, cost, string.IsNullOrEmpty(u.unitDisplayName) ? id : u.unitDisplayName);
             GD.Print($"[自定义兵种] 注册 {id}（{builtinUnits[id].DisplayName}） 造价{cost} ← {path}");
             u.Free();

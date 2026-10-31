@@ -41,6 +41,7 @@ maxAttackRange = 5
 useMinMaxAttackRange = true
 animSprite = NodePath("Base2D")
 baseAnimSprite = NodePath("Base2D")
+cost = 12000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

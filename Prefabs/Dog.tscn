@@ -42,6 +42,7 @@ primaryHasLimitedAmmo = false
 hasSecondaryWeapon = false
 animSprite = NodePath("Base2D")
 baseAnimSprite = NodePath("Base2D")
+cost = 1500
 
 scentEnabled = true
 scentRangeMin = 1

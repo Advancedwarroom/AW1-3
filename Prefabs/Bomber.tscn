@@ -41,6 +41,7 @@ primaryHasLimitedAmmo = true
 hasSecondaryWeapon = false
 animSprite = NodePath("Base2D")
 baseAnimSprite = NodePath("Base2D")
+cost = 22000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

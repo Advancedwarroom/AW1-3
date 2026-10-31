@@ -46,6 +46,7 @@ canTransportUnitTypes = Array[String](["Infantry", "Mech"])
 maxLoadCapacity = 1
 animSprite = NodePath("Base2D")
 baseAnimSprite = NodePath("Base2D")
+cost = 5000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=580524551]
 

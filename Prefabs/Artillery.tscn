@@ -33,6 +33,7 @@ hasPrimaryWeapon = true
 maxPrimaryAmmo = 9
 currentPrimaryAmmo = 9
 team = "Player1"
+cost = 6000
 
 [node name="Area2D" type="Area2D" parent="." unique_id=839834484]
 
