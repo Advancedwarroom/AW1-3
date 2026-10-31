@@ -1,0 +1,671 @@
+using Godot;
+using System;
+using System.Linq;
+using System.IO;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Reflection;
+
+// TerrainEditor · SpawnMenu（由 TerrainEditor.cs 按模块拆分；partial class，Export 分组已显式标注）
+public partial class TerrainEditor
+{
+// ========== 创建生成菜单 ==========
+private void CreateSpawnMenu()
+{
+    spawnMenuPanel = new Panel();
+    spawnMenuPanel.Name = "SpawnMenuPanel";
+    spawnMenuPanel.CustomMinimumSize = new Vector2(400, 600);
+    spawnMenuPanel.SetAnchorsPreset(LayoutPreset.Center);
+    spawnMenuPanel.Visible = false;
+    spawnMenuPanel.ZIndex = 1200;
+
+    var panelStyle = new StyleBoxFlat();
+    panelStyle.BgColor = new Color(0.1f, 0.12f, 0.18f, 0.97f);
+    panelStyle.SetCornerRadiusAll(16);
+    panelStyle.SetBorderWidthAll(3);
+    panelStyle.BorderColor = new Color(0.4f, 0.7f, 0.9f);
+    spawnMenuPanel.AddThemeStyleboxOverride("panel", panelStyle);
+
+    // 标题
+    spawnTitleLabel = new Label();
+    TranslateGroup.SetText(spawnTitleLabel, "🎮 单位/兵器/设施生成器");
+    spawnTitleLabel.HorizontalAlignment = HorizontalAlignment.Center;
+    spawnTitleLabel.AddThemeFontSizeOverride("font_size", 20);
+    spawnTitleLabel.AddThemeColorOverride("font_color", new Color(0.4f, 0.9f, 1f));
+    spawnTitleLabel.CustomMinimumSize = new Vector2(0, 35);
+    spawnTitleLabel.Position = new Vector2(0, 12);
+    spawnTitleLabel.Size = new Vector2(320, 35);
+    spawnMenuPanel.AddChild(spawnTitleLabel);
+
+
+    // 模式选择器
+    spawnModeSelector = new HBoxContainer();
+    spawnModeSelector.Position = new Vector2(15, 50);
+    spawnModeSelector.Size = new Vector2(370, 40);
+    spawnModeSelector.AddThemeConstantOverride("separation", 8);
+
+    spawnModeUnitBtn = new Button();
+    TranslateGroup.SetText(spawnModeUnitBtn, "🚶 生成单位");
+    spawnModeUnitBtn.CustomMinimumSize = new Vector2(90, 36);
+    spawnModeUnitBtn.AddThemeFontSizeOverride("font_size", 12);
+    spawnModeUnitBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Unit);
+    spawnModeSelector.AddChild(spawnModeUnitBtn);
+
+    spawnModeWeaponBtn = new Button();
+    TranslateGroup.SetText(spawnModeWeaponBtn, "⚔️ 生成兵器");
+    spawnModeWeaponBtn.CustomMinimumSize = new Vector2(90, 36);
+    spawnModeWeaponBtn.AddThemeFontSizeOverride("font_size", 12);
+    spawnModeWeaponBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Weapon);
+    spawnModeSelector.AddChild(spawnModeWeaponBtn);
+
+    spawnModeFacilityBtn = new Button();
+    TranslateGroup.SetText(spawnModeFacilityBtn, "🏙️ 生成设施");
+    spawnModeFacilityBtn.CustomMinimumSize = new Vector2(90, 36);
+    spawnModeFacilityBtn.AddThemeFontSizeOverride("font_size", 12);
+    spawnModeFacilityBtn.Pressed += () => SwitchSpawnMode(SpawnMode.Facility);
+    spawnModeSelector.AddChild(spawnModeFacilityBtn);
+
+    destroyModeBtn = new Button();
+    TranslateGroup.SetText(destroyModeBtn, "💀 销毁模式");
+    destroyModeBtn.CustomMinimumSize = new Vector2(90, 36);
+    destroyModeBtn.AddThemeFontSizeOverride("font_size", 12);
+    destroyModeBtn.Pressed += ToggleDestroyMode;
+    spawnModeSelector.AddChild(destroyModeBtn);
+
+    spawnMenuPanel.AddChild(spawnModeSelector);
+
+    // ✅ 方向选择器（黑炮/大型黑炮专用）
+    directionSelector = new HBoxContainer();
+    directionSelector.Position = new Vector2(60, 92);
+    directionSelector.Size = new Vector2(280, 30);
+    directionSelector.AddThemeConstantOverride("separation", 6);
+    directionSelector.Visible = false;
+
+    var dirLabel = new Label();
+    TranslateGroup.SetText(dirLabel, "朝向:");
+    dirLabel.AddThemeFontSizeOverride("font_size", 12);
+    dirLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
+    dirLabel.CustomMinimumSize = new Vector2(40, 24);
+    directionSelector.AddChild(dirLabel);
+
+    string[] dirLabels = { TranslateGroup.T("⬆️ 上"), TranslateGroup.T("➡️ 右"), TranslateGroup.T("⬇️ 下"), TranslateGroup.T("⬅️ 左") };
+    for (int i = 0; i < 4; i++)
+    {
+        int dirIndex = i; // 闭包捕获
+        var dirBtn = new Button();
+        dirBtn.Text = dirLabels[i];
+        dirBtn.CustomMinimumSize = new Vector2(50, 26);
+        dirBtn.AddThemeFontSizeOverride("font_size", 10);
+        dirBtn.Pressed += () => {
+            pendingCannonDirection = (BlackCannon.CannonDirection)dirIndex;
+            UpdateDirectionButtonStyles();
+        };
+        dirBtn.Name = $"DirBtn_{dirIndex}";
+        directionSelector.AddChild(dirBtn);
+    }
+
+    spawnMenuPanel.AddChild(directionSelector);
+
+    // 提示标签
+    spawnHintLabel = new Label();
+    TranslateGroup.SetText(spawnHintLabel, "选择模式开始...");
+    spawnHintLabel.HorizontalAlignment = HorizontalAlignment.Center;
+    spawnHintLabel.AddThemeFontSizeOverride("font_size", 12);
+    spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
+    spawnHintLabel.Position = new Vector2(10, 125);
+    spawnHintLabel.Size = new Vector2(380, 25);
+    spawnMenuPanel.AddChild(spawnHintLabel);
+
+    // 滚动容器
+    var scroll = new ScrollContainer();
+    scroll.Position = new Vector2(15, 155);
+    scroll.Size = new Vector2(370, 435);
+    scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+
+    spawnButtonContainer = new VBoxContainer();
+    spawnButtonContainer.AddThemeConstantOverride("separation", 6);
+    spawnButtonContainer.Size = new Vector2(370, 0);
+
+    scroll.AddChild(spawnButtonContainer);
+    spawnMenuPanel.AddChild(scroll);
+
+    var dragHandle = new Panel();
+    dragHandle.Name = "DragHandle";
+    dragHandle.CustomMinimumSize = new Vector2(400, 35);
+    dragHandle.Position = new Vector2(0, 0);
+    dragHandle.MouseFilter = MouseFilterEnum.Pass;
+    spawnMenuPanel.AddChild(dragHandle);
+
+    spawnTitleLabel.Position = new Vector2(0, 12 + 35);
+    spawnTitleLabel.Size = new Vector2(400, 35);
+
+    var closeBtn = new Button();
+    closeBtn.Name = "CloseButton";
+    closeBtn.Text = "✕";
+    closeBtn.CustomMinimumSize = new Vector2(32, 32);
+    closeBtn.Position = new Vector2(360, 10);
+    closeBtn.ZIndex = 10;
+    closeBtn.MouseFilter = MouseFilterEnum.Stop;
+    closeBtn.Pressed += CloseSpawnMenu;
+    spawnMenuPanel.AddChild(closeBtn);
+
+    AddChild(spawnMenuPanel);
+    MakeMenuDraggable(spawnMenuPanel, dragHandle);
+
+}
+
+private bool isDestroyMode = false;
+
+private void ToggleDestroyMode()
+{
+    isDestroyMode = !isDestroyMode;
+    destroyModeBtn.Text = isDestroyMode ? TranslateGroup.T("❌ 退出销毁") : TranslateGroup.T("💀 销毁模式");
+
+    if (isDestroyMode)
+    {
+        TranslateGroup.SetText(spawnHintLabel, "💀 销毁模式：点击格子上的单位/兵器即可销毁");
+        spawnHintLabel.AddThemeColorOverride("font_color", new Color(1f, 0.3f, 0.3f));
+        currentSpawnMode = SpawnMode.None;
+        selectedTemplatePath = "";
+        if (directionSelector != null) directionSelector.Visible = false;
+        UpdateModeButtonStyles();
+    }
+    else
+    {
+        TranslateGroup.SetText(spawnHintLabel, "选择模式开始...");
+        spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.6f));
+    }
+}
+
+private string GetFriendlyTypeName(Infantry unit)
+{
+    return unit switch
+    {
+        Mech => TranslateGroup.T("机甲"),
+        MdTank => TranslateGroup.T("重坦"),
+        LightTank => TranslateGroup.T("轻坦"),
+        Recon => TranslateGroup.T("侦察车"),
+        Artillery => TranslateGroup.T("火炮"),
+        Rocket => TranslateGroup.T("火箭"),
+        AntiAir => TranslateGroup.T("防空高炮"),
+        APC => TranslateGroup.T("运输"),
+        Flare => TranslateGroup.T("照明车"),
+        Bike => TranslateGroup.T("摩托兵"),
+        PipeRunner => TranslateGroup.T("管道炮"),
+        Oozium => TranslateGroup.T("史莱姆"),
+                AntiTank => TranslateGroup.T("反坦克炮"),
+        FlyBomb => TranslateGroup.T("飞弹"),
+            Fighter => TranslateGroup.T("战斗机"),
+            Bomber => TranslateGroup.T("轰炸机"),
+            BCopter => TranslateGroup.T("武装直升机"),
+            TCopter => TranslateGroup.T("运输直升机"),
+            AntiAirMissile => TranslateGroup.T("防空导弹"),
+            Stealth => TranslateGroup.T("隐身战机"),
+            Dog => TranslateGroup.T("机械狗"),
+        RepairBoat => TranslateGroup.T("修理船"),
+        Infantry => TranslateGroup.T("步兵"),
+        _ => unit.GetType().Name
+    };
+}
+
+private string GetFriendlyWeaponName(Weapon weapon)
+{
+    return weapon switch
+    {
+        DeathRay => TranslateGroup.T("死光炮"),
+        BlackCannon => TranslateGroup.T("黑炮"),
+        Laser => TranslateGroup.T("激光炮"),
+        Crystal => TranslateGroup.T("黑水晶"),
+        _ => weapon.GetType().Name
+    };
+}
+
+
+private void SwitchSpawnMode(SpawnMode mode)
+{
+    currentSpawnMode = mode;
+    isDestroyMode = false;
+    TranslateGroup.SetText(destroyModeBtn, "💀 销毁模式");
+
+    UpdateModeButtonStyles();
+    RefreshSpawnButtons();
+}
+
+private void UpdateModeButtonStyles()
+{
+    ResetButtonStyle(spawnModeUnitBtn);
+    ResetButtonStyle(spawnModeWeaponBtn);
+    ResetButtonStyle(spawnModeFacilityBtn);
+    ResetButtonStyle(destroyModeBtn);
+
+    if (currentSpawnMode == SpawnMode.Unit)
+        HighlightButton(spawnModeUnitBtn, new Color(0.3f, 0.6f, 0.3f));
+    else if (currentSpawnMode == SpawnMode.Weapon)
+        HighlightButton(spawnModeWeaponBtn, new Color(0.3f, 0.4f, 0.6f));
+    else if (currentSpawnMode == SpawnMode.Facility)
+        HighlightButton(spawnModeFacilityBtn, new Color(0.8f, 0.6f, 0.2f));
+    else if (isDestroyMode)
+        HighlightButton(destroyModeBtn, new Color(0.6f, 0.2f, 0.2f));
+}
+
+// ✅ 更新方向按钮高亮状态
+private void UpdateDirectionButtonStyles()
+{
+    if (directionSelector == null) return;
+    for (int i = 0; i < 4; i++)
+    {
+        var btn = directionSelector.GetNodeOrNull<Button>($"DirBtn_{i}");
+        if (btn == null) continue;
+        if ((BlackCannon.CannonDirection)i == pendingCannonDirection)
+        {
+            var style = new StyleBoxFlat();
+            style.BgColor = new Color(0.3f, 0.5f, 0.8f, 0.95f);
+            style.SetCornerRadiusAll(6);
+            style.SetBorderWidthAll(2);
+            style.BorderColor = Colors.Yellow;
+            btn.AddThemeStyleboxOverride("normal", style);
+        }
+        else
+        {
+            var style = new StyleBoxFlat();
+            style.BgColor = new Color(0.25f, 0.25f, 0.3f, 0.6f);
+            style.SetCornerRadiusAll(6);
+            btn.AddThemeStyleboxOverride("normal", style);
+        }
+    }
+}
+
+private void ResetButtonStyle(Button btn)
+{
+    var style = new StyleBoxFlat();
+    style.BgColor = new Color(0.25f, 0.25f, 0.3f, 0.8f);
+    style.SetCornerRadiusAll(6);
+    btn.AddThemeStyleboxOverride("normal", style);
+}
+
+private void HighlightButton(Button btn, Color color)
+{
+    var style = new StyleBoxFlat();
+    style.BgColor = new Color(color.R, color.G, color.B, 0.9f);
+    style.SetCornerRadiusAll(6);
+    btn.AddThemeStyleboxOverride("normal", style);
+}
+
+private void RefreshSpawnButtons()
+{
+    foreach (var child in spawnButtonContainer.GetChildren())
+        child.QueueFree();
+
+    selectedTemplatePath = "";
+    selectedTemplateCategory = "";
+    if (directionSelector != null) directionSelector.Visible = false;
+
+    if (currentSpawnMode == SpawnMode.None) return;
+
+    List<UnitTemplate> templates;
+    if (currentSpawnMode == SpawnMode.Unit)
+        templates = unitTemplates;
+    else if (currentSpawnMode == SpawnMode.Weapon)
+        templates = weaponTemplates;
+    else
+        templates = facilityTemplates;
+
+    var grouped = templates.GroupBy(t => t.Category).OrderBy(g => g.Key);
+
+    foreach (var group in grouped)
+    {
+        var categoryLabel = new Label();
+        categoryLabel.Text = $"=== {group.Key} ===";
+        categoryLabel.AddThemeFontSizeOverride("font_size", 14);
+        categoryLabel.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.3f));
+        categoryLabel.CustomMinimumSize = new Vector2(0, 25);
+        spawnButtonContainer.AddChild(categoryLabel);
+
+        foreach (var template in group)
+        {
+            var btn = CreateTemplateButton(template);
+            spawnButtonContainer.AddChild(btn);
+        }
+    }
+
+    spawnHintLabel.Text = currentSpawnMode switch
+    {
+        SpawnMode.Unit => TranslateGroup.T("🚶 选择单位模板，然后点击地图格子生成"),
+        SpawnMode.Weapon => TranslateGroup.T("⚔️ 选择兵器模板，然后点击地图格子生成"),
+        SpawnMode.Facility => TranslateGroup.T("🏙️ 选择设施模板，然后点击地图格子生成"),
+        _ => TranslateGroup.T("选择模式开始...")
+    };
+    spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.9f, 0.6f));
+}
+
+private Button CreateTemplateButton(UnitTemplate template)
+{
+    var btn = new Button();
+    btn.CustomMinimumSize = new Vector2(270, 50);
+    btn.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+
+    btn.Text = $"{template.DisplayName}\n{template.Description}";
+    btn.AddThemeFontSizeOverride("font_size", 12);
+    btn.AddThemeColorOverride("font_color", Colors.White);
+    btn.Alignment = HorizontalAlignment.Left;
+
+    var normalStyle = new StyleBoxFlat();
+    normalStyle.BgColor = new Color(template.DisplayColor.R * 0.3f, template.DisplayColor.G * 0.3f, 
+        template.DisplayColor.B * 0.3f, 0.8f);
+    normalStyle.SetCornerRadiusAll(8);
+    btn.AddThemeStyleboxOverride("normal", normalStyle);
+
+    var hoverStyle = new StyleBoxFlat();
+    hoverStyle.BgColor = new Color(template.DisplayColor.R * 0.5f, template.DisplayColor.G * 0.5f, 
+        template.DisplayColor.B * 0.5f, 0.9f);
+    hoverStyle.SetCornerRadiusAll(8);
+    btn.AddThemeStyleboxOverride("hover", hoverStyle);
+
+    var pressedStyle = new StyleBoxFlat();
+    pressedStyle.BgColor = new Color(template.DisplayColor.R * 0.7f, template.DisplayColor.G * 0.7f, 
+        template.DisplayColor.B * 0.7f, 1.0f);
+    pressedStyle.SetCornerRadiusAll(8);
+    btn.AddThemeStyleboxOverride("pressed", pressedStyle);
+
+    // ✅ 可滚动的势力选择区
+    var teamScroll = new ScrollContainer();
+    teamScroll.Position = new Vector2(180, 8);
+    teamScroll.Size = new Vector2(88, 34);
+    teamScroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Auto;
+    teamScroll.VerticalScrollMode = ScrollContainer.ScrollMode.Disabled;
+    teamScroll.Name = "TeamScroll";
+    
+    var teamHBox = new HBoxContainer();
+    teamHBox.AddThemeConstantOverride("separation", 4);
+    teamHBox.Name = "TeamHBox";
+
+    // ✅ 动态生成所有活跃势力的选择按钮
+    foreach (var faction in TeamHelper.GetActiveFactions())
+    {
+        string fid = faction.Id;
+        string shortName = TeamHelper.GetTeamShortName(fid);
+        var fBtn = new Button();
+        fBtn.Text = shortName;
+        fBtn.CustomMinimumSize = new Vector2(32, 24);
+        fBtn.AddThemeFontSizeOverride("font_size", 9);
+        // 用势力主色作为按钮色调提示
+        var fStyle = new StyleBoxFlat();
+        fStyle.BgColor = faction.PrimaryColor.Darkened(0.3f);
+        fStyle.SetCornerRadiusAll(4);
+        fBtn.AddThemeStyleboxOverride("normal", fStyle);
+        fBtn.Pressed += () => {
+            template.Team = fid;
+            UpdateTemplateTeamIndicator(btn, fid);
+        };
+        teamHBox.AddChild(fBtn);
+    }
+
+    teamScroll.AddChild(teamHBox);
+    btn.AddChild(teamScroll);
+
+    btn.Pressed += () => {
+        selectedTemplatePath = template.ScenePath;
+        selectedTemplateCategory = template.Category;
+        spawnHintLabel.Text = $"✅ {TranslateGroup.T("已选择")}: {template.DisplayName} ({template.Team})\n{TranslateGroup.T("点击地图格子生成")}...";
+        spawnHintLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
+
+        // ✅ 黑炮/大型黑炮：显示方向选择器
+        bool isCannon = template.ScenePath.Contains("black_cannon") || template.ScenePath.Contains("large_cannon") || template.ScenePath.Contains("death_ray");
+        if (directionSelector != null)
+        {
+            directionSelector.Visible = isCannon;
+            if (isCannon)
+            {
+                pendingCannonDirection = BlackCannon.CannonDirection.Up; // 默认朝上
+                UpdateDirectionButtonStyles();
+            }
+        }
+
+        foreach (var child in spawnButtonContainer.GetChildren())
+        {
+            if (child is Button b && b != btn)
+                ResetTemplateButtonStyle(b);
+        }
+        HighlightTemplateButton(btn, template.DisplayColor);
+    };
+
+    return btn;
+}
+
+private void UpdateTemplateTeamIndicator(Button btn, string team)
+{
+    var teamLabel = btn.GetNodeOrNull<Label>("TeamLabel");
+    if (teamLabel == null)
+    {
+        teamLabel = new Label();
+        teamLabel.Name = "TeamLabel";
+        teamLabel.Position = new Vector2(220, 4);
+        teamLabel.Size = new Vector2(60, 20);
+        teamLabel.AddThemeFontSizeOverride("font_size", 10);
+        btn.AddChild(teamLabel);
+    }
+    teamLabel.Text = TeamHelper.GetTeamShortName(team);
+    teamLabel.AddThemeColorOverride("font_color", TeamHelper.GetTeamColor(team));
+}
+
+private void ResetTemplateButtonStyle(Button btn)
+{
+    var style = new StyleBoxFlat();
+    style.BgColor = new Color(0.25f, 0.25f, 0.3f, 0.6f);
+    style.SetCornerRadiusAll(8);
+    btn.AddThemeStyleboxOverride("normal", style);
+}
+
+private void HighlightTemplateButton(Button btn, Color color)
+{
+    var style = new StyleBoxFlat();
+    style.BgColor = new Color(color.R * 0.6f, color.G * 0.6f, color.B * 0.6f, 0.95f);
+    style.SetCornerRadiusAll(8);
+    style.SetBorderWidthAll(2);
+    style.BorderColor = Colors.Yellow;
+    btn.AddThemeStyleboxOverride("normal", style);
+}
+// ========== 菜单控制 ==========
+private void OpenSpawnMenu()
+{
+    CloseAllMenus();
+    spawnMenuPanel.Visible = true;
+    isMenuOpen = true;
+    currentSpawnMode = SpawnMode.None;
+    isDestroyMode = false;
+    selectedTemplatePath = "";
+    UpdateModeButtonStyles();
+
+    foreach (var child in spawnButtonContainer.GetChildren())
+        child.QueueFree();
+
+    TranslateGroup.SetText(spawnHintLabel, "选择生成模式...");
+}
+
+private void CloseSpawnMenu()
+{
+    spawnMenuPanel.Visible = false;
+    currentSpawnMode = SpawnMode.None;
+    isDestroyMode = false;
+    selectedTemplatePath = "";
+    if (directionSelector != null) directionSelector.Visible = false;
+    isMenuOpen = false;
+}
+
+    // ==================== 自定义配置加载模式 ====================
+
+    private SpawnMode pendingSpawnMode = SpawnMode.None;
+    private string pendingSpawnScenePath = "";
+    private string pendingSpawnTeam = "";
+    private SavedGridTerrainData pendingTerrainData = null;
+
+    /// <summary>
+    /// 设置生成模式（供CustomConfigUI调用，加载保存的单位/兵器/设施）
+    /// </summary>
+    public void SetSpawnMode(SpawnMode mode, string scenePath, string team)
+    {
+        pendingSpawnMode = mode;
+        pendingSpawnScenePath = scenePath;
+        pendingSpawnTeam = team;
+        pendingTerrainData = null;
+
+        // 关闭其他菜单，进入等待点击状态
+        CloseAllMenus();
+
+        string typeName = mode switch
+        {
+            SpawnMode.Unit => TranslateGroup.T("单位"),
+            SpawnMode.Weapon => TranslateGroup.T("兵器"),
+            SpawnMode.Facility => TranslateGroup.T("设施"),
+            _ => TranslateGroup.T("对象")
+        };
+
+        // 显示提示
+        var hint = new Label();
+        hint.Text = $"🖱️ {TranslateGroup.T("点击地图格子放置")}{typeName}...ESC{TranslateGroup.T("取消")}";
+        hint.AddThemeFontSizeOverride("font_size", 14);
+        hint.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.7f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.SetAnchorsPreset(LayoutPreset.CenterTop);
+        hint.Position = new Vector2(0, 80);
+        hint.ZIndex = 2000;
+        hint.Name = "SpawnModeHint";
+        AddChild(hint);
+
+        // 3秒后自动消失
+        var timer = new Timer();
+        timer.WaitTime = 3.0f;
+        timer.OneShot = true;
+        timer.Timeout += () => { 
+            var h = GetNodeOrNull<Label>("SpawnModeHint");
+            h?.QueueFree();
+            timer.QueueFree(); 
+        };
+        AddChild(timer);
+        timer.Start();
+    }
+
+    /// <summary>
+    /// 设置地形应用模式（供CustomConfigUI调用，加载保存的地形）
+    /// </summary>
+    public void SetApplyTerrainMode(SavedGridTerrainData data)
+    {
+        pendingTerrainData = data;
+        pendingSpawnMode = SpawnMode.None;
+        pendingSpawnScenePath = "";
+
+        CloseAllMenus();
+
+        var hint = new Label();
+        hint.Text = TranslateGroup.T("🖱️ 点击地图格子应用地形 ") + "\"" + data.displayName + "\"...\n" + TranslateGroup.T("ESC取消");
+        hint.AddThemeFontSizeOverride("font_size", 14);
+        hint.AddThemeColorOverride("font_color", new Color(0.7f, 1f, 0.4f));
+        hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.SetAnchorsPreset(LayoutPreset.CenterTop);
+        hint.Position = new Vector2(0, 80);
+        hint.ZIndex = 2000;
+        hint.Name = "TerrainModeHint";
+        AddChild(hint);
+
+        var timer = new Timer();
+        timer.WaitTime = 3.0f;
+        timer.OneShot = true;
+        timer.Timeout += () => { 
+            var h = GetNodeOrNull<Label>("TerrainModeHint");
+            h?.QueueFree();
+            timer.QueueFree(); 
+        };
+        AddChild(timer);
+        timer.Start();
+    }
+
+    /// <summary>
+    /// 取消待处理的生成/应用模式
+    /// </summary>
+    public void CancelPendingMode()
+    {
+        pendingSpawnMode = SpawnMode.None;
+        pendingSpawnScenePath = "";
+        pendingSpawnTeam = "";
+        pendingTerrainData = null;
+
+        var h1 = GetNodeOrNull<Label>("SpawnModeHint");
+        h1?.QueueFree();
+        var h2 = GetNodeOrNull<Label>("TerrainModeHint");
+        h2?.QueueFree();
+    }
+
+    /// <summary>
+    /// 处理待生成模式的格子点击
+    /// </summary>
+    private bool HandlePendingSpawn(Grids grid)
+    {
+        if (pendingSpawnMode == SpawnMode.None && pendingTerrainData == null) return false;
+
+        if (pendingTerrainData != null)
+        {
+            ApplySavedGridTerrain(grid, pendingTerrainData);
+            pendingTerrainData = null;
+            var h = GetNodeOrNull<Label>("TerrainModeHint");
+            h?.QueueFree();
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(pendingSpawnScenePath)) return false;
+
+        switch (pendingSpawnMode)
+        {
+            case SpawnMode.Unit:
+                SpawnUnitAtGrid(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                break;
+            case SpawnMode.Weapon:
+                // 检查是否多格兵器
+                var scene = GD.Load<PackedScene>(pendingSpawnScenePath);
+                if (scene != null)
+                {
+                    var temp = scene.Instantiate<Weapon>();
+                    if (temp != null)
+                    {
+                        // ✅ 关键修复：Instantiate不会触发_Ready，多格属性需手动检测
+                        if (temp is LargeCannon lc && !temp.isMultiTile)
+                        {
+                            temp.isMultiTile = true;
+                            temp.size = lc.multiTileSize;
+                        }
+                        else if (temp is DeathRay dr && !temp.isMultiTile)
+                        {
+                            temp.isMultiTile = true;
+                            temp.size = dr.multiTileSize;
+                        }
+
+                        bool isMulti = temp.isMultiTile;
+                        temp.QueueFree();
+
+                        if (isMulti)
+                        {
+                            // ✅ 进入预览模式，不清除pending！
+                            // 确认/取消由 OnGridClickedForEdit 最前面的统一逻辑处理
+                            TryPreviewMultiTileWeapon(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                            return true;
+                        }
+                        else
+                        {
+                            SpawnWeaponAtGrid(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                        }
+                    }
+                }
+                break;
+            case SpawnMode.Facility:
+                SpawnFacilityAtGrid(grid, pendingSpawnScenePath, pendingSpawnTeam);
+                break;
+        }
+
+        // 只有非预览模式才清除pending状态
+        pendingSpawnMode = SpawnMode.None;
+        pendingSpawnScenePath = "";
+        var hint = GetNodeOrNull<Label>("SpawnModeHint");
+        hint?.QueueFree();
+
+        return true;
+    }
+}
