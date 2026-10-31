@@ -58,7 +58,7 @@ public partial class GridManager
                     var neighbor = map[nIdx.X, nIdx.Y];
                     if (neighbor == null) continue;
 
-                    int moveCost = infantry.GetMoveCost(neighbor.gridType);
+                    int moveCost = infantry.GetMoveCostOnGrid(neighbor);   // ✅ 与实际移动一致（含港口靠泊等设施覆盖）
                     if (moveCost >= 999 || moveCost == int.MaxValue) continue;
 
                     if (infantry is not Oozium && neighbor.weapon != null)
@@ -158,7 +158,7 @@ public partial class GridManager
                     blocked = true; // 兵器阻挡
                 else
                 {
-                    int moveCost = selectedUnit.GetMoveCost(g.gridType);
+                    int moveCost = selectedUnit.GetMoveCostOnGrid(g);
                     if (moveCost >= 999 || moveCost == int.MaxValue)
                         blocked = true; // 地形不可通行
                     else if (unitManager?.CanMoveTo(g.GridIndex, selectedUnit) == false)
@@ -376,7 +376,7 @@ public partial class GridManager
                 var neighbor = map[nIdx.X, nIdx.Y];
                 if (neighbor == null) continue;
 
-                int moveCost = infantry.GetMoveCost(neighbor.gridType);
+                int moveCost = infantry.GetMoveCostOnGrid(neighbor);   // ✅ 与实际移动一致（含港口靠泊等设施覆盖）
                 if (moveCost >= 999 || moveCost == int.MaxValue) continue;
 
                 if (unitManager?.CanMoveTo(neighbor.GridIndex, infantry) == false)

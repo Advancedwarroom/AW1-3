@@ -27,6 +27,7 @@ defaultMovePoints = 5
 movePoints = 5
 baseAttack = 550
 canAttackAfterMoving = true
+terrainMoveCostOverrides = Array[String](["BRIDGE=1", "BEACH=1"])
 noAmmoIcon = NodePath("HpLabel/NoAmmoIcon")
 maxFuel = 99
 fuel = 99
@@ -41,6 +42,7 @@ hasSecondaryWeapon = false
 primaryAntiArmor = true
 primaryAntiInfantry = true
 minAttackRange = 3
+useMinMaxAttackRange = true
 maxAttackRange = 5
 attackRange = 5
 animSprite = NodePath("Base2D")

@@ -19,7 +19,9 @@ public partial class TerrainEditor
         { "Artillery", "Art" }, { "APC", "APC" }, { "Recon", "Rec" },
         { "AntiAir", "AA" }, { "AntiTank", "AT" }, { "Flare", "Flr" },
         { "Bike", "Bke" }, { "FlyBomb", "FBo" }, { "Fighter", "Ftr" }, { "Bomber", "Bom" }, { "BCopter", "BH" }, { "TCopter", "TH" }, { "AntiAirMissile", "SAM" }, { "Stealth", "Stl" }, { "Dog", "Dog" },
-        { "PipeRunner", "PRun" }
+        { "PipeRunner", "PRun" },
+        { "RepairBoat", "RBt" }, { "Battleship", "BS" }, { "Cruiser", "Cru" }, { "Submarine", "Sub" }, { "Lander", "Lnd" }, { "Carrier", "Car" }, { "Gunboat", "GBt" },
+        { "Neotank", "Neo" }, { "Megatank", "Mga" }, { "WarTank", "WTk" }, { "Rig", "Rig" }, { "Duster", "Dst" }, { "Seaplane", "SPl" }, { "ProducibleBoat", "PBt" }, { "KamikazeBoat", "KBt" }
     };
     private readonly Dictionary<string, string> compactWeaponAbbr = new()
     {
@@ -27,7 +29,7 @@ public partial class TerrainEditor
     };
     private readonly Dictionary<string, string> compactFacilityAbbr = new()
     {
-        { "City", "Cty" }, { "Base", "Bse" }, { "AirPort", "Apt" }, { "Port", "Prt" }
+        { "City", "Cty" }, { "Base", "Bse" }, { "AirPort", "Apt" }, { "Port", "Prt" }, { "TempAirPort", "TAp" }, { "TempPort", "TPt" }
     };
     private readonly Dictionary<string, string> compactTeamAbbr = new()
     {

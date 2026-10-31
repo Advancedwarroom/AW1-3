@@ -31,6 +31,9 @@ public partial class Infantry
     [Export] public bool canMoveWhileBuilding = false;                                // ⑨ 内部建造时可否移动
     [Export] public bool constructionAutomation = false;                               // ⑩ 自动化
     [Export] public int constructionCooldownTurns = 0;                                  // ⑪ 冷却回合数
+    // ⑫ 可建造地形白名单：写地形名（如 "BEACH"）=对所有建筑生效；写 "建筑:地形"（如 "TempPort:BEACH"）=只对该建筑生效。
+    //    留空=未配置，按 FacilityDatabase 默认规则（临时机场=平原，临时港口=海滩，其余任意）。
+    [Export] public Godot.Collections.Array<string> constructionAllowedTerrains = new();
 
     // ===== 运行时状态（不导出） =====
     public bool isConstructing = false;                 // 建造中
@@ -159,9 +162,32 @@ public partial class Infantry
     public bool DeployCarriedFacility(Grids target)
     {
         if (carriedFacilityTypes.Count == 0) return false;
+        if (target == null || !CanBuildFacilityOnTerrain(carriedFacilityTypes[0], target.gridType)) return false;   // ⑫ 部署也受地形限制
         if (!SpawnFacilityOnGrid(carriedFacilityTypes[0], target)) return false;
         carriedFacilityTypes.RemoveAt(0);
         return true;
+    }
+
+    /// <summary>⑫ 该建筑能否建在此地形：检查器白名单优先，未配置才用 FacilityDatabase 默认规则</summary>
+    public bool CanBuildFacilityOnTerrain(string facilityType, GridType terrain)
+    {
+        if (constructionAllowedTerrains == null || constructionAllowedTerrains.Count == 0)
+            return FacilityDatabase.IsTerrainAllowed(facilityType, terrain);
+
+        bool hasRuleForThis = false;
+        foreach (var raw in constructionAllowedTerrains)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            string entry = raw.Trim();
+            string fac = null, ter = entry;
+            int sep = entry.IndexOf(':');
+            if (sep >= 0) { fac = entry[..sep].Trim(); ter = entry[(sep + 1)..].Trim(); }
+            if (fac != null && !string.Equals(fac, facilityType, StringComparison.OrdinalIgnoreCase)) continue;
+            hasRuleForThis = true;
+            if (Enum.TryParse<GridType>(ter, true, out var g) && g == terrain) return true;
+        }
+        // 白名单里完全没有提到这个建筑（也没有通用条目）=该建筑不限地形
+        return !hasRuleForThis;
     }
 
     /// <summary>外部建造自动放置：在范围内随机挑一个可放格子</summary>
@@ -199,7 +225,7 @@ public partial class Infantry
                 if (g == null) continue;
                 if (g.city != null && IsInstanceValid(g.city)) continue;   // 已有建筑
                 if (g.weapon != null) continue;                            // 兵器占位
-                if (!FacilityDatabase.IsTerrainAllowed(facilityType, g.gridType)) continue;   // ✅ 建筑地形要求（如临时港口只能建在海滩）
+                if (!CanBuildFacilityOnTerrain(facilityType, g.gridType)) continue;   // ⑫ 可建造地形白名单（如临时港口只能建在海滩）
                 result.Add(g);
             }
         }

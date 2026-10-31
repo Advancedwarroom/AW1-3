@@ -207,7 +207,7 @@ public override void _Ready()
         // ========== ✅ 战争迷雾视野初始化 ==========
         if (visionRange < 0 && useConfigVision)
         {
-            visionRange = VisionConfig.GetUnitVisionRange(TemplateId);
+            visionRange = VisionConfig.GetUnitVisionRange(UnitTypeId, TemplateId);
         }
         else if (visionRange >= 0)
         {
