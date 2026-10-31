@@ -16,6 +16,7 @@ public partial class Infantry
     /// 致命伤触发：向 x-y 环内随机空格逃跑并野化（满血中立）。
     /// 成功返回 true（死亡被逃跑抵消）；无处可逃返回 false（照常死亡）。
     /// 规格裁定：永久存续 / 原主人可攻击 / 落地满血（致命伤被逃跑抵消，代价是脱离编制而非血量）
+    /// 一次性：逃跑成功后自动关闭 canFleeOnDeath，野化单位不会二次野化
     /// </summary>
     public virtual bool TryFlee()
     {
@@ -50,6 +51,7 @@ public partial class Infantry
         if (!target.infantries.Contains(this)) target.infantries.Add(this);
         if (target.infantry == null) target.infantry = this;
 
+        canFleeOnDeath = false;                // 只能野化一次：已逃过的单位再受致命伤照常阵亡（随 Export 字段一起存档）
         health = maxHealth;                    // 野化=满血
         team = TeamHelper.Player0;             // 中立（P0）：无相位、不动不操作、挨打照反击（反击链队伍无关）
         UpdateHpLabel();
