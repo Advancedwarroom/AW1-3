@@ -138,7 +138,7 @@ GitHub Actions 手动触发（workflow_dispatch），Mono+android-arm64 正路�
 - 港口与原作一致：可占领、1000/回合收入、维修补给舰船、生产海军；海军单位可靠泊（`GetMoveCostOnGrid` 覆盖：海军/气垫进港口格=1，移动范围/路径/AI 寻路/逃离全走此口）
 - 潜艇下潜/上浮 = 直接复用隐身模块，按钮文字可检查器改（`stealthHideButtonText`/`stealthShowButtonText`，默认隐身/显形，潜艇填下潜/上浮）；下潜贴身可见（相邻1格），只有巡洋舰和潜艇能打水下潜艇（stealthAttackableBy）
 - 登陆艇装卸限制（原作）：只能浅滩（BEACH）和港口
-- 贴图：占位贴图（`asscets/units/ships/`），换真图只改 .tres 引用
+- 贴图：原版 GBA 地图贴图（AWBW 提取，16×16，Base2D ×2）：`asscets/units/{Battleship,Cruiser,Submarine,Lander,Carrier}/`，红=Player1 / blue=Player2；炮艇为 DoR 原图按 GBA 橙星/蓝月调色板重上色（24×24，Base2D ×4/3）；港口 `art/Port/Port0~2.png`（中立/P1/P2，32×44，offset -4 底部与机场对齐）
 **编辑器**：设施模板列表 + 紧凑格式缩写 Prt + 生成器搜索框（按显示名/描述/场景路径过滤，单位/兵器/设施通用）
 
 ## 模块十五：统一弹药系统（AmmoKind）

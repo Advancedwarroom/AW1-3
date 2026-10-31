@@ -1,26 +1,15 @@
-[gd_resource type="SpriteFrames" format=3 uid="uid://99bt59ivdpdt6"]
+[gd_resource type="SpriteFrames" load_steps=5 format=3]
 
-[ext_resource type="Texture2D" uid="uid://39k52d16lbgqn" path="res://asscets/units/ships/lander_placeholder.png" id="1_lander"]
-[ext_resource type="Texture2D" uid="uid://39k52d16lbgqn" path="res://asscets/units/ships/lander_placeholder.png" id="2_lander"]
+[ext_resource type="Texture2D" path="res://asscets/units/Lander/lander1.png" id="1"]
+[ext_resource type="Texture2D" path="res://asscets/units/Lander/lander2.png" id="2"]
+[ext_resource type="Texture2D" path="res://asscets/units/Lander/landerblue1.png" id="3"]
+[ext_resource type="Texture2D" path="res://asscets/units/Lander/landerblue2.png" id="4"]
 
 [resource]
-animations = [
-{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("1_lander")
-}],
-"loop": 1,
-"name": &"Lander1",
-"speed": 5.0
-}
-{
-"frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_lander")
-}],
-"loop": 1,
-"name": &"Lander2",
-"speed": 5.0
-}
-]
+animations = [{
+"frames": [{"duration": 2.0, "texture": ExtResource("1")}, {"duration": 3.0, "texture": ExtResource("2")}],
+"loop": true, "name": &"Lander1", "speed": 6.25
+}, {
+"frames": [{"duration": 2.0, "texture": ExtResource("3")}, {"duration": 3.0, "texture": ExtResource("4")}],
+"loop": true, "name": &"Lander2", "speed": 6.25
+}]
