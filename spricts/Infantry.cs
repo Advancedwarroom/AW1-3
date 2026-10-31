@@ -2832,7 +2832,11 @@ public virtual void SetWaitVisual(bool waiting)
             exec = new System.Collections.Generic.List<(Infantry, Infantry, bool)> { first };
         }
         foreach (var s in exec)
+        {
+            // ✅ 死亡截断铁律：同发互兑原子化(Attack内反击已锁定)；跨发死亡=取消其未执行的后续拳
+            if (s.atk == null || s.def == null || s.atk.health <= 0 || s.def.health <= 0) continue;
             s.atk.Attack(s.def, allowCounter: s.counter);   // 唯一战斗结算点：隐身门/反击门/阈值矩阵全自动
+        }
     }
 
     // ==================== 雾战模块助手 ====================
