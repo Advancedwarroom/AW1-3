@@ -1,0 +1,182 @@
+name: 自对弈回归 + 冒烟
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.1
+
+jobs:
+  smoke:
+    name: 冒烟（主场景无头启动不崩）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: 装 .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: 编译 C# 游戏程序集
+        run: dotnet build AWone1.csproj -nologo
+      - name: 下载 Godot 4.7.1 Mono 无头版
+        run: |
+          wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip
+          unzip -o Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip
+          sudo ln -s $PWD/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64 /usr/local/bin/godot
+      - name: 导入资源
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          backup=""
+          if [ -f export_presets.cfg ]; then
+            backup="$(mktemp)"
+            mv export_presets.cfg "$backup"
+          fi
+          restore_export_presets() {
+            if [ -n "$backup" ] && [ -f "$backup" ]; then
+              mv "$backup" export_presets.cfg
+            fi
+          }
+          trap restore_export_presets EXIT
+          godot --headless --import --path . --quit 2>&1 | tee build/import.log
+          if grep -E "SCRIPT ERROR|ERROR:" build/import.log; then
+            echo "Godot asset import reported an error"; exit 1
+          fi
+      - name: 杀掉 MSBuild 服务进程
+        run: dotnet build-server shutdown
+      - name: 主场景无头跑 600 帧
+        run: |
+          mkdir -p build
+          set -o pipefail
+          timeout 300 godot --headless --verbose --path . res://tests/smoke.tscn 2>&1 | tee build/smoke.log
+      - name: 检查主场景运行时错误与资源泄漏
+        run: |
+          if grep -E "SCRIPT ERROR|ERROR:|WARNING: .* leaked|Failed to load hue" build/smoke.log; then
+            echo "发现主场景运行时错误或退出资源泄漏"; exit 1
+          fi
+          grep -q "SMOKE_PASS: 600 frames" build/smoke.log || { echo "主场景 600 帧测试未完成"; exit 1; }
+
+  selfplay:
+    name: 双AI自对弈回归（60阶段）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: 装 .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: 编译 C# 游戏程序集
+        run: dotnet build AWone1.csproj -nologo
+      - name: 下载 Godot 4.7.1 Mono 无头版
+        run: |
+          wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip
+          unzip -o Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip
+          sudo ln -s $PWD/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64 /usr/local/bin/godot
+      - name: 导入资源
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          backup=""
+          if [ -f export_presets.cfg ]; then
+            backup="$(mktemp)"
+            mv export_presets.cfg "$backup"
+          fi
+          restore_export_presets() {
+            if [ -n "$backup" ] && [ -f "$backup" ]; then
+              mv "$backup" export_presets.cfg
+            fi
+          }
+          trap restore_export_presets EXIT
+          godot --headless --import --path . --quit 2>&1 | tee build/import.log
+          if grep -E "SCRIPT ERROR|ERROR:" build/import.log; then
+            echo "Godot asset import reported an error"; exit 1
+          fi
+      - name: 杀掉 MSBuild 服务进程
+        run: dotnet build-server shutdown
+      - name: 双AI自对弈 60 阶段
+        run: |
+          mkdir -p build
+          set -o pipefail
+          timeout 900 godot --headless --verbose --path . res://tests/selfplay.tscn -- --max-phases 60 2>&1 | tee build/selfplay.log
+      - name: 运行时错误检查（适配开创人 ScreenErrorLogger：CI 直接炸）
+        run: |
+          if grep -E "SCRIPT ERROR|ERROR:|WARNING: .* leaked|Failed to load hue" build/selfplay.log; then
+            echo "发现运行时错误（见上方匹配行）"; exit 1
+          fi
+      - name: 失败时开issue带日志（recolor同款通道）
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          { echo "run: ${{ github.run_id }}"; echo '```'; tail -c 4000 build/selfplay.log 2>/dev/null || echo '(无日志)'; echo '```'; } > /tmp/sp_issue.txt
+          gh issue create --title "[CI] 自对弈失败 run ${{ github.run_id }}" --body-file /tmp/sp_issue.txt || true
+      - name: 失败时导出日志（发这个给我）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selfplay-log
+          path: build/selfplay.log
+
+  recolor-check:
+    name: 设施换色断言（P-1必须紫）
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: 装 .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: 编译 C# 游戏程序集
+        run: dotnet build AWone1.csproj -nologo
+      - name: 下载 Godot 4.7.1 Mono 无头版
+        run: |
+          wget -q https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip
+          unzip -o Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip
+          sudo ln -s $PWD/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64 /usr/local/bin/godot
+      - name: 导入资源
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          backup=""
+          if [ -f export_presets.cfg ]; then
+            backup="$(mktemp)"
+            mv export_presets.cfg "$backup"
+          fi
+          restore_export_presets() {
+            if [ -n "$backup" ] && [ -f "$backup" ]; then
+              mv "$backup" export_presets.cfg
+            fi
+          }
+          trap restore_export_presets EXIT
+          godot --headless --import --path . --quit 2>&1 | tee build/import.log
+          if grep -E "SCRIPT ERROR|ERROR:" build/import.log; then
+            echo "Godot asset import reported an error"; exit 1
+          fi
+      - name: 杀掉 MSBuild 服务进程
+        run: dotnet build-server shutdown
+      - name: City P-1 换色断言
+        run: |
+          mkdir -p build
+          timeout 300 godot --headless --path . res://tests/facility_recolor_check.tscn 2>&1 | tee build/recolor.log
+          exit ${PIPESTATUS[0]}
+      - name: 断言日志上汇总页+注脚上检查
+        if: always()
+        run: |
+          mkdir -p build
+          if [ -s build/recolor.log ]; then
+            head -c 3000 build/recolor.log >> "$GITHUB_STEP_SUMMARY" || true
+            echo "::error::$(head -c 1200 build/recolor.log | tr '\n' ' ')"
+          else
+            echo "::error::recolor.log 为空: godot 零输出退出——超时/段错误"
+          fi
+      - name: 失败时开issue带日志（TOKEN可读通道）
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          { echo "run: ${{ github.run_id }}"; echo '```'; cat build/recolor.log 2>/dev/null || echo '(无日志)'; echo '```'; } > /tmp/issue_body.txt
+          gh issue create --title "[CI] recolor-check 失败 run ${{ github.run_id }}" --body-file /tmp/issue_body.txt || true
