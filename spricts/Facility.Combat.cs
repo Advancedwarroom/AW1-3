@@ -4,6 +4,16 @@ public partial class Facility
 {
  [ExportGroup("设施血量与被击")]
  [Export] public bool canBeAttacked = false;
+
+    [ExportGroup("战役记账")]
+    [Export] public double campaignScoreValue = 0;
+    [Export] public double campaignCrystalValue = 0;
+    [Export] public double campaignOccupierScoreValue = 0;
+    [Export] public double campaignOccupierCrystalValue = 0;
+    [Export] public bool takeoverEnabled = false;
+    [Export] public bool defeatOnLoseAfterTakeover = true;   // HQ二易其主判负(接管后再失守)
+    public string lastAttackerTeam = "";
+    public int factionChangeCount = 0;
  [Export] public int maxHealth = 100;
  [Export] public int health = 100;
  [Export] public bool canBeAttackedOnSameGrid = true;
@@ -53,6 +63,7 @@ public partial class Facility
   if (health<=0)
   {
    isDestroyed=true;
+            CampaignSettlement.Instance?.RecordKill(campaignScoreValue, campaignCrystalValue, lastAttackerTeam);   // ✅ 开创人2026-11-14 战役摧毁账
    if (changeTerrainToRuinsOnDestroyed && ParentGrid!=null && IsInstanceValid(ParentGrid))
    {
     ParentGrid.gridType=GridType.RUINS;

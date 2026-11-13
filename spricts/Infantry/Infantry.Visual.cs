@@ -108,6 +108,7 @@ public virtual void UpdateTeamVisual()
         if (baseSprite != null && IsInstanceValid(baseSprite) && 
             normalSprite != null && IsInstanceValid(normalSprite))
         {
+            // ⚠️ 临时诊断（2026-11-13）：读取后删除。排查犀牛底图不可见。
             var baseMat = FactionPaletteManager.GetBaseLayerMaterial(team);
             if (baseMat != null)
             {

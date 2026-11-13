@@ -11,6 +11,11 @@ public partial class Infantry : Node2D
     [Export] public bool canCounterWhenDefending = true;   // 被攻击时能否反击（Artillery/Rocket=false，默认true）
     [Export] public bool canCounterAtRange = false;        // 能否远程反击（false=仅近战距离1可反击，true=在攻击范围内可反击）
     [Export] public bool canMerge = true;
+
+    [ExportGroup("战役记账")]
+    [Export] public double campaignScoreValue = 0;      // 摧毁得分
+    [Export] public double campaignCrystalValue = 0;    // 摧毁宝钞
+    public string lastAttackerTeam = "";                // 凶手追踪(运行时)
     [Export] public bool canActAfterMerge = false;
 
     // ✅ 开创人2026-11-10：存活胜负倒计时（全部单位通用，默认关闭=0；与兵器/设施同机制同字段名，GameManager.SurvivalCountdowns 统一驱动）
@@ -104,6 +109,13 @@ public override void _Ready()
         baseSprite = GetNodeOrNull<Sprite2D>("BaseSprite");
     if (normalSprite == null)
         normalSprite = GetNodeOrNull<Sprite2D>("NormalSprite");
+
+    // 修复：无 animSprite 的双图层单位可能被 FindChild("*") 误识别为旧版 sprite。
+    // 同时 idleSprite 的 BaseSprite 兜底也不能指向双图层底图，否则旧动画逻辑会隐藏/改写它。
+    if (baseSprite != null && sprite == baseSprite)
+        sprite = null;
+    if (baseSprite != null && idleSprite == baseSprite)
+        idleSprite = null;
     
     // ✅ 双图层组件自动获取（AnimatedSprite2D 版）
     if (baseAnimSprite == null)
@@ -393,8 +405,14 @@ public override void _Process(double delta)
             noAmmoIcon.Visible = false;
     }
 }
+    [Export] public double campaignKillScoreValue = 0;      // ✅ 开创人2026-11-14 接缝③:击杀积分价值(0=不记账)
+    [Export] public double campaignKillCrystalValue = 0;    // ✅ 宝钞价值
     public virtual void OnDestroyed()
     {
+        {   // ✅ 开创人2026-11-14 接缝③:死亡入口→战役结算台账
+            var __st = GetTree()?.Root?.FindChild("CampaignSettlement", true, false) as CampaignSettlement;
+            __st?.RecordKill(campaignKillScoreValue, campaignKillCrystalValue, lastAttackerTeam);
+        }
         // ✅ CO 模块28（多屏 CO 死亡）：CO 单位阵亡——全图（含多屏）无残存 isCoUnit 则 CO 死亡
         if (isCoUnit)
             CoModuleSystem.OnCoUnitDestroyed(this);

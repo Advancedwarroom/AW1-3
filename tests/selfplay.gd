@@ -206,25 +206,11 @@ func _finish() -> void:
 	print("[SELFPLAY] 结果: %s | 阶段: %d | 失败: %d" % [report["result"], phase_changes, failures.size()])
 	var exit_code := 0 if failures.is_empty() else 1
 	var tree := get_tree()
-	# Free the game scene and every root-level runtime/autoload node before shutdown.
-	# TranslateGroup._ExitTree clears its static UI registry and unregisters translations.
-	if game_instance != null and is_instance_valid(game_instance):
-		game_instance.free()
-	game_instance = null
-	print("[TEST_CLEANUP] found TranslateGroup: ", translate_group != null)
-	if translate_group != null:
-		translate_group.call("ReleaseRuntimeResources")
-		print("[TEST_CLEANUP] called ReleaseRuntimeResources")
-		translate_group.free()
+	# 最简退出：对照组 facility_recolor_check.gd 同款——零拆卸操作
+	# （手动free→悬空引用洪灾；ReleaseRuntimeResources→shutdown死锁冒烟124；全部拆除）
 	game_manager = null
 	ai_manager = null
-	for child in tree.root.get_children(true):
-		if child == self:
-			continue
-		child.free()
-	await tree.process_frame
-	await tree.process_frame
-	tree.quit(exit_code)
+	get_tree().quit(exit_code)
 
 func _parse_args() -> void:
 	var args := OS.get_cmdline_user_args()

@@ -132,6 +132,49 @@ public partial class Facility : Node2D
     [Export] public int surviveVictoryTurns = 0;   // 本设施存活满 N 大回合 → 所属势力直接胜利（0=关闭）
     [Export] public int surviveDefeatTurns = 0;    // 本设施存活满 N 大回合 → 所属势力失败出局（0=关闭）
     [Export] public int survivedTurns = 0;         // 已存活大回合数（计时器；[Export] 随存档/导出/导入自动带走）
+    [ExportGroup("推动模块")]
+    [Export] public float weight = 1.0f;
+    [Export] public bool weightScalesWithHealth = false;
+    [Export] public bool pushableByPhysics = false;
+    [Export] public bool pushBlocksInfantryWhenOverlapped = true;
+    [Export] public Infantry.EqualWeightPushMode equalWeightPushMode = Infantry.EqualWeightPushMode.Stop;
+    [ExportGroup("反弹（被推动方响应）")]
+    [Export] public bool pushReboundEnabled = false;
+    [Export] public Weapon.StaticReboundMode pushReboundMode = Weapon.StaticReboundMode.Stay;
+    [ExportGroup("卸力（被推动方响应）")]
+    [Export] public bool pushMitigationEnabled = false;
+    [Export] public bool pushMitigationCeremony = false;      // 开启重量卸力仪式
+    [Export] public bool mitigationWeakensWeight = false;
+    [Export] public Infantry.MitigationValueMode mitigationWeightWeakenMode = Infantry.MitigationValueMode.Fixed;
+    [Export] public float mitigationWeightWeakenValue = 0f;
+    [ExportGroup("转移（被推动方响应）")]
+    [Export] public bool pushTransferEnabled = false;         // 被推动时改向：落到 pushTransferDirection 指定格
+    [Export] public Vector2I pushTransferDirection = Vector2I.Zero;
+    [ExportGroup("脆弱（冲突存活冲击）")]
+    [Export] public bool fragile = false;                     // 冲突存活后仍受冲击
+    [Export] public Infantry.FragileDamageMode fragileDamageMode = Infantry.FragileDamageMode.Fixed;
+    [Export] public int fragileDamageAmount = 0;              // 固定值：扣（负值对兵器=修复）
+
+    public virtual float GetEffectiveWeight() => Mathf.Max(0f, weight) * (weightScalesWithHealth ? Mathf.Clamp((float)health / Mathf.Max(1, maxHealth), 0f, 1f) : 1f);
+
+    public virtual bool MoveByPhysicsPush(Grids destination)
+    {
+        var origin = ParentGrid;
+        if (!pushableByPhysics || origin == null || destination == null
+            || destination == origin || destination.city != null)
+            return false;
+
+        // Clear the source occupancy before reparenting so grid ownership never
+        // temporarily points at the destination while the old tile still owns it.
+        if (origin.city == this)
+            origin.city = null;
+        Reparent(destination, true);
+        ParentGrid = destination;
+        destination.city = this;
+        GlobalPosition = destination.GlobalPosition;
+        return true;
+    }
+
     [Export] public int capturePointsRequired = 20;
     [Export] public int healMode = 0;
     [Export] public int healAmount = 0;
@@ -277,9 +320,75 @@ public partial class Facility : Node2D
             normalAnimSprite.Reparent(baseAnimSprite, true);
         }
 
+        // Normalize the visible facility artwork to one 32 px tile width.
+        // Scaling the Base parent also scales its child overlay without changing alignment.
+        NormalizeFacilityVisualScale();
+
         UpdateCityVisual();
         UpdateHpLabel();
         CreateStatusBarUI();
+    }
+
+
+    private void NormalizeFacilityVisualScale()
+    {
+        const float targetWidth = 32f;
+
+        if (baseAnimSprite != null && IsInstanceValid(baseAnimSprite) && baseAnimSprite.SpriteFrames != null)
+        {
+            var frames = baseAnimSprite.SpriteFrames;
+            Texture2D texture = null;
+            if (!string.IsNullOrEmpty(baseAnimSprite.Animation) && frames.HasAnimation(baseAnimSprite.Animation)
+                && frames.GetFrameCount(baseAnimSprite.Animation) > 0)
+                texture = frames.GetFrameTexture(baseAnimSprite.Animation, 0);
+            if (texture == null)
+            {
+                foreach (var animationName in frames.GetAnimationNames())
+                {
+                    if (frames.GetFrameCount(animationName) <= 0) continue;
+                    texture = frames.GetFrameTexture(animationName, 0);
+                    if (texture != null) break;
+                }
+            }
+            if (texture != null && texture.GetWidth() > 0)
+            {
+                float scale = targetWidth / texture.GetWidth();
+                baseAnimSprite.Scale = new Vector2(scale, scale);
+            }
+            return;
+        }
+
+        if (baseSprite != null && IsInstanceValid(baseSprite) && baseSprite.Texture != null
+            && baseSprite.Texture.GetWidth() > 0)
+        {
+            float scale = targetWidth / baseSprite.Texture.GetWidth();
+            baseSprite.Scale = new Vector2(scale, scale);
+            return;
+        }
+
+        // Legacy single-layer facilities use their own texture as the scale reference.
+        if (animSprite != null && IsInstanceValid(animSprite) && animSprite.SpriteFrames != null)
+        {
+            var frames = animSprite.SpriteFrames;
+            Texture2D texture = null;
+            if (!string.IsNullOrEmpty(animSprite.Animation) && frames.HasAnimation(animSprite.Animation)
+                && frames.GetFrameCount(animSprite.Animation) > 0)
+                texture = frames.GetFrameTexture(animSprite.Animation, 0);
+            if (texture == null)
+            {
+                foreach (var animationName in frames.GetAnimationNames())
+                {
+                    if (frames.GetFrameCount(animationName) <= 0) continue;
+                    texture = frames.GetFrameTexture(animationName, 0);
+                    if (texture != null) break;
+                }
+            }
+            if (texture != null && texture.GetWidth() > 0)
+            {
+                float scale = targetWidth / texture.GetWidth();
+                animSprite.Scale = new Vector2(scale, scale);
+            }
+        }
     }
 
     // ========== 状态栏系统核心方法 ==========
@@ -414,7 +523,7 @@ public partial class Facility : Node2D
             if (cannotProduceStatus != null)
                 return false;
 
-            return productionsThisTurn < maxProductionsPerTurn;
+            return productionsThisTurn < GetEffectiveMaxProductions();   // ✅ 与CanProduceNow同一条动态公式（血量/占领度绑定对P-1公共设施同样生效）
         }
 
         return facilityTeam == team;
@@ -592,6 +701,14 @@ public partial class Facility : Node2D
             if (d < best) { best = d; bn = kv.n; }
         }
         return bn;
+    }
+
+    // ✅ 开创人2026-11-12: 关闭时释放色板静态缓存——否则退出时 CompressedTexture2D/Image 泄漏, 进程退出码被顶成1
+    public static void ReleaseCowPaletteCaches()
+    {
+        _cowPalCache.Clear();
+        _cowPalTex.Clear();
+        _cowPalShader = null;
     }
 
     private static Texture2D CowPaletteTexture(string name)

@@ -57,11 +57,59 @@ public partial class Weapon : Node2D
 
     [ExportGroup("基础属性")]
     [Export] public string team = "Player1";
+
+    [ExportGroup("战役记账")]
+    [Export] public double campaignScoreValue = 0;      // 摧毁得分
+    [Export] public double campaignCrystalValue = 0;    // 摧毁宝钞
+    [Export] public bool takeoverEnabled = false;       // 败后残余允许接管
+    public string lastAttackerTeam = "";                // 凶手追踪(运行时)
     [Export] public int maxHealth = 999;
     [Export] public int health = 999;
     [Export] public bool canRotate = true;
     [Export] public int maxAttacksPerTurn = 1;
     [Export] public int cost = 0;
+
+    [ExportGroup("推动模块")]
+    [Export] public float weight = 1.0f;
+    [Export] public bool weightScalesWithHealth = false;
+    [Export] public bool pushableByPhysics = false;
+    [Export] public bool pushBlocksInfantryWhenOverlapped = true;
+    [Export] public Infantry.EqualWeightPushMode equalWeightPushMode = Infantry.EqualWeightPushMode.Stop;
+    [ExportGroup("反弹（被推动方响应）")]
+    [Export] public bool pushReboundEnabled = false;            // 被推动时反弹
+    [Export] public StaticReboundMode pushReboundMode = StaticReboundMode.Stay; // Stay=原地不动弹回链环；CounterPush=按重量反推发动栈
+    public enum StaticReboundMode { Stay, CounterPush }
+    [ExportGroup("卸力（被推动方响应）")]
+    [Export] public bool pushMitigationEnabled = false;
+    [Export] public bool pushMitigationCeremony = false;      // 开启重量卸力仪式
+    [Export] public bool mitigationWeakensWeight = false;
+    [Export] public Infantry.MitigationValueMode mitigationWeightWeakenMode = Infantry.MitigationValueMode.Fixed;
+    [Export] public float mitigationWeightWeakenValue = 0f;
+    [ExportGroup("转移（被推动方响应）")]
+    [Export] public bool pushTransferEnabled = false;         // 被推动时改向：落到 pushTransferDirection 指定格
+    [Export] public Vector2I pushTransferDirection = Vector2I.Zero;
+    [ExportGroup("脆弱（冲突存活冲击）")]
+    [Export] public bool fragile = false;                     // 冲突存活后仍受冲击
+    [Export] public Infantry.FragileDamageMode fragileDamageMode = Infantry.FragileDamageMode.Fixed;
+    [Export] public int fragileDamageAmount = 0;              // 固定值：扣（负值对兵器=修复）
+
+    public virtual float GetEffectiveWeight() => Mathf.Max(0f, weight) * (weightScalesWithHealth ? Mathf.Clamp((float)health / Mathf.Max(1, maxHealth), 0f, 1f) : 1f);
+
+    public virtual bool MoveByPhysicsPush(Grids destination, WeaponManager manager)
+    {
+        if (!pushableByPhysics || isDestroyed || destination == null || manager == null)
+            return false;
+
+        // BindWeaponToGrid validates the full occupied footprint for multi-tile weapons.
+        // Preserve the old transform if the destination footprint cannot be rebound.
+        Vector2 previousPosition = Position;
+        Position = destination.Position;
+        if (manager.BindWeaponToGrid(this, true))
+            return true;
+
+        Position = previousPosition;
+        return false;
+    }
 
     // ✅ 力场bypass：坠落等引擎流程内部使用（黑弧护卫全毁坠落时绕过力场）
     public bool ignoreForceField = false; 
@@ -452,6 +500,7 @@ public partial class Weapon : Node2D
 
     public virtual void TakeDamage(int damage, Infantry attacker = null)
     {
+        if (attacker != null && damage > 0) lastAttackerTeam = attacker.team;   // ✅ 开创人2026-11-14 战役记账：凶手追踪
         if (healthLocked) return; // 力场锁血
         // ✅ 力场保护：被存活黑弧力场保护的地图目标物，攻击全部无效（坠落流程带bypass）
         if (!ignoreForceField && BlackArc.IsGridForceFieldProtected(grid)) return;
@@ -556,10 +605,16 @@ public partial class Weapon : Node2D
         }
     }
 
+    [Export] public double campaignKillScoreValue = 0;      // ✅ 开创人2026-11-14 接缝③:击杀积分价值(0=不记账)
+    [Export] public double campaignKillCrystalValue = 0;    // ✅ 宝钞价值
     public virtual void OnDestroyed()
     {
         if (TryDeathTransform()) return; // 直接销毁入口同样支持尸化；attempted 防重入。
         isDestroyed = true; // ✅ 关键：标记为已摧毁，确保胜利判定正确识别
+        {   // ✅ 开创人2026-11-14 接缝③:死亡入口→战役结算台账
+            var __st = GetTree()?.Root?.FindChild("CampaignSettlement", true, false) as CampaignSettlement;
+            __st?.RecordKill(campaignKillScoreValue, campaignKillCrystalValue, lastAttackerTeam);
+        }
         var gm = GetTree()?.GetFirstNodeInGroup("game_manager") as GameManager;
         gm?.gridManager?.ClearWeaponRange();
         Grids.IsForceActionMode = false;

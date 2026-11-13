@@ -870,4 +870,23 @@ public partial class TerrainEditor
         }
         return costs;
     }
+// ========== 战役入口（开创人2026-11-14）：菜单场景留文件，战场启动时接管 ==========
+/// <summary>
+/// 战役入口：若存在 user://campaign_pending.map（战役菜单写入的地图导出文件），
+/// 导入该图并直接开战。无论成败都先清掉待导入文件，避免重复触发。
+/// </summary>
+public bool TryImportPendingCampaign()
+{
+    const string pendingPath = "user://campaign_pending.map";
+    if (!Godot.FileAccess.FileExists(pendingPath)) return false;
+    using var f = Godot.FileAccess.Open(pendingPath, Godot.FileAccess.ModeFlags.Read);
+    if (f == null) return false;
+    string content = f.GetAsText();
+    Godot.DirAccess.RemoveAbsolute(pendingPath);
+    if (string.IsNullOrWhiteSpace(content)) return false;
+    ParseAndImportMap(content);
+    // ParseAndImportMap 会强制进入编辑模式，战役要直接开打
+    if (IsEditMode) SetEditMode(false);
+    return true;
+}
 }

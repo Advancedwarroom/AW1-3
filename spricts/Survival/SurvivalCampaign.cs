@@ -1,0 +1,46 @@
+// SurvivalCampaign.cs v2 - AWDS正统生存模式·战役配置 + 无尽/肉鸽池 (开创人2026-11-14)
+using Godot;
+
+[GlobalClass]
+public partial class SurvivalCampaign : Resource
+{
+    [ExportGroup("生存战役")]
+    [Export] public string campaignName = "生存战役";
+    [Export] public int[] stageSlots = new int[0];            // 关卡序列：存档槽索引（ExtraSave槽）
+    [Export] public string[] stageMapPaths = new string[0]; // ✅ 缺口A(开创人2026-11-14):路径轨——res://Maps/xx.txt,槽位越界时兜底,战役可分发
+    [Export] public int limitType = 0;                        // 0=总资金 1=总回合数 2=总时间(秒) 3=单位上限(总名额,最狠的紧箍咒)
+    [Export] public int unitCapRefillPerStage = 0;
+    [ExportGroup("真生存·整军过继")]
+    [Export] public bool carryUnitsBetweenStages = false;    // 部队跨关延续:残血的兵带伤进下一关
+    [Export] public bool carryFundsBetweenStages = false;    // 资金跨关结转
+    [Export] public bool neutralizePresetFacilities = true;  // 下关我方预制设施中立化——想造血,去占中立厂
+    [Export] public bool removePresetUnits = true;           // 下关预制我方单位清除:只带自己打出来的兵
+    [Export] public int carryDeployRadius = 3;               // 携带单位围绕HQ部署半径           // 单位上限模式:每关回充名额(0=纯消耗硬核,死一个少一个)
+    [Export] public double budget = 0;                        // 总预算：资金(G)/大回合数/秒数；0=不限
+    [Export] public bool fundsCarry = true;
+    [Export] public bool coEnergyResetPerStage = true;        // 待接：每关CO能量重置
+    [Export] public string playerTeam = "Player1";
+    [Export] public string saveFileName = "survival_save.json";   // ✅ 多战役分文件存档
+
+    [ExportGroup("军心(命数制)")]
+    [Export] public bool moraleEnabled = false;            // ✅ 军心系:败一关扣1点命,归零终局(与预算制并存)
+    [Export] public int moraleMax = 3;
+    [Export] public int[] eliteStageIndices = new int[0];    // 精英关(主线索引):输掉无视军心直接终局
+
+    [ExportGroup("树状选关")]
+    [Export] public string stageTree = "";
+    [ExportGroup("AI强度")]
+    [Export] public double aiFundsMultiplier = 1.0;              // ✅ AI资金倍率(1.7=AI收入170%)
+    [Export] public double aiFundsMultiplierPerStage = 0.0;    // 每深入一层追加倍率(压迫递增)
+    [Export] public bool talentDraftEnabled = false;   // ✅ 天赋选秀:每关胜利后三选一(需UI接DraftRequested信号)
+    [Export] public TalentPool talentPool;   // ✅ 分支图DSL(开创人2026-11-14):"0>1,2\n1>2\n2>"=0胜后可选1/2,2终点;留空=线性序列
+    [Export] public string[] coIds = new string[0];           // 战役锁定CO：coIds[0]=主CO，其余=搭档（空=沿用各关地图默认）
+
+    [ExportGroup("无尽/肉鸽")]
+    [Export] public bool endlessMode = false;                 // 主序列打完后从池中无限抽关
+    [Export] public int[] endlessPoolSlots = new int[0];      // 无尽池：存档槽索引
+    [Export] public string[] endlessPoolPaths = new string[0]; // ✅ 无尽池路径轨
+    [Export] public MapGenProfile[] endlessGenPool = new MapGenProfile[0]; // ✅ 缺口B:无尽生成池——抽中即现场生成一张新图(真无限)
+    [Export] public bool randomDraw = true;                   // true=随机抽；false=顺序循环
+    [Export] public double budgetShrinkPercentPerStage = 0;   // 每深入一层预算缩减%(0-100)，压迫感来源
+}

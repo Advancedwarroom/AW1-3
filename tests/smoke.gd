@@ -22,21 +22,5 @@ func _run_smoke() -> void:
 		await get_tree().process_frame
 
 	print("SMOKE_PASS: %d frames" % FRAMES_TO_RUN)
-	var tree := get_tree()
-	if main_instance != null and is_instance_valid(main_instance):
-		main_instance.free()
-	main_instance = null
-	print("[TEST_CLEANUP] found TranslateGroup: ", translate_group != null)
-	if translate_group != null:
-		translate_group.call("ReleaseRuntimeResources")
-		print("[TEST_CLEANUP] called ReleaseRuntimeResources")
-		translate_group.free()
-	# Some effects deliberately reparent themselves to the SceneTree root. They are
-	# transient in this test and must be freed before checking shutdown leaks.
-	for child in tree.root.get_children(true):
-		if child == self:
-			continue
-		child.free()
-	await tree.process_frame
-	await tree.process_frame
-	tree.quit(0)
+	# 最简退出：对照组 facility_recolor_check.gd 同款——零拆卸操作，57秒干净退出
+	get_tree().quit(0)
